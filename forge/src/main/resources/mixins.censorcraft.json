@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.supasulley.censorcraft.mixins",  
+  "compatibilityLevel": "JAVA_21",
+  "refmap": "mixins.censorcraft.refmap.json",
+  "client": [
+    "GUIMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
