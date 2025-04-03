@@ -2,12 +2,15 @@ package com.supasulley.censorcraft.gui;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
+import com.supasulley.censorcraft.CensorCraft;
 import com.supasulley.censorcraft.Config;
 import com.supasulley.censorcraft.gui.MicrophoneList.MicrophoneEntry;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.ObjectSelectionList;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
@@ -16,16 +19,33 @@ public class MicrophoneList extends ObjectSelectionList<MicrophoneEntry> {
 	
 	private static final int TEXT_PADDING = 2;
 	
-	public MicrophoneList(int x, int y, int width, int height, Minecraft minecraft, Collection<String> microphones)
+	private Button refreshButton;
+	
+	public MicrophoneList(Button refreshButton, int x, int y, int width, int height, Minecraft minecraft, Collection<String> microphones)
 	{
 		// Winning the world's dumbest constructor award
 		super(minecraft, width, height, y, TEXT_PADDING * 3 + minecraft.font.lineHeight * microphones.stream().mapToInt(name -> minecraft.font.split(Component.literal(name), width).size()).max().orElseThrow());
-		setX(x);
+		
+		this.refreshButton = refreshButton;
 		
 		microphones.forEach(name -> addEntry(new MicrophoneEntry(name)));
-		
 		// Select the desired, otherwise just the first one
 		setSelected(this.children().stream().filter(mic -> mic.component.getString().equals(Config.Client.PREFERRED_MIC.get())).findFirst().orElse(this.getFirstElement()));
+		setX(x);
+	}
+	
+	@Override
+	public void setSelected(MicrophoneEntry element)
+	{
+		super.setSelected(element);
+		String newMic = Optional.ofNullable(element).map(entry -> entry.getMicrophoneName()).orElse("");
+		
+		if(!newMic.equals(Config.Client.PREFERRED_MIC.get()))
+		{
+			CensorCraft.LOGGER.info("Client changed preferred audio source to \"{}\"", newMic);
+			Config.Client.PREFERRED_MIC.set(newMic);
+			refreshButton.onPress();
+		}
 	}
 	
 	@Override

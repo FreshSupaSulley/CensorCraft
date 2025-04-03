@@ -1,21 +1,17 @@
 package com.supasulley.censorcraft.gui;
 
-import java.util.Optional;
 import java.util.stream.Collectors;
 
-import com.supasulley.censorcraft.CensorCraft;
 import com.supasulley.censorcraft.Config;
 import com.supasulley.jscribe.AudioRecorder;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Checkbox;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
-// inject gui class
 public class ConfigScreen extends Screen {
 	
 	private static final int PADDING = 5;
@@ -42,7 +38,7 @@ public class ConfigScreen extends Screen {
 	}
 	
 	/**
-	 * Ran everytime the config button is pressed.
+	 * Runs everytime the mod config menu is opened.
 	 */
 	@Override
 	protected void init()
@@ -61,41 +57,22 @@ public class ConfigScreen extends Screen {
 		final int restartButtonY = this.height - (PADDING + Button.DEFAULT_HEIGHT) * 2;
 		final int listWidth = this.width / 2;
 		
-		// List of microphones
-		list = new MicrophoneList(PADDING + listWidth / 2, bottom + PADDING, listWidth - PADDING * 2, restartButtonY - (bottom + PADDING) - PADDING, minecraft, AudioRecorder.getMicrophones().stream().map(mic -> mic.getName()).collect(Collectors.toList()));
-		addRenderableWidget(list);
-		
-		System.out.println(list.getY() + " " + this.height + " " + list.getHeight());
-		// Restart button
-		bottom = addRenderableWidget(Button.builder(Component.literal("Restart"), button ->
+		// Restart button defined above list because list requires it
+		Button restartButton = Button.builder(Component.literal("Restart"), button ->
 		{
 			button.active = false;
 			restartJScribe = true;
-		}).bounds(this.width / 2 - Button.BIG_WIDTH / 2, restartButtonY, Button.BIG_WIDTH, Button.DEFAULT_HEIGHT).build()).getBottom();
+		}).bounds(this.width / 2 - Button.BIG_WIDTH / 2, restartButtonY, Button.BIG_WIDTH, Button.DEFAULT_HEIGHT).build();
+		
+		// List of microphones
+		list = new MicrophoneList(restartButton, PADDING + listWidth / 2, bottom + PADDING, listWidth - PADDING * 2, restartButtonY - (bottom + PADDING) - PADDING, minecraft, AudioRecorder.getMicrophones().stream().map(mic -> mic.getName()).collect(Collectors.toList()));
+		bottom = restartButton.getBottom();
+		addRenderableWidget(list);
+		
+		// Add button after widget
+		addRenderableWidget(restartButton);
 		
 		// Close button
 		addRenderableWidget(Button.builder(Component.literal("Close"), button -> this.onClose()).bounds(this.width / 2 - Button.BIG_WIDTH / 2, bottom + PADDING, Button.BIG_WIDTH, Button.DEFAULT_HEIGHT).build());
-	}
-	
-	@Override
-	public void onClose()
-	{
-		super.onClose();
-		
-		// Ensure to update preferred mic
-		String newMic = Optional.ofNullable(list.getSelected()).map(entry -> entry.getMicrophoneName()).orElse("");
-		
-		if(!newMic.equals(Config.Client.PREFERRED_MIC.get()))
-		{
-			CensorCraft.LOGGER.info("Client changed preferred audio source to \"{}\"", newMic);
-			ConfigScreen.restartJScribe = true;
-			Config.Client.PREFERRED_MIC.set(newMic);
-		}
-	}
-	
-	@Override
-	public void render(GuiGraphics p_281549_, int p_281550_, int p_282878_, float p_282465_)
-	{
-		super.render(p_281549_, p_281550_, p_282878_, p_282465_);
 	}
 }

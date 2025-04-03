@@ -1,7 +1,7 @@
 plugins {
     // Apply the java-library plugin for API and implementation separation.
-    `java-library`
-    `java`
+    id 'java-library'
+    id 'java'
 }
 
 repositories {
@@ -11,11 +11,11 @@ repositories {
 
 dependencies {
     // Use JUnit Jupiter for testing.
-    testImplementation(libs.junit.jupiter)
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testImplementation libs.junit.jupiter
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
-tasks.named<Test>("test") {
+tasks.named(Test) {
     // Use JUnit Platform for unit tests.
     useJUnitPlatform()
 }

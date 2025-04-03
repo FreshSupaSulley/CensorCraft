@@ -29,7 +29,7 @@ class AppTest {
 	public static void main(String[] args) throws Exception
 	{
 		JScribe scribe = new JScribe(Paths.get("src/test/resources/ggml-tiny.en.bin"));
-		scribe.start("");
+		scribe.start("", 5000, 500, 5000);
 		
 		// Translate for a while
 		while(true)
@@ -42,14 +42,15 @@ class AppTest {
 				System.exit(1);
 			}
 			long time = System.currentTimeMillis();
-			scribe.start("");
+			scribe.start("", 5000, 500, 5000);
 			System.out.println(System.currentTimeMillis() - time);
 			if(!scribe.isRunning())
 			{
 				System.out.println("problem2");
 				System.exit(1);
 			}
-			Thread.sleep(4000);
+			Thread.sleep(1000);
+			System.out.println("This should be true: " + scribe.isRunning() + " " + scribe.isRunningAndNoAudio());
 		}
 	}
 }

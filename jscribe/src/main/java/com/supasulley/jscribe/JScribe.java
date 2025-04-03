@@ -14,7 +14,6 @@ public class JScribe implements UncaughtExceptionHandler {
 	protected static Logger logger;
 	
 	private final Path modelPath;
-	private boolean running;
 	private AudioRecorder recorder;
 	private Transcriber transcriber;
 	
@@ -41,34 +40,33 @@ public class JScribe implements UncaughtExceptionHandler {
 	/**
 	 * Starts live audio transcription.
 	 * 
-	 * @param microphone preferred microphone name
-	 * 
-	 * @return true if transcription started, false if it was already running
+	 * @param microphone  preferred microphone name
+	 * @param recordTime  audio sample time in milliseconds (must be greater than 0)
+	 * @param overlapTime amount of overlap between samples in milliseconds (must not exceed recordTime)
+	 * @param overlapTime amount of overlap between samples in milliseconds (at least recordTime + overlapTime). 0 indicates no max
+	 * @return true if transcription started, false otherwise
 	 */
-	public boolean start(String microphone)
+	public boolean start(String microphone, long recordTime, long overlapTime, long maxRecordTime)
 	{
-		if(running)
+		if(isRunning())
 		{
+			return false;
+		}
+		
+		if(overlapTime > recordTime || overlapTime <= 0 || overlapTime <= 0)
+		{
+			JScribe.logger.error("JScribe is misconfigured");
 			return false;
 		}
 		
 		logger.info("Starting JScribe");
 		
 		// where do i put running = true lol
-		try
-		{
-			recorder = new AudioRecorder(transcriber = new Transcriber(modelPath), microphone, 2000, 500);
-		} catch(IOException e)
-		{
-			uncaughtException(Thread.currentThread(), e);
-			e.printStackTrace();
-		}
-		
+		recorder = new AudioRecorder(transcriber = new Transcriber(modelPath), microphone, recordTime, overlapTime);
 		// Report errors to this thread
 		recorder.setUncaughtExceptionHandler(this);
 		transcriber.setUncaughtExceptionHandler(this);
 		
-		running = true;
 		recorder.start();
 		transcriber.start();
 		return true;
@@ -81,21 +79,21 @@ public class JScribe implements UncaughtExceptionHandler {
 	 */
 	public boolean stop()
 	{
-		if(!running)
+		if(!isRunning())
 		{
 			return false;
 		}
 		
 		logger.info("Stopping JScribe");
 		
-		transcriber.shutdown();
 		recorder.shutdown();
+		transcriber.shutdown();
 		
 		// Wait to die
 		try
 		{
-			transcriber.join();
 			recorder.join();
+			transcriber.join();
 		} catch(InterruptedException e)
 		{
 			JScribe.logger.error("Failed to join JScribe threads", e);
@@ -103,19 +101,7 @@ public class JScribe implements UncaughtExceptionHandler {
 		}
 		
 		JScribe.logger.info("Stopped JScribe");
-		running = false;
 		return true;
-	}
-	
-	/**
-	 * @return active microphone information, or null if none was found or not running
-	 */
-	public Mixer.Info getActiveMicrophone()
-	{
-		if(!running)
-			return null;
-		
-		return recorder.getMicrophoneInfo();
 	}
 	
 	/**
@@ -123,7 +109,7 @@ public class JScribe implements UncaughtExceptionHandler {
 	 */
 	public boolean isRunning()
 	{
-		return running;
+		return transcriber != null && recorder != null && transcriber.isAlive() && recorder.isAlive();
 	}
 	
 	/**
@@ -131,7 +117,24 @@ public class JScribe implements UncaughtExceptionHandler {
 	 */
 	public boolean isRunningAndNoAudio()
 	{
-		return running && !transcriber.receivingAudio();
+		return isRunning() && !recorder.receivingAudio();
+	}
+	
+	public float getAudioLevel()
+	{
+		if(!isRunning()) return 0;
+		return recorder.getAudioLevel();
+	}
+	
+	/**
+	 * @return active microphone information, or null if none was found or not running
+	 */
+	public Mixer.Info getActiveMicrophone()
+	{
+		if(!isRunning())
+			return null;
+		
+		return recorder.getMicrophoneInfo();
 	}
 	
 	/**
