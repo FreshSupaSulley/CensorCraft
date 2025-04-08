@@ -1,6 +1,6 @@
 plugins {
     id 'java-library'
-    id 'application'
+    //id 'application'
 }
 
 repositories {
@@ -14,22 +14,24 @@ dependencies {
     // Whisper JNI
     implementation 'io.github.givimad:whisper-jni:1.7.1'
     
+    // https://mvnrepository.com/artifact/org.slf4j/slf4j-api
+    api 'org.slf4j:slf4j-api:2.0.16'
+    
     // https://mvnrepository.com/artifact/net.lingala.zip4j/zip4j
     api 'net.lingala.zip4j:zip4j:2.11.5'
     
-    // https://mvnrepository.com/artifact/org.slf4j/slf4j-api
-    implementation 'org.slf4j:slf4j-api:2.0.16'
-    
     testImplementation libs.junit.jupiter
-    implementation 'org.slf4j:slf4j-simple:2.0.17'
-    
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testImplementation 'org.slf4j:slf4j-simple:2.0.17'
 }
 
 tasks.named('test') {
     useJUnitPlatform()
 }
 
+test {
+    testLogging.showStandardStreams = true
+}
+/*
 application {
     mainClass = 'com.supasulley.jscribe.AppTest'
 }
@@ -45,4 +47,4 @@ jar {
     }
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
  }
- 
+ */

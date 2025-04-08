@@ -46,14 +46,23 @@ public class JScribe implements UncaughtExceptionHandler {
 	 * @param overlapTime amount of overlap between samples in milliseconds (at least recordTime + overlapTime). 0 indicates no max
 	 * @return true if transcription started, false otherwise
 	 */
-	public boolean start(String microphone, long recordTime, long overlapTime, long maxRecordTime)
+	
+	/**
+	 * Starts live audio transcription.
+	 * 
+	 * @param microphone preferred microphone name
+	 * @param windowSize length of appended audio samples in milliseconds sent to the model
+	 * @param latency    interval in milliseconds for when the window is sent to the model
+	 * @return true if transcription started, false otherwise
+	 */
+	public boolean start(String microphone, long windowSize, long latency)
 	{
 		if(isRunning())
 		{
 			return false;
 		}
 		
-		if(overlapTime > recordTime || overlapTime <= 0 || overlapTime <= 0)
+		if(windowSize <= 0 || latency <= 0 || latency )
 		{
 			JScribe.logger.error("JScribe is misconfigured");
 			return false;
@@ -62,7 +71,7 @@ public class JScribe implements UncaughtExceptionHandler {
 		logger.info("Starting JScribe");
 		
 		// where do i put running = true lol
-		recorder = new AudioRecorder(transcriber = new Transcriber(modelPath), microphone, recordTime, overlapTime);
+		recorder = new AudioRecorder(transcriber = new Transcriber(modelPath), microphone, windowSize, latency);
 		// Report errors to this thread
 		recorder.setUncaughtExceptionHandler(this);
 		transcriber.setUncaughtExceptionHandler(this);
@@ -120,9 +129,13 @@ public class JScribe implements UncaughtExceptionHandler {
 		return isRunning() && !recorder.receivingAudio();
 	}
 	
+	/**
+	 * @return audio level of samples, [0 - 1]
+	 */
 	public float getAudioLevel()
 	{
-		if(!isRunning()) return 0;
+		if(!isRunning())
+			return 0;
 		return recorder.getAudioLevel();
 	}
 	

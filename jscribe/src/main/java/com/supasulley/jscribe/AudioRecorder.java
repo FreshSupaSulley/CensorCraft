@@ -1,14 +1,11 @@
 package com.supasulley.jscribe;
 
-import java.io.ByteArrayInputStream;
-import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.sound.sampled.AudioFileFormat;
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
@@ -23,7 +20,7 @@ public class AudioRecorder extends Thread implements Runnable {
 	public static final AudioFormat FORMAT = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 16000, 16, 1, 2, 16000, false);
 	
 	private final Transcriber transcription;
-	private final long windowSize;
+	private final long baseLatency, overlap;
 	
 	/** Can change based on transcription speed */
 	private long latency;
@@ -33,10 +30,12 @@ public class AudioRecorder extends Thread implements Runnable {
 	private Mixer.Info device;
 	private float loudness;
 	
-	public AudioRecorder(Transcriber listener, String micName, long windowSize, long latency)
+	public AudioRecorder(Transcriber listener, String micName, long latency, long overlap)
 	{
 		this.transcription = listener;
-		this.windowSize = windowSize;
+		this.baseLatency = latency;
+		this.overlap = overlap;
+		
 		this.latency = latency;
 		
 		List<Mixer.Info> microphones = getMicrophones();
@@ -85,11 +84,6 @@ public class AudioRecorder extends Thread implements Runnable {
 		return device;
 	}
 	
-	public long getTranscriptionTime()
-	{
-		return latency;
-	}
-	
 	public void shutdown()
 	{
 		running = false;
@@ -132,21 +126,21 @@ public class AudioRecorder extends Thread implements Runnable {
 						continue;
 					}
 					
-					receivingAudio = true;
-					
 					// If we have a window
 					if(window != null)
 					{
+						final int windowLength = (int) (FORMAT.getSampleRate() * ((latency + overlap) / 1000f));
+						
 						// If the current window doesn't have enough samples for the full window size yet
-						if(window.length < (int) (FORMAT.getSampleRate() * (windowSize / 1000f)))
+						if(window.length < windowLength)
 						{
 							JScribe.logger.trace("Expanding window");
 							
-							// Update window to include this new sample
-							float[] newWindow = new float[window.length + rawSamples.length];
+							// Create a new window with the old with space for the new audio sample, or cap it at the window length
+							float[] newWindow = new float[Math.min(windowLength, window.length + rawSamples.length)];
 							
-							// Prepend newWindow with old
-							System.arraycopy(window, 0, newWindow, 0, window.length);
+							// Prepend newWindow with old IF we have space for it
+							System.arraycopy(window, newWindow.length - rawSamples.length, newWindow, 0, window.length);
 							
 							window = newWindow;
 						}
@@ -155,16 +149,16 @@ public class AudioRecorder extends Thread implements Runnable {
 						{
 							JScribe.logger.trace("Shifting window");
 							
-							// Shift window to the left to make room for new samples
-							float[] newWindow = new float[window.length];
+							// Shift window to the left to make room for the new sample
+							float[] newWindow = new float[windowLength];
 							
-							// Copy window with offset
+							// Copy old window, making enough room for the raw samples at the end
 							System.arraycopy(window, rawSamples.length, newWindow, 0, window.length - rawSamples.length);
 							
 							window = newWindow;
 						}
 						
-						// Append window with new samples
+						// Append window with new samples at the very end
 						System.arraycopy(rawSamples, 0, window, window.length - rawSamples.length, rawSamples.length);
 					}
 					else
@@ -178,53 +172,58 @@ public class AudioRecorder extends Thread implements Runnable {
 				}
 				
 				// Write to file for testing
-				// final float[] samples2 = window;
-				// Thread thread = new Thread(() ->
-				// {
-				// try
-				// {
-				// writeWavFile(System.currentTimeMillis() + ".wav", samples2, format.getSampleRate(), format.getChannels());
-				// } catch(IOException | LineUnavailableException e)
-				// {
-				// // FIXME Auto-generated catch block
-				// e.printStackTrace();
-				// }
-				// });
-				// thread.start();
+//				final float[] samples2 = window;
+//				Thread thread = new Thread(() ->
+//				{
+//					try
+//					{
+//						writeWavFile(System.currentTimeMillis() + ".wav", samples2, FORMAT.getSampleRate(), FORMAT.getChannels());
+//					} catch(IOException | LineUnavailableException e)
+//					{
+//						e.printStackTrace();
+//					}
+//				});
+//				thread.start();
 				
 				// Pass samples to transcriber
 				transcription.newSample(window);
 				
-				JScribe.logger.info("{}", transcription.getBacklog());
-				
-				// long transcribeTime = transcription.getLastTranscriptionTime();
-				//
-				// // If transcription is taking longer than expected
-				// if(transcribeTime > baseLatency)
-				// {
-				// // If its high but going down
-				// /*
-				// * if(timeTook < recordTime) { long compromisedTime = (baseRecordTime + timeTook) / 2; JScribe.logger.info("Catching up to base time (" + baseRecordTime +
-				// * "ms)! Setting record time to " + compromisedTime + "ms (was " + recordTime + "ms)"); recordTime = compromisedTime; } // It's just going up else
-				// */
-				// if(transcribeTime > latency)
-				// {
-				// JScribe.logger.warn("Transcription took {}ms of desired {}ms", transcribeTime, latency);
-				// }
-				//
-				// /*
-				// * The priority is to make transcription as live as possible. The more files we have on the transcription backlog, the longer we should record a sample for to
-				// * help reduce that backlog. The consequence is transcription becomes more delayed. Do not allow samples too long.
-				// */
-				// latency = baseLatency + (transcribeTime - baseLatency) * transcription.getBacklog();
-				//
-				// // 0 indicates no cap
-				// if(maxRecordTime != 0 && latency > maxRecordTime)
-				// {
-				// JScribe.logger.warn("Transcription is taking too long (exceeded {}ms cap)", maxRecordTime);
-				// latency = maxRecordTime;
-				// }
-				// }
+				// If transcription is taking longer than expected
+				if(transcription.getBacklog() > 0)
+				{
+					// If its high but going down
+					/*
+					 * if(timeTook < recordTime) { long compromisedTime = (baseRecordTime + timeTook) / 2; JScribe.logger.info("Catching up to base time (" + baseRecordTime +
+					 * "ms)! Setting record time to " + compromisedTime + "ms (was " + recordTime + "ms)"); recordTime = compromisedTime; } // It's just going up else
+					 */
+					
+					/*
+					 * The priority is to make transcription as live as possible. The more files we have on the transcription backlog, the longer we should record a sample for to
+					 * help reduce that backlog. The consequence is transcription becomes more delayed. Do not allow samples too long.
+					 */
+					long newLatency = baseLatency * transcription.getBacklog();
+					JScribe.logger.warn("Backlog of {}. Raising latency from {}ms to {}ms", transcription.getBacklog(), latency, newLatency);
+					latency = newLatency;
+					
+					// If the latecy is greater than the desired window size
+					if(latency > baseLatency + overlap)
+					{
+						long newWindowSize = Math.max(baseWindowSize, latency + baseLatency);
+						
+//						final int maxWindowSize = 30000;
+//						
+//						if(newWindowSize > maxWindowSize)
+//						{
+//							JScribe.logger.warn("Transcription is taking too long (window exceeded {}ms cap)", maxWindowSize);
+//							windowSize = maxWindowSize;
+//						}
+//						else
+						{
+							JScribe.logger.warn("Expanding window to from {}ms to {}ms", windowSize, newWindowSize);
+							windowSize = newWindowSize;
+						}
+					}
+				}
 			}
 		} catch(LineUnavailableException e)
 		{
@@ -235,43 +234,43 @@ public class AudioRecorder extends Thread implements Runnable {
 		}
 	}
 	
-	private static byte[] convertToPCM(float[] samples)
-	{
-		byte[] pcmData = new byte[samples.length * 2]; // 2 bytes per sample (16-bit)
-		for(int i = 0; i < samples.length; i++)
-		{
-			// Convert the float sample (-1.0 to 1.0) to a 16-bit signed integer
-			short pcmSample = (short) (samples[i] * Short.MAX_VALUE);
-			pcmData[2 * i] = (byte) (pcmSample & 0xFF);
-			pcmData[2 * i + 1] = (byte) ((pcmSample >> 8) & 0xFF);
-		}
-		return pcmData;
-	}
-	
-	public static void writeWavFile(String filename, float[] samples, float sampleRate, int numChannels) throws IOException, LineUnavailableException
-	{
-		// Convert the float[] to 16-bit PCM data
-		byte[] pcmData = convertToPCM(samples);
-		
-		// Create a byte array input stream from the PCM data
-		ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(pcmData);
-		
-		// Define audio format (16-bit PCM, mono/stereo, sample rate)
-		AudioFormat format = new AudioFormat(sampleRate, 16, numChannels, true, false); // signed 16-bit PCM, big-endian
-		
-		// Create an AudioInputStream from the byte array input stream
-		AudioInputStream audioInputStream = new AudioInputStream(byteArrayInputStream, format, pcmData.length / format.getFrameSize());
-		
-		// Write the AudioInputStream to a WAV file using AudioSystem
-		File outputFile = new File(filename);
-		AudioSystem.write(audioInputStream, AudioFileFormat.Type.WAVE, outputFile);
-		
-		System.out.println("WAV file has been written to: " + outputFile.getAbsolutePath());
-	}
+//	private static byte[] convertToPCM(float[] samples)
+//	{
+//		byte[] pcmData = new byte[samples.length * 2]; // 2 bytes per sample (16-bit)
+//		for(int i = 0; i < samples.length; i++)
+//		{
+//			// Convert the float sample (-1.0 to 1.0) to a 16-bit signed integer
+//			short pcmSample = (short) (samples[i] * Short.MAX_VALUE);
+//			pcmData[2 * i] = (byte) (pcmSample & 0xFF);
+//			pcmData[2 * i + 1] = (byte) ((pcmSample >> 8) & 0xFF);
+//		}
+//		return pcmData;
+//	}
+//	
+//	public static void writeWavFile(String filename, float[] samples, float sampleRate, int numChannels) throws IOException, LineUnavailableException
+//	{
+//		// Convert the float[] to 16-bit PCM data
+//		byte[] pcmData = convertToPCM(samples);
+//		
+//		// Create a byte array input stream from the PCM data
+//		ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(pcmData);
+//		
+//		// Define audio format (16-bit PCM, mono/stereo, sample rate)
+//		AudioFormat format = new AudioFormat(sampleRate, 16, numChannels, true, false); // signed 16-bit PCM, big-endian
+//		
+//		// Create an AudioInputStream from the byte array input stream
+//		AudioInputStream audioInputStream = new AudioInputStream(byteArrayInputStream, format, pcmData.length / format.getFrameSize());
+//		
+//		// Write the AudioInputStream to a WAV file using AudioSystem
+//		File outputFile = new File(filename);
+//		AudioSystem.write(audioInputStream, AudioFileFormat.Type.WAVE, outputFile);
+//		
+//		System.out.println("WAV file has been written to: " + outputFile.getAbsolutePath());
+//	}
 	
 	private float[] recordSample(AudioInputStream stream) throws InterruptedException, IOException
 	{
-		final int singleSampleSize = FORMAT.getSampleSizeInBits() / 8;
+		final int sampleSize = 2048 * (FORMAT.getSampleSizeInBits() / 8);
 		
 		// Calcualte how long this sample has to be
 		ByteBuffer captureBuffer = ByteBuffer.allocate((int) ((FORMAT.getSampleRate() * (FORMAT.getSampleSizeInBits() / 8) * FORMAT.getChannels() * latency) / 1000f));
@@ -279,6 +278,8 @@ public class AudioRecorder extends Thread implements Runnable {
 		
 		// Read individual samples until assembled
 		int bytesRead = 0;
+		
+		boolean hasData = false;
 		
 		while(bytesRead < captureBuffer.limit())
 		{
@@ -290,37 +291,45 @@ public class AudioRecorder extends Thread implements Runnable {
 				throw new InterruptedException();
 			}
 			
-			byte[] singleSample = new byte[singleSampleSize];
+			byte[] singleSample = new byte[Math.min(sampleSize, captureBuffer.remaining())];
 			int read = stream.read(singleSample);
 			
 			if(read == -1)
 			{
-				JScribe.logger.error("rip");
+				JScribe.logger.error("End of audio stream");
 				return null;
 			}
 			
-			// Format is little endian
-			short sample = (short) ((singleSample[1] << 8) | (singleSample[0] & 0xFF));
+			// Calculate RMS
+			long sum = 0;
 			
-			// Normalize the sample to [-1, 1]
-			float normalizedSample = sample / (float) Short.MAX_VALUE;
+			// For each short
+			for(int i = 0; i < singleSample.length; i += 2)
+			{
+				// Little endian
+				short sample = (short) ((singleSample[i + 1] << 8) | (singleSample[i] & 0xFF));
+				sum += sample * sample;
+			}
 			
-			// Calculate the dB level for this single sample
-			if(normalizedSample == 0)
+			// Immeidately update receiving audio rather than waiting for the end of the sample for analysis
+			if(!hasData && sum != 0)
 			{
-				// Silence
-				loudness = 0;
+				hasData = true;
+				receivingAudio = true;
 			}
-			else
-			{
-				// Gives range from (-infinity, 0)
-				loudness = 20 * (float) Math.log10(Math.abs(normalizedSample));
-				// Transform to 0 to 1
-				loudness = Math.clamp(1 - loudness / -100f, 0, 1);
-			}
+			
+			double rms = Math.sqrt(sum / (singleSample.length / 2));
+			loudness = 1 - Math.clamp((float) (40 * Math.log10(rms / 32768)) / -100, 0, 1);
 			
 			captureBuffer.put(singleSample);
 			bytesRead += read;
+		}
+		
+		// Before we analyze the samples, check if the audio isn't empty
+		if(!hasData)
+		{
+			JScribe.logger.trace("Audio was recorded, but it seemed to be empty");
+			return null;
 		}
 		
 		// Obtain the 16-bit int audio samples (short type in Java)
@@ -329,24 +338,12 @@ public class AudioRecorder extends Thread implements Runnable {
 		// Transform the samples to f32 samples (normalize the values)
 		float[] samples = new float[captureBuffer.capacity() / 2]; // Each short is 2 bytes
 		int i = 0;
-		boolean hasData = false;
 		
 		while(shortBuffer.hasRemaining())
 		{
 			// Normalize the 16-bit short value to a float between -1 and 1
 			float newVal = Math.max(-1f, Math.min(((float) shortBuffer.get()) / Short.MAX_VALUE, 1f));
 			samples[i++] = newVal;
-			
-			if(!hasData && newVal != 0)
-			{
-				hasData = true;
-			}
-		}
-		
-		if(!hasData)
-		{
-			JScribe.logger.trace("Audio was recorded, but it seemed to be empty");
-			return null;
 		}
 		
 		return samples;

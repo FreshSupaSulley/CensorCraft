@@ -54,6 +54,7 @@ public class CensorCraft {
 	// GUI
 	private static final long DEGRADE_GUI = 10000;
 	public static MutableComponent GUI_TEXT;
+	public static float JSCRIBE_VOLUME;
 	private static long lastMessage;
 	
 	public CensorCraft(FMLJavaModLoadingContext context)
@@ -168,6 +169,9 @@ public class CensorCraft {
 		// This is only for client ticks
 		if(event.side != LogicalSide.CLIENT)
 			return;
+		
+		// Update bar height
+		JSCRIBE_VOLUME = controller.getAudioLevel();
 		
 		// Degrade old GUI messages
 		if(System.currentTimeMillis() - lastMessage >= DEGRADE_GUI)

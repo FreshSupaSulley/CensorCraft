@@ -37,7 +37,7 @@ public abstract class Config {
 	
 	public static class Client extends Config {
 		
-		public static ConfigValue<Boolean> SHOW_TRANSCRIPTION;
+		public static ConfigValue<Boolean> SHOW_TRANSCRIPTION, SHOW_VOLUME_BAR;
 		public static ConfigValue<Long> SAMPLE_LENGTH, SAMPLE_OVERLAP_LENGTH;
 		public static ConfigValue<String> PREFERRED_MIC;
 		
@@ -49,6 +49,7 @@ public abstract class Config {
 			PREFERRED_MIC = builder.comment("Name of microphone, otherwise uses first available").define("preferred_mic", "");
 //			INDICATE_RECORDING = builder.comment("Shows permanent text in-game indicating recording status").define("indicate_recording", true);
 			SHOW_TRANSCRIPTION = builder.comment("Display live transcription").define("show_transcription", true);
+			SHOW_VOLUME_BAR = builder.comment("Display microphone volume").define("show_mic_volume", true);
 			
 			// Recording
 			builder.pop().comment("Only mess with these settings if you know what you're doing").push("transcription");

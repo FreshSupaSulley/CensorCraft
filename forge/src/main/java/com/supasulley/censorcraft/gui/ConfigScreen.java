@@ -49,10 +49,23 @@ public class ConfigScreen extends Screen {
 		// Config.Client.INDICATE_RECORDING.set(value);
 		// }).build()).getBottom();
 		
-		int bottom = addRenderableWidget(Checkbox.builder(Component.literal("Show spoken text"), font).pos(PADDING, PADDING).tooltip(Tooltip.create(Component.literal("Displays live audio transcriptions"))).selected(Config.Client.SHOW_TRANSCRIPTION.get()).onValueChange((button, value) ->
+		Checkbox checkbox = addRenderableWidget(Checkbox.builder(Component.literal("Show spoken text"), font).tooltip(Tooltip.create(Component.literal("Displays live audio transcriptions"))).selected(Config.Client.SHOW_TRANSCRIPTION.get()).onValueChange((button, value) ->
 		{
 			Config.Client.SHOW_TRANSCRIPTION.set(value);
-		}).build()).getBottom();
+		}).build());
+		
+		Checkbox volumeBar = addRenderableWidget(Checkbox.builder(Component.literal("Show microphone volume"), font).tooltip(Tooltip.create(Component.literal("Displays a volume bar indicating your microphone volume"))).selected(Config.Client.SHOW_VOLUME_BAR.get()).onValueChange((button, value) ->
+		{
+			Config.Client.SHOW_VOLUME_BAR.set(value);
+		}).build());
+		
+		// Combine them
+		int totalCheckboxWidth = checkbox.getWidth() + volumeBar.getWidth();
+		
+		checkbox.setPosition(width / 2 - totalCheckboxWidth / 2 - PADDING, PADDING);
+		volumeBar.setPosition(width / 2 + PADDING, PADDING);
+		
+		int bottom = checkbox.getBottom();
 		
 		final int restartButtonY = this.height - (PADDING + Button.DEFAULT_HEIGHT) * 2;
 		final int listWidth = this.width / 2;
