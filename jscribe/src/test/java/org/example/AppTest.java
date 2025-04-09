@@ -18,7 +18,7 @@ class AppTest {
 	void testModel()
 	{
 		JScribe scribe = new JScribe(Paths.get("src/test/resources/ggml-tiny.en.bin"));
-		scribe.start("", 2000, 500, 5000);
+		scribe.start("", 1500, 500);
 		
 		// Translate for a while
 		long start = System.currentTimeMillis();

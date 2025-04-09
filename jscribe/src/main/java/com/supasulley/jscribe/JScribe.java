@@ -47,26 +47,19 @@ public class JScribe implements UncaughtExceptionHandler {
 	 * @return true if transcription started, false otherwise
 	 */
 	
-	/**
-	 * Starts live audio transcription.
-	 * 
-	 * @param microphone preferred microphone name
-	 * @param windowSize length of appended audio samples in milliseconds sent to the model
-	 * @param latency    interval in milliseconds for when the window is sent to the model
-	 * @return true if transcription started, false otherwise
-	 */
+	
 	public boolean start(String microphone, long windowSize, long latency)
 	{
 		if(isRunning())
 		{
 			return false;
 		}
-		
-		if(windowSize <= 0 || latency <= 0 || latency )
-		{
-			JScribe.logger.error("JScribe is misconfigured");
-			return false;
-		}
+//		
+//		if(windowSize <= 0 || latency <= 0 || latency )
+//		{
+//			JScribe.logger.error("JScribe is misconfigured");
+//			return false;
+//		}
 		
 		logger.info("Starting JScribe");
 		
@@ -105,7 +98,7 @@ public class JScribe implements UncaughtExceptionHandler {
 			transcriber.join();
 		} catch(InterruptedException e)
 		{
-			JScribe.logger.error("Failed to join JScribe threads", e);
+			JScribe.logger.error("Failed to join JScribe threads (running: {}, {})", recorder.isAlive(), transcriber.isAlive(), e);
 			e.printStackTrace();
 		}
 		
