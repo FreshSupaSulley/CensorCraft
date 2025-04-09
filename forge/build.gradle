@@ -117,8 +117,6 @@ configurations {
 dependencies {
 	shade project(":jscribe")
 	
-	// Bundled by jscribe anyways thanks to shading
-	//shade "net.lingala.zip4j:zip4j:2.11.5"
 	//compile fileTree(dir: 'src/main/resources/lib', includes: ['*.jar'])
 	
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"

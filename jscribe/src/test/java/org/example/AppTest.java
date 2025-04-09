@@ -13,44 +13,19 @@ class AppTest {
 	
 	/**
 	 * This doesn't work when running from the IDE on Mac. Thanks Tim Apple!
-	 * 
-	 * @throws Exception
 	 */
 	@Test
-	void testModel() throws Exception
-	{
-//		JScribe scribe = new JScribe(Paths.get("src/test/resources/ggml-tiny.en.bin"));
-//		scribe.start();
-		
-		// Translate for a while
-//		Thread.sleep(30000);
-	}
-	
-	public static void main(String[] args) throws Exception
+	void testModel()
 	{
 		JScribe scribe = new JScribe(Paths.get("src/test/resources/ggml-tiny.en.bin"));
-		scribe.start("", 5000, 500, 5000);
+		scribe.start("", 1500, 500);
 		
 		// Translate for a while
-		while(true)
+		long start = System.currentTimeMillis();
+		
+		while(System.currentTimeMillis() - start < 30000 && !scribe.isRunningAndNoAudio())
 		{
-			scribe.stop();
-			
-			if(scribe.isRunning())
-			{
-				System.out.println("problem");
-				System.exit(1);
-			}
-			long time = System.currentTimeMillis();
-			scribe.start("", 5000, 500, 5000);
-			System.out.println(System.currentTimeMillis() - time);
-			if(!scribe.isRunning())
-			{
-				System.out.println("problem2");
-				System.exit(1);
-			}
-			Thread.sleep(1000);
-			System.out.println("This should be true: " + scribe.isRunning() + " " + scribe.isRunningAndNoAudio());
+			for(String buffer = null; !(buffer = scribe.getBuffer()).equals(""); System.out.println(buffer));
 		}
 	}
 }
