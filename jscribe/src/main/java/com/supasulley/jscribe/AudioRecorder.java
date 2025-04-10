@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import javax.sound.sampled.AudioFileFormat;
@@ -132,11 +133,12 @@ public class AudioRecorder extends Thread implements Runnable {
 					// If we have a window
 					if(window != null)
 					{
-						final int overlapLength = (int) (FORMAT.getSampleRate() * (overlap / 1000f));
-						final int windowLength = (int) (FORMAT.getSampleRate() * ((latency + overlap) / 1000f));
+						final int windowLength = ((int) (FORMAT.getSampleRate() * (FORMAT.getSampleSizeInBits() / 8) * FORMAT.getChannels() * ((latency + overlap) / 1000f)));
+//						final int windowLength = (int) ((FORMAT.getSampleRate() * (FORMAT.getSampleSizeInBits() / 8) * FORMAT.getChannels() * (latency + overlap)) / 1000f);
+//						final int windowLength = (int) (FORMAT.getSampleRate() * ((latency + overlap) / 1000f));
 						
 						// If the current window doesn't have enough samples for the full window size yet
-//						if(window.length < windowLength)
+						if(window.length < windowLength)
 						{
 							JScribe.logger.trace("Expanding window");
 							
@@ -144,68 +146,58 @@ public class AudioRecorder extends Thread implements Runnable {
 							// If that exceeds the windowLength, cap it
 							float[] newWindow = new float[Math.min(windowLength, window.length + rawSamples.length)];
 							
-							System.out.println("putting window of size " + window.length + " into newwindow with size " + newWindow.length + " with rawsamples of size " + rawSamples.length);
 							// Prepend newWindow with old IF we have space for it
-							System.arraycopy(window, (int) (window.length - overlapLength), newWindow, 0, overlapLength);
+							System.arraycopy(window, (window.length + rawSamples.length) - newWindow.length, newWindow, 0, newWindow.length - rawSamples.length);
 							
 							window = newWindow;
 						}
 						// Shift window
-//						else
-//						{
-//							JScribe.logger.trace("Shifting window");
-//							
-//							// Shift window to the left to make room for the new sample
-//							float[] newWindow = new float[windowLength];
-//							
-//							// Copy old window, making enough room for the raw samples at the end
-//							System.arraycopy(window, rawSamples.length, newWindow, 0, window.length - rawSamples.length);
-//							
-//							window = newWindow;
-//						}
+						else
+						{
+							JScribe.logger.trace("Shifting window");
+							
+							// Shift window to the left to make room for the new sample
+							float[] newWindow = new float[windowLength];
+							
+							// Copy old window, making enough room for the raw samples at the end
+							System.arraycopy(window, rawSamples.length, newWindow, 0, window.length - rawSamples.length);
+							
+							window = newWindow;
+						}
 						
 						// Append window with new samples at the very end
 						System.arraycopy(rawSamples, 0, window, window.length - rawSamples.length, rawSamples.length);
 					}
 					else
 					{
-						JScribe.logger.trace("No last samples to prepend");
+						JScribe.logger.info("No last samples to prepend");
 						window = rawSamples;
 					}
 				} catch(InterruptedException e)
 				{
+					JScribe.logger.info("Interrupted", e);
 					continue;
 				}
-				
-				// Write to file for testing
-				final float[] samples2 = window;
-				Thread thread = new Thread(() ->
-				{
-					try
-					{
-						writeWavFile(System.currentTimeMillis() + ".wav", samples2, FORMAT.getSampleRate(), FORMAT.getChannels());
-					} catch(IOException | LineUnavailableException e)
-					{
-						e.printStackTrace();
-					}
-				});
-				thread.start();
 				
 				/*
 				 * The priority is to make transcription as live as possible. The more files we have on the transcription backlog, the longer we should record a sample for to
 				 * help reduce that backlog. The consequence is transcription becomes more delayed. Do not allow samples too long.
 				 */
-				long newLatency = baseLatency * (transcription.getBacklog() + 1);
+//				long newLatency = baseLatency * (transcription.getBacklog() + 1);
+//				
+//				newLatency = (++sus) * baseLatency;
 				
 				// Pass samples to transcriber
+				// Do we need to make sure window wont change??
+//				transcription.newSample(Arrays.copyOf(window, window.length));
 				transcription.newSample(window);
 				
 				// If transcription is taking longer than expected
-				if(newLatency > latency)
-				{
-					JScribe.logger.warn("Backlog of {}. Raising latency from {}ms to {}ms", transcription.getBacklog(), latency, newLatency);
-					latency = newLatency;
-				}
+//				if(newLatency > latency)
+//				{
+//					JScribe.logger.warn("Backlog of {}. Raising latency from {}ms to {}ms", transcription.getBacklog(), latency, newLatency);
+//					latency = newLatency;
+//				}
 			}
 		} catch(LineUnavailableException e)
 		{
@@ -215,7 +207,7 @@ public class AudioRecorder extends Thread implements Runnable {
 			JScribe.logger.error("Something went wrong reading audio input", e);
 		}
 	}
-	
+	static int sus =0 ;
 	private static byte[] convertToPCM(float[] samples)
 	{
 		byte[] pcmData = new byte[samples.length * 2]; // 2 bytes per sample (16-bit)
@@ -254,8 +246,8 @@ public class AudioRecorder extends Thread implements Runnable {
 	{
 		final int sampleSize = 2048 * (FORMAT.getSampleSizeInBits() / 8);
 		
-		// Calcualte how long this sample has to be
-		ByteBuffer captureBuffer = ByteBuffer.allocate((int) ((FORMAT.getSampleRate() * (FORMAT.getSampleSizeInBits() / 8) * FORMAT.getChannels() * latency) / 1000f));
+		// Calculate how many bytes an audio sample of length latency should have
+		ByteBuffer captureBuffer = ByteBuffer.allocate((int) (FORMAT.getSampleRate() * (FORMAT.getSampleSizeInBits() / 8) * FORMAT.getChannels() * (latency / 1000f)));
 		captureBuffer.order(ByteOrder.LITTLE_ENDIAN);
 		
 		// Read individual samples until assembled

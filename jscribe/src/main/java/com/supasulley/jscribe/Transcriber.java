@@ -8,6 +8,8 @@ import java.nio.file.StandardCopyOption;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.stream.Stream;
 
+import javax.sound.sampled.LineUnavailableException;
+
 import io.github.givimad.whisperjni.WhisperContext;
 import io.github.givimad.whisperjni.WhisperFullParams;
 import io.github.givimad.whisperjni.WhisperJNI;
@@ -19,10 +21,9 @@ import net.lingala.zip4j.ZipFile;
 public class Transcriber extends Thread implements Runnable {
 	
 	private final WhisperJNI whisper = new WhisperJNI();
-	private final LinkedBlockingQueue<float[]> samples = new LinkedBlockingQueue<float[]>(MAX_SAMPLES);
+	private final LinkedBlockingQueue<float[]> samples = new LinkedBlockingQueue<float[]>();
 	private final StringBuffer buffer = new StringBuffer();
 	
-	public static final int MAX_SAMPLES = 20;
 	private static final WhisperFullParams params;
 	
 	private Path modelPath;
@@ -181,19 +182,19 @@ public class Transcriber extends Thread implements Runnable {
 					bufferIndex += collectSamples[i].length;
 				}
 				
-//				final float[] samples2 = toProcess;
-//				Thread thread = new Thread(() ->
-//				{
-//					try
-//					{
-//						AudioRecorder.writeWavFile(System.currentTimeMillis() + ".wav", samples2, AudioRecorder.FORMAT.getSampleRate(), AudioRecorder.FORMAT.getChannels());
-//					} catch(IOException | LineUnavailableException e)
-//					{
-//						// FIXME Auto-generated catch block
-//						e.printStackTrace();
-//					}
-//				});
-//				thread.start();
+				final float[] samples2 = toProcess;
+				Thread thread = new Thread(() ->
+				{
+					try
+					{
+						AudioRecorder.writeWavFile(System.currentTimeMillis() + ".wav", samples2, AudioRecorder.FORMAT.getSampleRate(), AudioRecorder.FORMAT.getChannels());
+					} catch(IOException | LineUnavailableException e)
+					{
+						// FIXME Auto-generated catch block
+						e.printStackTrace();
+					}
+				});
+				thread.start();
 				
 				JScribe.logger.info("Transcribing {} recordings", numSamples);
 				
@@ -266,75 +267,11 @@ public class Transcriber extends Thread implements Runnable {
 		return result;
 	}
 	
-	// private static void convertAudio(String inputFilePath, String outputFilePath)
-	// {
-	// try
-	// {
-	// File inputFile = new File(inputFilePath);
-	// AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(inputFile);
-	//
-	// // Specify the desired format (16-bit PCM, mono, 16000 Hz)
-	// AudioFormat targetFormat = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 16000, 16, 1, 2, 16000, false);
-	//
-	// // Convert the audio
-	// AudioInputStream convertedStream = AudioSystem.getAudioInputStream(targetFormat, audioInputStream);
-	//
-	// // Write to the output file (e.g., WAV or AIFF)
-	// File outputFile = new File(outputFilePath);
-	// AudioSystem.write(convertedStream, AudioFileFormat.Type.WAVE, outputFile);
-	// System.out.println("Audio conversion completed.");
-	// } catch(Exception e)
-	// {
-	// e.printStackTrace();
-	// }
-	// }
-	
-	// private float[] getSamples(File file) throws UnsupportedAudioFileException, IOException
-	// {
-	// // convertAudio(file.getAbsolutePath(), file.getAbsolutePath());
-	//
-	// // sample is a 16 bit int 16000hz little endian wav file
-	// AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(file);
-	// // read all the available data to a little endian capture buffer
-	// ByteBuffer captureBuffer = ByteBuffer.allocate(audioInputStream.available());
-	// captureBuffer.order(ByteOrder.LITTLE_ENDIAN);
-	// int read = audioInputStream.read(captureBuffer.array());
-	// if(read == -1)
-	// return null;
-	// // obtain the 16 int audio samples, short type in java
-	// var shortBuffer = captureBuffer.asShortBuffer();
-	// // transform the samples to f32 samples
-	// float[] samples = new float[captureBuffer.capacity() / 2];
-	// var i = 0;
-	// boolean hasData = false;
-	// while(shortBuffer.hasRemaining())
-	// {
-	// // If the data is above 0
-	// float newVal = Float.max(-1f, Float.min(((float) shortBuffer.get()) / (float) Short.MAX_VALUE, 1f));
-	// samples[i++] = newVal;
-	//
-	// if(!hasData && newVal != 0)
-	// {
-	// hasData = true;
-	// }
-	// }
-	//
-	// if(!hasData)
-	// return null;
-	// return samples;
-	// }
-	
 	public void newSample(float[] sample)
 	{
 		if(!running)
 		{
 			throw new IllegalStateException("Transcriber is dead");
-		}
-		
-		if(samples.size() >= MAX_SAMPLES)
-		{
-			JScribe.logger.error("Transcription is taking too long! Exceeded max samples ({})", MAX_SAMPLES);
-			return;
 		}
 		
 		samples.add(sample);
