@@ -121,13 +121,13 @@ dependencies {
 	
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
     
-    // Apply Mixin AP
+    // Apply Mixin AP to generate refmap
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
 }
 
 mixin {
-    add sourceSets.main, 'mixin.censorcraft.refmap.json'
-    config "mixins.censorcraft.json"
+    //add sourceSets.main, 'censorcraft.refmap.json'
+    config "censorcraft.mixins.json"
 }
 
 // This block of code expands all declared replace properties in the specified resource targets.
@@ -177,7 +177,7 @@ jar {
     archiveClassifier = 'slim'
     manifest {
         attributes([
-        	"MixinConfigs": "mixins.censorcraft.json",
+        	"MixinConfigs": "censorcraft.mixins.json",
             'Specification-Title'     : mod_id,
             'Specification-Vendor'    : mod_authors,
             'Specification-Version'   : '1',

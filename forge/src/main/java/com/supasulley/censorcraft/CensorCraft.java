@@ -106,7 +106,7 @@ public class CensorCraft {
 	
 	private void startJScribe()
 	{
-		if(controller.start(Config.Client.PREFERRED_MIC.get(), 500, 1500))
+		if(controller.start(Config.Client.PREFERRED_MIC.get(), 750, 1000))
 		{
 			MutableComponent component = Component.literal("Now listening to ");
 			component.append(Component.literal(controller.getActiveMicrophone().getName() + ". ").withStyle(style -> style.withBold(true)));
