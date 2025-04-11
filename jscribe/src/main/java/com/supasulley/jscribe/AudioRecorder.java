@@ -1,15 +1,11 @@
 package com.supasulley.jscribe;
 
-import java.io.ByteArrayInputStream;
-import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
-import javax.sound.sampled.AudioFileFormat;
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
@@ -24,7 +20,7 @@ public class AudioRecorder extends Thread implements Runnable {
 	public static final AudioFormat FORMAT = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 16000, 16, 1, 2, 16000, false);
 	
 	private final Transcriber transcription;
-	private final long baseLatency, overlap;
+	private final long overlap;
 	
 	/** Can change based on transcription speed */
 	private long latency;
@@ -37,10 +33,8 @@ public class AudioRecorder extends Thread implements Runnable {
 	public AudioRecorder(Transcriber listener, String micName, long latency, long overlap)
 	{
 		this.transcription = listener;
-		this.baseLatency = latency;
-		this.overlap = overlap;
-		
 		this.latency = latency;
+		this.overlap = overlap;
 		
 		List<Mixer.Info> microphones = getMicrophones();
 		
@@ -133,9 +127,7 @@ public class AudioRecorder extends Thread implements Runnable {
 					// If we have a window
 					if(window != null)
 					{
-						final int windowLength = ((int) (FORMAT.getSampleRate() * (FORMAT.getSampleSizeInBits() / 8) * FORMAT.getChannels() * ((latency + overlap) / 1000f)));
-//						final int windowLength = (int) ((FORMAT.getSampleRate() * (FORMAT.getSampleSizeInBits() / 8) * FORMAT.getChannels() * (latency + overlap)) / 1000f);
-//						final int windowLength = (int) (FORMAT.getSampleRate() * ((latency + overlap) / 1000f));
+						final int windowLength = (int) (FORMAT.getSampleRate() * ((latency + overlap) / 1000f));
 						
 						// If the current window doesn't have enough samples for the full window size yet
 						if(window.length < windowLength)
@@ -207,40 +199,40 @@ public class AudioRecorder extends Thread implements Runnable {
 			JScribe.logger.error("Something went wrong reading audio input", e);
 		}
 	}
-	static int sus =0 ;
-	private static byte[] convertToPCM(float[] samples)
-	{
-		byte[] pcmData = new byte[samples.length * 2]; // 2 bytes per sample (16-bit)
-		for(int i = 0; i < samples.length; i++)
-		{
-			// Convert the float sample (-1.0 to 1.0) to a 16-bit signed integer
-			short pcmSample = (short) (samples[i] * Short.MAX_VALUE);
-			pcmData[2 * i] = (byte) (pcmSample & 0xFF);
-			pcmData[2 * i + 1] = (byte) ((pcmSample >> 8) & 0xFF);
-		}
-		return pcmData;
-	}
 	
-	public static void writeWavFile(String filename, float[] samples, float sampleRate, int numChannels) throws IOException, LineUnavailableException
-	{
-		// Convert the float[] to 16-bit PCM data
-		byte[] pcmData = convertToPCM(samples);
-		
-		// Create a byte array input stream from the PCM data
-		ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(pcmData);
-		
-		// Define audio format (16-bit PCM, mono/stereo, sample rate)
-		AudioFormat format = new AudioFormat(sampleRate, 16, numChannels, true, false); // signed 16-bit PCM, big-endian
-		
-		// Create an AudioInputStream from the byte array input stream
-		AudioInputStream audioInputStream = new AudioInputStream(byteArrayInputStream, format, pcmData.length / format.getFrameSize());
-		
-		// Write the AudioInputStream to a WAV file using AudioSystem
-		File outputFile = new File(filename);
-		AudioSystem.write(audioInputStream, AudioFileFormat.Type.WAVE, outputFile);
-		
-		System.out.println("WAV file has been written to: " + outputFile.getAbsolutePath());
-	}
+//	private static byte[] convertToPCM(float[] samples)
+//	{
+//		byte[] pcmData = new byte[samples.length * 2]; // 2 bytes per sample (16-bit)
+//		for(int i = 0; i < samples.length; i++)
+//		{
+//			// Convert the float sample (-1.0 to 1.0) to a 16-bit signed integer
+//			short pcmSample = (short) (samples[i] * Short.MAX_VALUE);
+//			pcmData[2 * i] = (byte) (pcmSample & 0xFF);
+//			pcmData[2 * i + 1] = (byte) ((pcmSample >> 8) & 0xFF);
+//		}
+//		return pcmData;
+//	}
+//	
+//	public static void writeWavFile(String filename, float[] samples, float sampleRate, int numChannels) throws IOException, LineUnavailableException
+//	{
+//		// Convert the float[] to 16-bit PCM data
+//		byte[] pcmData = convertToPCM(samples);
+//		
+//		// Create a byte array input stream from the PCM data
+//		ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(pcmData);
+//		
+//		// Define audio format (16-bit PCM, mono/stereo, sample rate)
+//		AudioFormat format = new AudioFormat(sampleRate, 16, numChannels, true, false); // signed 16-bit PCM, big-endian
+//		
+//		// Create an AudioInputStream from the byte array input stream
+//		AudioInputStream audioInputStream = new AudioInputStream(byteArrayInputStream, format, pcmData.length / format.getFrameSize());
+//		
+//		// Write the AudioInputStream to a WAV file using AudioSystem
+//		File outputFile = new File(filename);
+//		AudioSystem.write(audioInputStream, AudioFileFormat.Type.WAVE, outputFile);
+//		
+//		System.out.println("WAV file has been written to: " + outputFile.getAbsolutePath());
+//	}
 	
 	private float[] recordSample(AudioInputStream stream) throws InterruptedException, IOException
 	{

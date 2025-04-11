@@ -8,8 +8,6 @@ import java.nio.file.StandardCopyOption;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.stream.Stream;
 
-import javax.sound.sampled.LineUnavailableException;
-
 import io.github.givimad.whisperjni.WhisperContext;
 import io.github.givimad.whisperjni.WhisperFullParams;
 import io.github.givimad.whisperjni.WhisperJNI;
@@ -182,19 +180,19 @@ public class Transcriber extends Thread implements Runnable {
 					bufferIndex += collectSamples[i].length;
 				}
 				
-				final float[] samples2 = toProcess;
-				Thread thread = new Thread(() ->
-				{
-					try
-					{
-						AudioRecorder.writeWavFile(System.currentTimeMillis() + ".wav", samples2, AudioRecorder.FORMAT.getSampleRate(), AudioRecorder.FORMAT.getChannels());
-					} catch(IOException | LineUnavailableException e)
-					{
-						// FIXME Auto-generated catch block
-						e.printStackTrace();
-					}
-				});
-				thread.start();
+//				final float[] samples2 = toProcess;
+//				Thread thread = new Thread(() ->
+//				{
+//					try
+//					{
+//						AudioRecorder.writeWavFile(System.currentTimeMillis() + ".wav", samples2, AudioRecorder.FORMAT.getSampleRate(), AudioRecorder.FORMAT.getChannels());
+//					} catch(IOException | LineUnavailableException e)
+//					{
+//						// FIXME Auto-generated catch block
+//						e.printStackTrace();
+//					}
+//				});
+//				thread.start();
 				
 				JScribe.logger.info("Transcribing {} recordings", numSamples);
 				

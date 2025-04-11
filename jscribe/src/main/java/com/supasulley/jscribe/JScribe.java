@@ -40,31 +40,27 @@ public class JScribe implements UncaughtExceptionHandler {
 	/**
 	 * Starts live audio transcription.
 	 * 
-	 * @param microphone  preferred microphone name
-	 * @param recordTime  audio sample time in milliseconds (must be greater than 0)
-	 * @param overlapTime amount of overlap between samples in milliseconds (must not exceed recordTime)
-	 * @param overlapTime amount of overlap between samples in milliseconds (at least recordTime + overlapTime). 0 indicates no max
+	 * @param microphone preferred microphone name (can be blank)
+	 * @param latency    audio sample length in milliseconds
+	 * @param overlap    extra audio in milliseconds to catch stray words
 	 * @return true if transcription started, false otherwise
 	 */
-	
-	
-	public boolean start(String microphone, long windowSize, long latency)
+	public boolean start(String microphone, long latency, long overlap)
 	{
 		if(isRunning())
 		{
 			return false;
 		}
-//		
-//		if(windowSize <= 0 || latency <= 0 || latency )
-//		{
-//			JScribe.logger.error("JScribe is misconfigured");
-//			return false;
-//		}
+		
+		if(latency <= 0)
+		{
+			throw new IllegalStateException("JScribe is misconfigured");
+		}
 		
 		logger.info("Starting JScribe");
 		
 		// where do i put running = true lol
-		recorder = new AudioRecorder(transcriber = new Transcriber(modelPath), microphone, windowSize, latency);
+		recorder = new AudioRecorder(transcriber = new Transcriber(modelPath), microphone, latency, overlap);
 		// Report errors to this thread
 		recorder.setUncaughtExceptionHandler(this);
 		transcriber.setUncaughtExceptionHandler(this);
