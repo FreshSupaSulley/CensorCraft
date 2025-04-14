@@ -18,13 +18,19 @@ class AppTest {
 	void testModel()
 	{
 		JScribe scribe = new JScribe(Paths.get("src/test/resources/ggml-tiny.en.bin"));
-		scribe.start("", 500, 1500);
+		scribe.start("", 1000, 500);
 		
 		// Translate for a while
-		long start = System.currentTimeMillis();
+		long start = System.currentTimeMillis(), lastAudio = start;
 		
 		while(System.currentTimeMillis() - start < 30000 && !scribe.isRunningAndNoAudio())
 		{
+			if(System.currentTimeMillis() - lastAudio > 200)
+			{
+				lastAudio = System.currentTimeMillis();
+				System.out.println("Audio level: " + scribe.getAudioLevel());
+			}
+			
 			for(String buffer = null; !(buffer = scribe.getBuffer()).equals(""); System.out.println(buffer));
 		}
 	}

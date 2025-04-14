@@ -1,6 +1,6 @@
 import java.util.List;
 
-import com.supasulley.censorcraft.Trie;
+import com.supasulley.network.Trie;
 
 class AppTest {
 	

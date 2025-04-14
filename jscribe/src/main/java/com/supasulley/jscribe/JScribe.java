@@ -140,11 +140,11 @@ public class JScribe implements UncaughtExceptionHandler {
 	}
 	
 	/**
-	 * @return number of queued audio files needed to be transcribed
+	 * @return milliseconds behind the current audio feed
 	 */
-	public int getBacklog()
+	public long getTimeBehind()
 	{
-		return transcriber.getBacklog();
+		return transcriber.getTimeBehind();
 	}
 	
 	/**
@@ -154,10 +154,6 @@ public class JScribe implements UncaughtExceptionHandler {
 	 */
 	public String getBuffer()
 	{
-		// if(Math.random() < 0.05)
-		// {
-		// return System.currentTimeMillis() + "";
-		// }
 		return transcriber.getBuffer();
 	}
 	

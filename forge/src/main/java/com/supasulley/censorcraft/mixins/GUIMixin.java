@@ -47,7 +47,8 @@ public abstract class GUIMixin {
 			graphics.fill(RenderType.guiOverlay(), PADDING, PADDING + barHeight, PADDING + barWidth, PADDING + barHeight - Math.clamp((int) (CensorCraft.JSCRIBE_VOLUME * barHeight), 1, barHeight), 0xAAFFFFFF);
 		}
 		
-		graphics.drawWordWrap(Minecraft.getInstance().font, component, x, PADDING, graphics.guiWidth() - PADDING * 2, 16777215);
+		// Color is ARGB
+		graphics.drawWordWrap(Minecraft.getInstance().font, component, x, PADDING, graphics.guiWidth() - x - PADDING, 0xFFFFFFFF);
 	}
 	
 //	/**

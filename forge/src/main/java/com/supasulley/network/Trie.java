@@ -1,4 +1,4 @@
-package com.supasulley.censorcraft;
+package com.supasulley.network;
 
 import java.util.*;
 

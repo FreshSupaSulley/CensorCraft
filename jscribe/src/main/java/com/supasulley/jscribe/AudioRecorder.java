@@ -165,9 +165,12 @@ public class AudioRecorder extends Thread implements Runnable {
 						JScribe.logger.info("No last samples to prepend");
 						window = rawSamples;
 					}
+					
+					// Send to transcriber
+					transcription.newSample(window);
 				} catch(InterruptedException e)
 				{
-					JScribe.logger.info("Interrupted", e);
+					JScribe.logger.debug("Interrupted", e);
 					continue;
 				}
 				
@@ -182,7 +185,6 @@ public class AudioRecorder extends Thread implements Runnable {
 				// Pass samples to transcriber
 				// Do we need to make sure window wont change??
 //				transcription.newSample(Arrays.copyOf(window, window.length));
-				transcription.newSample(window);
 				
 				// If transcription is taking longer than expected
 //				if(newLatency > latency)
@@ -253,8 +255,7 @@ public class AudioRecorder extends Thread implements Runnable {
 			// For some reason you can't just rely on Thread.interrupted. Doesn't seem to work all of the time
 			if(!running || Thread.interrupted())
 			{
-				JScribe.logger.info("Audio recorder was interrupted");
-				throw new InterruptedException();
+				throw new InterruptedException("Audio recorder was interrupted");
 			}
 			
 			byte[] singleSample = new byte[Math.min(sampleSize, captureBuffer.remaining())];
@@ -285,7 +286,10 @@ public class AudioRecorder extends Thread implements Runnable {
 			}
 			
 			double rms = Math.sqrt(sum / (singleSample.length / 2));
-			loudness = 1 - Math.clamp((float) (40 * Math.log10(rms / 32768)) / -100, 0, 1);
+			// number * Math.log10
+			// number is the magic here
+			// The higher the number, the less sensitive to lower values?
+			loudness = 1 - Math.clamp((float) (30 * Math.log10(rms / 32768)) / -100, 0, 1);
 			
 			captureBuffer.put(singleSample);
 			bytesRead += read;

@@ -19,7 +19,7 @@ import net.lingala.zip4j.ZipFile;
 public class Transcriber extends Thread implements Runnable {
 	
 	private final WhisperJNI whisper = new WhisperJNI();
-	private final LinkedBlockingQueue<float[]> samples = new LinkedBlockingQueue<float[]>();
+	private final LinkedBlockingQueue<AudioSample> samples = new LinkedBlockingQueue<AudioSample>();
 	private final StringBuffer buffer = new StringBuffer();
 	
 	private static final WhisperFullParams params;
@@ -27,7 +27,7 @@ public class Transcriber extends Thread implements Runnable {
 	private Path modelPath;
 	private boolean running = true;
 	
-	private long timeToTranscribe;
+	private long lastTimestamp = System.currentTimeMillis();
 	
 	static
 	{
@@ -47,15 +47,15 @@ public class Transcriber extends Thread implements Runnable {
 		String osName = System.getProperty("os.name").toLowerCase();
 		String osArch = System.getProperty("os.arch").toLowerCase();
 		
-		JScribe.logger.info("OS: " + osName);
-		JScribe.logger.info("Arch: " + osArch);
+		JScribe.logger.debug("OS: " + osName);
+		JScribe.logger.debug("Arch: " + osArch);
 		
 		String resourceName = null;
 		
 		// Mac
 		if(osName.contains("mac") || osName.contains("darwin"))
 		{
-			JScribe.logger.info("On Mac");
+			JScribe.logger.debug("On Mac");
 			
 			// osArch doesn't help for differentiating x86-64 / Arm macs
 			// String trueArch = new String(new ProcessBuilder("uname", "-m").start().getInputStream().readAllBytes()).trim();
@@ -74,7 +74,7 @@ public class Transcriber extends Thread implements Runnable {
 		}
 		else if(osName.contains("win"))
 		{
-			JScribe.logger.info("On Windows");
+			JScribe.logger.debug("On Windows");
 			
 			if(osArch.contains("amd64") || osArch.contains("x86_64"))
 			{
@@ -83,7 +83,7 @@ public class Transcriber extends Thread implements Runnable {
 		}
 		else if(osName.contains("nix") || osName.contains("nux") || osName.contains("aix"))
 		{
-			JScribe.logger.info("On Linux");
+			JScribe.logger.debug("On Linux");
 			
 			if(osArch.contains("amd64") || osArch.contains("x86_64"))
 			{
@@ -157,17 +157,23 @@ public class Transcriber extends Thread implements Runnable {
 					continue;
 				}
 				
-				long startTime = System.currentTimeMillis();
-				
 				// Squash all requests into one batch to stay up to date
 				final int numSamples = samples.size();
 				float[][] collectSamples = new float[numSamples][];
-				
+				long firstTimestamp = 0;
 				int bufferSize = 0;
 				
 				for(int i = 0; i < numSamples; i++)
 				{
-					collectSamples[i] = samples.take();
+					AudioSample sample = samples.take();
+					collectSamples[i] = sample.samples();
+					
+					// The first timestamp is all we care about
+					if(firstTimestamp == 0)
+					{
+						firstTimestamp = sample.timestamp();
+					}
+					
 					bufferSize += collectSamples[i].length;
 				}
 				
@@ -180,19 +186,19 @@ public class Transcriber extends Thread implements Runnable {
 					bufferIndex += collectSamples[i].length;
 				}
 				
-//				final float[] samples2 = toProcess;
-//				Thread thread = new Thread(() ->
-//				{
-//					try
-//					{
-//						AudioRecorder.writeWavFile(System.currentTimeMillis() + ".wav", samples2, AudioRecorder.FORMAT.getSampleRate(), AudioRecorder.FORMAT.getChannels());
-//					} catch(IOException | LineUnavailableException e)
-//					{
-//						// FIXME Auto-generated catch block
-//						e.printStackTrace();
-//					}
-//				});
-//				thread.start();
+				// final float[] samples2 = toProcess;
+				// Thread thread = new Thread(() ->
+				// {
+				// try
+				// {
+				// AudioRecorder.writeWavFile(System.currentTimeMillis() + ".wav", samples2, AudioRecorder.FORMAT.getSampleRate(), AudioRecorder.FORMAT.getChannels());
+				// } catch(IOException | LineUnavailableException e)
+				// {
+				// // FIXME Auto-generated catch block
+				// e.printStackTrace();
+				// }
+				// });
+				// thread.start();
 				
 				JScribe.logger.info("Transcribing {} recordings", numSamples);
 				
@@ -220,8 +226,7 @@ public class Transcriber extends Thread implements Runnable {
 					buffer.append(text);
 				}
 				
-				timeToTranscribe = System.currentTimeMillis() - startTime;
-				JScribe.logger.trace("Took {}ms to transcribe", timeToTranscribe);
+				lastTimestamp = firstTimestamp;
 			}
 		} catch(IOException e)
 		{
@@ -243,21 +248,11 @@ public class Transcriber extends Thread implements Runnable {
 		interrupt();
 	}
 	
-	public int getBacklog()
+	public long getTimeBehind()
 	{
-		return samples.size();
+		return System.currentTimeMillis() - lastTimestamp;
 	}
 	
-	public long getLastTranscriptionTime()
-	{
-		return timeToTranscribe;
-	}
-	
-	/**
-	 * Gets all transcribed words and clears the buffer.
-	 * 
-	 * @return buffer of transcribed words
-	 */
 	public String getBuffer()
 	{
 		String result = buffer.toString();
@@ -272,6 +267,9 @@ public class Transcriber extends Thread implements Runnable {
 			throw new IllegalStateException("Transcriber is dead");
 		}
 		
-		samples.add(sample);
+		samples.add(new AudioSample(System.currentTimeMillis(), sample));
+	}
+	
+	private record AudioSample(long timestamp, float[] samples) {
 	}
 }

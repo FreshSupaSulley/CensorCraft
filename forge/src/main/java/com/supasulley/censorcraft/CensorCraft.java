@@ -4,24 +4,23 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.util.Optional;
 
 import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
 import com.supasulley.censorcraft.gui.ConfigScreen;
 import com.supasulley.jscribe.JScribe;
+import com.supasulley.network.Trie;
 import com.supasulley.network.WordPacket;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraftforge.client.ConfigScreenHandler.ConfigScreenFactory;
+import net.minecraftforge.client.event.ClientPauseChangeEvent;
+import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent.LevelTickEvent;
-import net.minecraftforge.event.entity.EntityJoinLevelEvent;
-import net.minecraftforge.event.entity.EntityLeaveLevelEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.fml.common.Mod;
@@ -41,7 +40,7 @@ public class CensorCraft {
 	public static final Logger LOGGER = LogUtils.getLogger();
 	
 	private static JScribe controller;
-	private boolean playerAlive;
+	private boolean inGame, paused;
 	
 	// Packets
 	public static final long HEARTBEAT_TIME = 30000, HEARTBEAT_SAFETY_NET = 5000;
@@ -52,10 +51,11 @@ public class CensorCraft {
 	public static Trie tabooTree;
 	
 	// GUI
-	private static final long DEGRADE_GUI = 10000;
+	private static final long GUI_TIMEOUT = 10000;
 	public static MutableComponent GUI_TEXT;
 	public static float JSCRIBE_VOLUME;
-	private static long lastMessage;
+	private long lastTranscriptionUpdate;
+	private String transcription;
 	
 	public CensorCraft(FMLJavaModLoadingContext context)
 	{
@@ -106,56 +106,58 @@ public class CensorCraft {
 	
 	private void startJScribe()
 	{
-		if(controller.start(Config.Client.PREFERRED_MIC.get(), 750, 1000))
+		// Call it 1 second of audio time
+		if(controller.start(Config.Client.PREFERRED_MIC.get(), 750, 500))
 		{
 			MutableComponent component = Component.literal("Now listening to ");
 			component.append(Component.literal(controller.getActiveMicrophone().getName() + ". ").withStyle(style -> style.withBold(true)));
-			
+			// Puts above inventory bar
 			Minecraft.getInstance().getChatListener().handleSystemMessage(component, true);
-//			setGUIText(component);
 		}
 	}
 	
-	/**
-	 * Handles when the <b>client-side</b> player joins the world (respawns, logs in, moves between dimensions, etc.)
-	 * 
-	 * <p>
-	 * Only applies to the local player, meaning when server players invoke this event, it's ignored.
-	 * </p>
-	 * 
-	 * @param event {@linkplain EntityJoinLevelEvent}
-	 */
-	@SubscribeEvent
-	public void onJoinWorld(EntityJoinLevelEvent event)
+	private void stopJScribe()
 	{
-		if(!(event.getEntity() instanceof LocalPlayer))
-			return;
-		
-		playerAlive = true;
-		startJScribe();
-	}
-	
-	/**
-	 * Handles when the player leaves the world (dies, exits, quits, etc.).
-	 * 
-	 * <p>
-	 * If the player moves between dimensions (i.e. travels to the nether), this doesn't get fired.
-	 * </p>
-	 * 
-	 * @param event {@linkplain EntityLeaveLevelEvent}
-	 */
-	@SubscribeEvent
-	public void onLeaveWorld(EntityLeaveLevelEvent event)
-	{
-		if(!(event.getEntity() instanceof LocalPlayer))
-			return;
-		
-		playerAlive = false;
-		
 		if(controller.stop())
 		{
 			setGUIText(Component.literal("Stopped recording."));
 		}
+	}
+	
+	@SubscribeEvent
+	public void onPause(ClientPauseChangeEvent.Post event)
+	{
+		// This event is so weird. Detects pausing like every tick regardless if you're in game
+		if(inGame && event.isPaused() != paused)
+		{
+			paused = event.isPaused();
+			LOGGER.info("Paused: {}", paused);
+			
+			if(paused)
+			{
+				stopJScribe();
+			}
+			else
+			{
+				startJScribe();
+			}
+		}
+	}
+	
+	@SubscribeEvent
+	public void onJoinWorld(ClientPlayerNetworkEvent.LoggingIn event)
+	{
+		inGame = true;
+		LOGGER.debug("Client logged out event fired");
+		startJScribe();
+	}
+	
+	@SubscribeEvent
+	public void onLeaveWorld(ClientPlayerNetworkEvent.LoggingOut event)
+	{
+		inGame = false;
+		LOGGER.debug("Client logged out event fired");
+		stopJScribe();
 	}
 	
 	/**
@@ -170,72 +172,82 @@ public class CensorCraft {
 		if(event.side != LogicalSide.CLIENT)
 			return;
 		
-		// Update bar height
-		JSCRIBE_VOLUME = controller.getAudioLevel();
-		
-		// Degrade old GUI messages
-		if(System.currentTimeMillis() - lastMessage >= DEGRADE_GUI)
-		{
-			GUI_TEXT = null;
-		}
-		
-		// If we're supposed to be recording
-		if(playerAlive)
-		{
-			if(!controller.isRunning())
-			{
-				setGUIText(Component.literal("CensorCraft not running!\n").withStyle(style -> style.withBold(true).withColor(0xFF0000)).append(Component.literal("Rejoin world or click Restart in the mod config menu. If this persists, check logs.").withStyle(style -> style.withBold(false).withColor(0xFFFFFF))));
-			}
-			else if(controller.isRunningAndNoAudio())
-			{
-				setGUIText(Component.literal("Not receiving audio!\n").withStyle(style -> style.withBold(true).withColor(0xFF0000)).append(Component.literal("Try changing the microphone in the mod config menu.").withStyle(style -> style.withBold(false).withColor(0xFFFFFF))));
-			}
-		}
+		// Update bar height, "smoothly"
+		// Also give the volume a lil boost
+		JSCRIBE_VOLUME = lerp(Math.clamp(controller.getAudioLevel() * 1.5f, 0, 1), controller.getAudioLevel(), 0.1f);
 		
 		// If the mic source changed, user restarted it, etc.
 		if(ConfigScreen.restart())
 		{
-			setGUIText(Component.literal("Restarting..."));
-			controller.stop();
+//			setGUIText(Component.literal("Restarting...").withStyle(style -> style.withBold(true)));
+			stopJScribe();
 			startJScribe();
 		}
 		
-		// Beyond this point, we need it to be running and actively transcribing
-		// UNLESS the player is dead, in which case we can still send heartbeats
-		if(!controller.isRunning() || controller.isRunningAndNoAudio() && playerAlive)
-			return;
-		
-		String buffer = controller.getBuffer();
-		
-		// If it's not blank, send it
-		// Send empty packet anyways if we need to keep up with the heartbeat
-		if(!buffer.isBlank() || System.currentTimeMillis() - lastWordPacket >= HEARTBEAT_TIME - HEARTBEAT_SAFETY_NET)
+		// If we're supposed to be recording AND we're not paused
+		if(inGame && !paused)
 		{
-			// 0 indicates we're fine
-			lastWordPacket = System.currentTimeMillis();
-			
-			LOGGER.info("Sending \"{}\" (backlog size: {})", buffer, controller.getBacklog());
-			channel.send(new WordPacket(buffer), PacketDistributor.SERVER.noArg());
-			
-			// Only show transcriptions if setting is enabled
-			if(Config.Client.SHOW_TRANSCRIPTION.get())
+			if(!controller.isRunning())
 			{
-				setGUIText(Component.literal(buffer).withColor(0xFFFFFF));
+				setGUIText(Component.literal("CensorCraft not running!\n").withStyle(style -> style.withBold(true).withColor(0xFF0000)).append(Component.literal("Rejoin world or click Restart in the mod config menu. If this persists, check logs.").withStyle(style -> style.withBold(false).withColor(0xFFFFFF))));
+				return;
+			}
+			else if(controller.isRunningAndNoAudio())
+			{
+				setGUIText(Component.literal("Not receiving audio!\n").withStyle(style -> style.withBold(true).withColor(0xFF0000)).append(Component.literal("Try changing the microphone in the mod config menu.").withStyle(style -> style.withBold(false).withColor(0xFFFFFF))));
+				return;
+			}
+			
+			// Beyond this point, we need it to be running and actively transcribing
+			// If it's not blank, send it
+			// Send empty packet anyways if we need to keep up with the heartbeat
+			String buffer = controller.getBuffer();
+			
+			if(!buffer.isBlank())
+			{
+				lastWordPacket = System.currentTimeMillis();
+				
+				LOGGER.info("Sending \"{}\"", buffer);
+				channel.send(new WordPacket(buffer), PacketDistributor.SERVER.noArg());
+				
+				lastTranscriptionUpdate = System.currentTimeMillis();
+				transcription = buffer;
+			}
+			
+			// Show transcriptions only if necessary
+			if(Config.Client.SHOW_TRANSCRIPTION.get() && System.currentTimeMillis() - lastTranscriptionUpdate < GUI_TIMEOUT)
+			{
+				MutableComponent component = Component.literal(transcription + "\n").withColor(0xFFFFFF);
+				
+				if(Config.Client.SHOW_DELAY.get())
+				{
+					component.append(Component.literal(String.format("%.1f", controller.getTimeBehind() / 1000f) + "s behind").withColor(0xAAAAAA));
+				}
+				
+				setGUIText(component);
+			}
+			else
+			{
+				setGUIText(Component.empty());
 			}
 		}
+		
+		// Heartbeat
+		if(System.currentTimeMillis() - lastWordPacket >= HEARTBEAT_TIME - HEARTBEAT_SAFETY_NET)
+		{
+			LOGGER.info("Sending heartbeat (paused: {})", paused);
+			lastWordPacket = System.currentTimeMillis();
+			channel.send(new WordPacket(""), PacketDistributor.SERVER.noArg());
+		}
+	}
+	
+	private float lerp(float a, float b, float percentage)
+	{
+		return a + (b - a) * percentage;
 	}
 	
 	private void setGUIText(MutableComponent component)
 	{
-		lastMessage = System.currentTimeMillis();
 		GUI_TEXT = component;
-	}
-	
-	/**
-	 * @return true if actively recording and transcribing audio, false otherwise
-	 */
-	public static boolean isRecording()
-	{
-		return Optional.ofNullable(controller).map(jscribe -> jscribe.isRunning()).orElse(false);
 	}
 }
