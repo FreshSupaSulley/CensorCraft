@@ -147,7 +147,9 @@ public class WordPacket {
 		if(taboo == null)
 			return;
 		
-		// Now a taboo happened!
+		// Update punishment timing and clear buffer
+		participant.punish();
+		
 		// If we need to wait before the player is punished again
 		if(System.currentTimeMillis() - participant.getLastPunishment() < Config.Server.TABOO_COOLDOWN.get() * 1000) // Convert taboo cooldown to ms
 		{
@@ -155,14 +157,12 @@ public class WordPacket {
 			return;
 		}
 		
-		// Update punishment timing
-		participant.punish();
 		CensorCraft.LOGGER.info("Taboo said by {}: \"{}\"!", player.getName().getString(), taboo);
 		
 		// Notify all players of the sin
 		if(Config.Server.CHAT_TABOOS.get())
 		{
-			player.level().players().forEach(sample -> sample.displayClientMessage(Component.literal(player.getName().getString()).withStyle(style -> style.withBold(true)).append(Component.literal(" said ").setStyle(Style.EMPTY)).append(Component.literal("\"" + taboo + "\"")), false));
+			player.level().players().forEach(sample -> sample.displayClientMessage(Component.literal(player.getName().getString()).withStyle(style -> style.withBold(true)).append(Component.literal(" said ").withStyle(style -> style.withBold(false))).append(Component.literal("\"" + taboo + "\"")), false));
 		}
 		
 		// Kill the player
