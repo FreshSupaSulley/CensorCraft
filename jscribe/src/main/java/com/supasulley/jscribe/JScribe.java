@@ -101,11 +101,11 @@ public class JScribe implements UncaughtExceptionHandler {
 	}
 	
 	/**
-	 * @return true if we're not receiving any audio data from the client
+	 * @return true if we're not receiving any audio data from the client, or JScribe is not running
 	 */
-	public boolean isRunningAndNoAudio()
+	public boolean noAudio()
 	{
-		return isRunning() && !recorder.receivingAudio();
+		return !isRunning() || !recorder.receivingAudio();
 	}
 	
 	/**

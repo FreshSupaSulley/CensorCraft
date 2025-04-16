@@ -23,12 +23,12 @@ class AppTest {
 		// Translate for a while
 		long start = System.currentTimeMillis(), lastAudio = start;
 		
-		while(System.currentTimeMillis() - start < 30000 && !scribe.isRunningAndNoAudio())
+		while(System.currentTimeMillis() - start < 30000 && !scribe.noAudio())
 		{
 			if(System.currentTimeMillis() - lastAudio > 200)
 			{
 				lastAudio = System.currentTimeMillis();
-				System.out.println("Audio level: " + scribe.getAudioLevel() + " - " + scribe.isRunningAndNoAudio());
+				System.out.println("Audio level: " + scribe.getAudioLevel());
 			}
 			
 			for(String buffer = null; !(buffer = scribe.getBuffer()).equals(""); System.out.println(buffer));

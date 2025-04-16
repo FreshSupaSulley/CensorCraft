@@ -278,7 +278,7 @@ public class AudioRecorder extends Thread implements Runnable {
 				sum += sample * sample;
 			}
 			
-			// Immeidately update receiving audio rather than waiting for the end of the sample for analysis
+			// Immediately update receiving audio rather than waiting for the end of the sample for analysis
 			if(!hasData && sum != 0)
 			{
 				hasData = true;

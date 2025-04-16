@@ -45,7 +45,8 @@ public class Transcriber extends Thread implements Runnable {
 			Transcriber.loadNatives();
 		} catch(IOException e)
 		{
-			throw new IllegalStateException(e);
+			e.printStackTrace();
+			System.exit(1);
 		}
 	}
 	
@@ -252,9 +253,10 @@ public class Transcriber extends Thread implements Runnable {
 	
 	public void shutdown()
 	{
+		// Stop runner from recording audio
+		interrupt();
 		samples.clear();
 		running = false;
-		interrupt();
 	}
 	
 	public long getTimeBehind()
