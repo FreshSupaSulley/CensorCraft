@@ -28,7 +28,7 @@ class AppTest {
 			if(System.currentTimeMillis() - lastAudio > 200)
 			{
 				lastAudio = System.currentTimeMillis();
-				System.out.println("Audio level: " + scribe.getAudioLevel());
+				System.out.println("Audio level: " + scribe.getAudioLevel() + " - " + scribe.isRunningAndNoAudio());
 			}
 			
 			for(String buffer = null; !(buffer = scribe.getBuffer()).equals(""); System.out.println(buffer));

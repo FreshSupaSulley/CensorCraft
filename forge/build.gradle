@@ -174,22 +174,27 @@ sourceSets.each {
 }
 
 jar {
-    archiveClassifier = 'slim'
+	enabled = false
     manifest {
         attributes([
-        	"MixinConfigs": "censorcraft.mixins.json",
+        	'MixinConfigs': 'censorcraft.mixins.json',
             'Specification-Title'     : mod_id,
             'Specification-Vendor'    : mod_authors,
             'Specification-Version'   : '1',
             'Implementation-Title'    : project.name,
             'Implementation-Version'  : project.jar.archiveVersion,
             'Implementation-Vendor'   : mod_authors,
-            "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
+            'Implementation-Timestamp': new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
         ])
     }
 }
 
 shadowJar {
+	// No need to package install scripts too
+	exclude '*.sh'
+	exclude '*.cmd'
+	exclude '*.md'
+	
     archiveClassifier = ''
     configurations = [project.configurations.shade]
     // Exclude slf4j-api from the final bundled JAR (already bundled)

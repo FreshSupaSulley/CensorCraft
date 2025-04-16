@@ -38,6 +38,15 @@ public class Transcriber extends Thread implements Runnable {
 		params.printTimestamps = false;
 		params.suppressNonSpeechTokens = true;
 		params.suppressBlank = true;
+		
+		try
+		{
+			// Load natives
+			Transcriber.loadNatives();
+		} catch(IOException e)
+		{
+			throw new IllegalStateException(e);
+		}
 	}
 	
 	public static void loadNatives() throws IOException
@@ -106,7 +115,7 @@ public class Transcriber extends Thread implements Runnable {
 		
 		JScribe.logger.info("Loading libraries for " + resourceName);
 		
-		Stream.of(extractZipToTemp("lib/" + resourceName).listFiles()).forEach(file ->
+		Stream.of(extractZipToTemp("natives/" + resourceName).listFiles()).forEach(file ->
 		{
 			JScribe.logger.info("Loading library at " + file);
 			System.load(file.getAbsolutePath());

@@ -1,6 +1,5 @@
 package com.supasulley.jscribe;
 
-import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.nio.file.Path;
 
@@ -21,15 +20,6 @@ public class JScribe implements UncaughtExceptionHandler {
 	{
 		JScribe.logger = logger;
 		this.modelPath = modelPath;
-		
-		try
-		{
-			// Load natives
-			Transcriber.loadNatives();
-		} catch(IOException e)
-		{
-			throw new IllegalStateException(e);
-		}
 	}
 	
 	public JScribe(Path modelPath)
@@ -111,7 +101,7 @@ public class JScribe implements UncaughtExceptionHandler {
 	}
 	
 	/**
-	 * @return true if receiving audio data from the client, false otherwise
+	 * @return true if we're not receiving any audio data from the client
 	 */
 	public boolean isRunningAndNoAudio()
 	{
