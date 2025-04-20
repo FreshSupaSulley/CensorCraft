@@ -12,7 +12,6 @@ import com.supasulley.censorcraft.Config;
 
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.Style;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LightningBolt;
@@ -142,6 +141,9 @@ public class WordPacket {
 		}
 		
 		CensorCraft.LOGGER.info("Received \"{}\" from {}", packet.payload, player.getName().getString());
+		
+		// Update trie in case the taboos did
+		tabooTree.update(Config.Server.TABOO.get());
 		
 		String taboo = tabooTree.containsAnyIgnoreCase(participant.appendWord(packet.payload));
 		if(taboo == null)

@@ -1,24 +1,38 @@
 package com.supasulley.network;
 
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
+
+import com.supasulley.censorcraft.CensorCraft;
 
 public class Trie {
 	
 	private List<String> list;
-	private final TrieNode root = new TrieNode();
+	private TrieNode root;
 	
 	public Trie(Iterable<?> rawList)
 	{
-		this.list = new ArrayList<String>();
-		rawList.forEach(item -> insert(item.toString()));
+		update(rawList);
 	}
 	
-	public List<String> getWords()
+	public void update(Iterable<?> rawList)
 	{
-		return list;
+		// Check if we need to update
+		List<String> newList = StreamSupport.stream(rawList.spliterator(), false).map(Object::toString).collect(Collectors.toList());
+		
+		if(!newList.equals(list))
+		{
+			CensorCraft.LOGGER.info("Updating tabooed words");
+			list = new ArrayList<String>();
+			root = new TrieNode();
+			newList.forEach(item -> insert(item));
+		}
+		
+		CensorCraft.LOGGER.info(list.toString());
 	}
 	
-	public void insert(String word)
+	private void insert(String word)
 	{
 		word = word.toLowerCase();
 		list.add(word);

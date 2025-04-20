@@ -1,7 +1,10 @@
 plugins {
+	id 'eclipse'
+    id 'idea'
     id 'maven-publish'
     id 'com.github.johnrengelman.shadow' version '8.1.1'
     id 'net.minecraftforge.gradle' version '[6.0.24,6.2)'
+    id 'org.parchmentmc.librarian.forgegradle' version '1.+'
     id 'org.spongepowered.mixin' version '0.7.+'
 }
 
@@ -13,6 +16,11 @@ base {
 }
 
 println "Java: ${System.getProperty 'java.version'}, JVM: ${System.getProperty 'java.vm.version'} (${System.getProperty 'java.vendor'}), Arch: ${System.getProperty 'os.arch'}"
+def runtime = Runtime.getRuntime()
+def mb = 1024 * 1024
+println "Max heap memory: ${runtime.maxMemory() / mb} MB"
+println "Total memory: ${runtime.totalMemory() / mb} MB"
+println "Free memory: ${runtime.freeMemory() / mb} MB"
 
 minecraft {
     mappings channel: mapping_channel, version: mapping_version
@@ -59,18 +67,19 @@ minecraft {
             property 'forge.logging.console.level', 'debug'
         }
         
-        // Use random username to not clash with others
-        String tempUsername = "";
-        for(int i = 0; i < 10; i++) {
-        	int random = 65 + (int) (26 * Math.random());
-        	tempUsername += (char) random;
-        }
-        println("Using " + tempUsername + " as username lol");
-        
         client {
+        	// Use random username to not clash with others so I can test multiplayer
+	        String tempUsername = "";
+	        for(int i = 0; i < 10; i++) {
+	        	int random = 65 + (int) (26 * Math.random());
+	        	tempUsername += (char) random;
+	        }
+	        
+	        println("Using " + tempUsername + " as username");
+	        
             // Comma-separated list of namespaces to load gametests from. Empty = all namespaces.
             property 'forge.enabledGameTestNamespaces', mod_id
-            args '--username', tempUsername // Generate "unique" username for each login so I can test server
+            args '--username', tempUsername
         }
 
         server {
