@@ -21,7 +21,8 @@ expose_rats = true
 
 [entity]
 	entity_name = ["CREEPER", "WITHER"]
-[lightnig[
+[lightnig]
+	strike_delay?? (spread out lightning strikes)
 
 [explosion]
 	#Explosion radius
