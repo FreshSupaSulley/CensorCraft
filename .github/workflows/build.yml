@@ -1,0 +1,94 @@
+name: build
+
+on:
+  release:
+    types: [created]
+
+# env?
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - run: sudo apt update && sudo apt install -y build-essential cmake unzip wget
+
+      - run: |
+          cd libs/whisper-jni
+          chmod +x download-test-model.sh
+          ./download-test-model.sh
+          chmod +x build_debian.sh
+          ./build_debian.sh
+          mvn test
+
+      - run: ./gradlew build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jscribe-linux
+          path: build/libs/
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - run: brew install cmake
+
+      - run: |
+          cd libs/whisper-jni
+          chmod +x download-test-model.sh
+          ./download-test-model.sh
+          chmod +x build_macos.sh
+          ./build_macos.sh
+          mvn test
+
+      - run: ./gradlew build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jscribe-macos
+          path: build/libs/
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - uses: ilammy/msvc-dev-cmd@v1
+
+      - run: |
+          cd libs/whisper-jni
+          ./download-test-model.ps1
+          ./build_win.ps1
+          mvn test
+        shell: pwsh
+
+      - run: ./gradlew build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jscribe-windows
+          path: build/libs/
