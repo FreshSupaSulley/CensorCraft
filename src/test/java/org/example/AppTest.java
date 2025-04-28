@@ -7,7 +7,7 @@ import java.nio.file.Paths;
 
 import org.junit.jupiter.api.Test;
 
-import com.supasulley.jscribe.JScribe;
+import io.github.freshsupasulley.JScribe;
 
 class AppTest {
 	

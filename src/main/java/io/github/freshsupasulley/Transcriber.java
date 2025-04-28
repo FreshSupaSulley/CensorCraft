@@ -1,4 +1,4 @@
-package com.supasulley.jscribe;
+package io.github.freshsupasulley;
 
 import java.io.File;
 import java.io.IOException;

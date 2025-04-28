@@ -4,6 +4,9 @@ plugins {
     id 'org.jreleaser' version '1.17.0'
 }
 
+group = 'io.github.freshsupasulley'
+version = '0.0.1'
+
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)
@@ -17,12 +20,8 @@ tasks.withType(JavaCompile).configureEach {
 sourceCompatibility = JavaVersion.VERSION_21
 targetCompatibility = JavaVersion.VERSION_21
 
-// Set project version for publishing
-version = '0.0.1'
-
 repositories {
     mavenCentral()
-    
     maven {
         name = "henkelmax.public"
         url = 'https://maven.maxhenkel.de/repository/public'
@@ -61,12 +60,8 @@ java {
 
 publishing {
     publications {
-        mavenJava(MavenPublication) {
-        	from(components.java)
-        	
-            groupId = 'com.supasulley'
-            artifactId = 'jscribe'
-            version = '0.0.1'
+        maven(MavenPublication) {
+            from components.java
             
 	        pom {
 	            name = 'jscribe'
@@ -82,8 +77,8 @@ publishing {
 	            
 	            developers {
 	                developer {
-	                    id = 'eboschert'
 	                    name = 'Erich Boschert'
+	                    email = 'erich.boschert10@gmail.com'
 	                }
 	            }
 	            
@@ -101,47 +96,32 @@ publishing {
         }
     }
 }
-/*
-signing {
-    sign publishing.publications.mavenJava
-}*/
 
 jreleaser {
+    release {
+        github {
+            enabled = true
+        }
+    }
+    
+    environment {
+        variables = 'config.toml'
+    }
+    
     signing {
         active = 'ALWAYS'
         armored = true
     }
+    
     deploy {
         maven {
             mavenCentral {
                 sonatype {
                     active = 'ALWAYS'
                     url = 'https://central.sonatype.com/api/v1/publisher'
-                    stagingRepository('target/staging-deploy')
+                    stagingRepository('build/staging-deploy')
                 }
             }
-            /*mavenCentral {
-                app {
-                    active = 'ALWAYS'
-                    url = 'https://central.sonatype.com/api/v1/publisher'
-                    username = sonatypeUsername
-                    password = sonatypePassword
-                    authorization = 'BEARER'
-                    applyMavenCentralRules = false
-                    // List of directories where staged artifacts can be found.
-                    stagingRepository('target/staging-deploy')
-                    
-                    // URL for checking artifacts may be already deployed.
-                    // Additional template tokens: `groupId`, `artifactId`, `version`, `path`, `filename`.
-                    verifyUrl = "https://repo1.maven.org/maven2/{{path}}/{{filename}}"
-                    
-                    // Registered publication namespace.
-                    // Defaults to `${project.java.groupId}`.
-                    namespace = 'io.github.freshsupasulley'
-                    // Deployment identifier used for publication.
-                    //deploymentId = 'dd9991b0-18a7-41e7-b1fe-37b8ea936f85'
-                }
-            }*/
         }
     }
 }

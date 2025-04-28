@@ -1,4 +1,4 @@
-package com.supasulley.jscribe;
+package io.github.freshsupasulley;
 
 import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
