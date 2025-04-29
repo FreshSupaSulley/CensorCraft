@@ -40,8 +40,8 @@ case $AARCH in
     export CC=arm-linux-gnueabihf-gcc
     export CXX=arm-linux-gnueabihf-g++
     
-    # Updated CFLAGS for ARMv7
-    LIB_VARIANT="+crc" CMAKE_CFLAGS="-march=armv7-a+crc -mfpu=neon -mno-unaligned-access" build_lib
+    # Updated CFLAGS for ARMv7 without crc
+    LIB_VARIANT="+neon" CMAKE_CFLAGS="-march=armv7-a -mfpu=neon -mno-unaligned-access" build_lib
     ADD_WRAPPER=true CMAKE_CFLAGS="-mfpu=neon -mno-unaligned-access" build_lib
     ;;
   *)
