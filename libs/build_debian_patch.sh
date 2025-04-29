@@ -36,8 +36,12 @@ case $AARCH in
     ;;
   armhf|armv7l)
     AARCH=armv7l
-    # Update the flags for armv7l to avoid unsupported options
-    LIB_VARIANT="+crc" CMAKE_CFLAGS="-march=armv7-a+crc -mfpu=neon -mno-unaligned-access" build_lib  # Use corrected flags for ARMv7
+    # Ensure that we use the correct ARMv7 cross-compiler
+    export CC=arm-linux-gnueabihf-gcc
+    export CXX=arm-linux-gnueabihf-g++
+    
+    # Updated CFLAGS for ARMv7
+    LIB_VARIANT="+crc" CMAKE_CFLAGS="-march=armv7-a+crc -mfpu=neon -mno-unaligned-access" build_lib
     ADD_WRAPPER=true CMAKE_CFLAGS="-mfpu=neon -mno-unaligned-access" build_lib
     ;;
   *)
