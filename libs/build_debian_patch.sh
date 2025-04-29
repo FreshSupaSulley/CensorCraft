@@ -1,5 +1,12 @@
 #!/bin/bash
 set -xe
+
+# Force architecture assignment
+if [ -z "$AARCH" ]; then
+    AARCH=$(dpkg --print-architecture)
+fi
+
+# Function to build the library
 build_lib() {
   TMP_DIR=src/main/resources/debian
   TARGET_DIR=src/main/resources/debian-$AARCH
@@ -14,21 +21,25 @@ build_lib() {
   rm -rf $TMP_DIR
   rm -rf build
 }
-AARCH=$(dpkg --print-architecture)
+
+# Detect AARCH (ensure it's not wrong)
+echo "Detected architecture: $AARCH"
 case $AARCH in
   amd64)
     LIB_VARIANT="+mf16c+mfma+mavx+mavx2" CMAKE_ARGS="-DGGML_AVX=ON -DGGML_AVX2=ON -DGGML_FMA=ON -DGGML_F16C=ON" build_lib
     ADD_WRAPPER=true CMAKE_ARGS="-DGGML_AVX=OFF -DGGML_AVX2=OFF -DGGML_FMA=OFF -DGGML_F16C=OFF" build_lib
     ;;
   arm64)
-    # For arm64, avoid x86-specific flags (like -mf16c, -mfma, etc.)
     LIB_VARIANT="+fp16" CMAKE_CFLAGS="-march=armv8.2-a+fp16" build_lib
     ADD_WRAPPER=true LIB_VARIANT="+crc" CMAKE_CFLAGS="-march=armv8.1-a+crc" build_lib
     ;;
   armhf|armv7l)
     AARCH=armv7l
-    # For armv7l, avoid advanced flags like -mf16c, -mfma, -mavx, and -mavx2
     LIB_VARIANT="+crc" CMAKE_CFLAGS="-march=armv7-a+crc -mfpu=neon-fp-armv8 -mno-unaligned-access" build_lib
     ADD_WRAPPER=true CMAKE_CFLAGS="-mfpu=neon -mno-unaligned-access" build_lib
+    ;;
+  *)
+    echo "Unknown architecture: $AARCH"
+    exit 1
     ;;
 esac

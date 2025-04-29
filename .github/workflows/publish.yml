@@ -18,13 +18,8 @@ jobs:
       - name: Build Debian AMD64
         run: |
           cd libs/whisper-jni
-          mkdir -p fakebin
-          echo -e '#!/bin/bash\necho amd64' > fakebin/dpkg
-          chmod +x fakebin/dpkg
-          export PATH="$PWD/fakebin:$PATH"
-
-          # Make the new script executable and run it
           chmod +x ../build_debian_patch.sh
+          export AARCH=amd64  # Explicitly set architecture for AMD64
           ../build_debian_patch.sh
       - uses: actions/upload-artifact@v4
         with:
@@ -41,11 +36,11 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
-
+          
           cd libs/whisper-jni
           chmod +x ../build_debian_patch.sh
-
-          # Run the patched build script for ARM64
+          
+          export AARCH=arm64  # Explicitly set architecture for ARM64
           ../build_debian_patch.sh
       - uses: actions/upload-artifact@v4
         with:
@@ -62,11 +57,11 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf
-
+          
           cd libs/whisper-jni
-          chmod +x ../build_debian_patch.sh  # Make the patch script executable
-
-          # Run the patched build script
+          chmod +x ../build_debian_patch.sh
+          
+          export AARCH=armv7l  # Explicitly set architecture for ARMv7l
           ../build_debian_patch.sh
       - uses: actions/upload-artifact@v4
         with:
