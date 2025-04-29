@@ -27,12 +27,12 @@ echo "Detected architecture: $AARCH"
 case $AARCH in
   amd64)
     # Only apply AVX and F16C for amd64 architecture
-    LIB_VARIANT="+mf16c+mfma+mavx+mavx2" CMAKE_ARGS="-DGGML_AVX=ON -DGGML_AVX2=ON -DGGML_FMA=ON -DGGML_F16C=ON" build_lib
-    ADD_WRAPPER=true CMAKE_ARGS="-DGGML_AVX=OFF -DGGML_AVX2=OFF -DGGML_FMA=OFF -DGGML_F16C=OFF" build_lib
+    LIB_VARIANT="+mf16c+mfma+mavx+mavx2" CMAKE_ARGS="-DGGML_AVX=ON -DGGML_AVX2=ON -DGGML_FMA=ON -DGGML_F16C=ON" CMAKE_CFLAGS="" build_lib
+    ADD_WRAPPER=true CMAKE_ARGS="-DGGML_AVX=OFF -DGGML_AVX2=OFF -DGGML_FMA=OFF -DGGML_F16C=OFF" CMAKE_CFLAGS="" build_lib
     ;;
   arm64)
     # ARM64 architecture: Ensure no x86-specific flags are used
-    LIB_VARIANT="+fp16" CMAKE_CFLAGS="-march=armv8-a" build_lib  # More generic flag for ARM64
+    LIB_VARIANT="+fp16" CMAKE_ARGS="" CMAKE_CFLAGS="-march=armv8-a" build_lib  # More generic flag for ARM64
     ADD_WRAPPER=true LIB_VARIANT="+crc" CMAKE_CFLAGS="-march=armv8.1-a+crc" build_lib
     ;;
   armhf|armv7l)
