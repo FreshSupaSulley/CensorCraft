@@ -11,28 +11,16 @@ build_lib() {
   TMP_DIR=src/main/resources/debian
   TARGET_DIR=src/main/resources/debian-$AARCH
 
-  # Select cross-compilation toolchain
-  case $AARCH in
-    arm64)
-      export CC=aarch64-linux-gnu-gcc
-      export CXX=aarch64-linux-gnu-g++
-      CMAKE_TOOLCHAIN_ARGS="-DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=aarch64"
-      ;;
-    armv7l)
-      export CC=arm-linux-gnueabihf-gcc
-      export CXX=arm-linux-gnueabihf-g++
-      CMAKE_TOOLCHAIN_ARGS="-DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=armv7l"
-      ;;
-    amd64)
-      CMAKE_TOOLCHAIN_ARGS=""
-      ;;
-    *)
-      echo "Unknown architecture: $AARCH"
-      exit 1
-      ;;
-  esac
+  if [ "$AARCH" = "arm64" ]; then
+    export CC=aarch64-linux-gnu-gcc
+    export CXX=aarch64-linux-gnu-g++
+    cmake -B build -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
+          -DCMAKE_C_COMPILER=$CC -DCMAKE_CXX_COMPILER=$CXX \
+          -DCMAKE_C_FLAGS="$CMAKE_CFLAGS" -DCMAKE_INSTALL_PREFIX=$TMP_DIR $CMAKE_ARGS
+  else
+    cmake -B build $CMAKE_ARGS -DCMAKE_C_FLAGS="$CMAKE_CFLAGS" -DCMAKE_INSTALL_PREFIX=$TMP_DIR
+  fi
 
-  cmake -B build $CMAKE_ARGS $CMAKE_TOOLCHAIN_ARGS -DCMAKE_C_FLAGS="$CMAKE_CFLAGS" -DCMAKE_INSTALL_PREFIX=$TMP_DIR
   cmake --build build --config Release
   cmake --install build
 
