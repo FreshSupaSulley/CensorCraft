@@ -38,13 +38,15 @@ jobs:
           submodules: recursive
       - name: Build Debian ARM64
         run: |
-          cd libs/whisper-jni
-          mkdir -p fakebin
-          echo -e '#!/bin/bash\necho arm64' > fakebin/dpkg
-          chmod +x fakebin/dpkg
-          export PATH="$PWD/fakebin:$PATH"
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
 
+          cd libs/whisper-jni
           chmod +x build_debian.sh
+
+          export AARCH=arm64
+          export CC=aarch64-linux-gnu-gcc
+          export CXX=aarch64-linux-gnu-g++
           ./build_debian.sh
       - uses: actions/upload-artifact@v4
         with:
@@ -63,12 +65,11 @@ jobs:
           sudo apt-get install -y gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf
 
           cd libs/whisper-jni
-          mkdir -p fakebin
-          echo -e '#!/bin/bash\necho armhf' > fakebin/dpkg
-          chmod +x fakebin/dpkg
-          export PATH="$PWD/fakebin:$PATH"
-
           chmod +x build_debian.sh
+
+          export AARCH=armv7l
+          export CC=arm-linux-gnueabihf-gcc
+          export CXX=arm-linux-gnueabihf-g++
           ./build_debian.sh
       - uses: actions/upload-artifact@v4
         with:
