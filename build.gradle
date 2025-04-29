@@ -98,12 +98,6 @@ publishing {
 }
 
 jreleaser {
-    release {
-        github {
-            enabled = true
-        }
-    }
-    
     environment {
         variables = 'config.toml'
     }
