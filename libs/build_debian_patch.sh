@@ -1,7 +1,7 @@
 #!/bin/bash
 set -xe
 
-# Force architecture assignment
+# Force architecture assignment if not set
 if [ -z "$AARCH" ]; then
     AARCH=$(dpkg --print-architecture)
 fi
@@ -31,7 +31,7 @@ case $AARCH in
     ;;
   arm64)
     # Use more generic ARM64 architecture flags
-    LIB_VARIANT="+fp16" CMAKE_CFLAGS="-march=armv8-a+fp16" build_lib  # More generic flag for ARM64
+    LIB_VARIANT="+fp16" CMAKE_CFLAGS="-march=armv8-a" build_lib  # More generic flag for ARM64
     ADD_WRAPPER=true LIB_VARIANT="+crc" CMAKE_CFLAGS="-march=armv8.1-a+crc" build_lib
     ;;
   armhf|armv7l)
