@@ -70,6 +70,9 @@ jobs:
           export AARCH=armv7l
           export CC=arm-linux-gnueabihf-gcc
           export CXX=arm-linux-gnueabihf-g++
+
+          export CMAKE_CFLAGS="-march=armv7-a -mfpu=neon"
+          
           ./build_debian.sh
       - uses: actions/upload-artifact@v4
         with:
