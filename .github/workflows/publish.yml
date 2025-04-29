@@ -23,8 +23,9 @@ jobs:
           chmod +x fakebin/dpkg
           export PATH="$PWD/fakebin:$PATH"
 
-          chmod +x build_debian.sh
-          ./build_debian.sh
+          # Make the new script executable and run it
+          chmod +x libs/build_debian_patch.sh
+          ./libs/build_debian_patch.sh
       - uses: actions/upload-artifact@v4
         with:
           name: debian-amd64
@@ -42,12 +43,12 @@ jobs:
           sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
 
           cd libs/whisper-jni
-          chmod +x build_debian.sh
-
+          # Make the new script executable and run it
+          chmod +x libs/build_debian_patch.sh
           export AARCH=arm64
           export CC=aarch64-linux-gnu-gcc
           export CXX=aarch64-linux-gnu-g++
-          ./build_debian.sh
+          ./libs/build_debian_patch.sh
       - uses: actions/upload-artifact@v4
         with:
           name: debian-arm64
@@ -65,15 +66,12 @@ jobs:
           sudo apt-get install -y gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf
 
           cd libs/whisper-jni
-          chmod +x build_debian.sh
-
+          # Make the new script executable and run it
+          chmod +x libs/build_debian_patch.sh
           export AARCH=armv7l
           export CC=arm-linux-gnueabihf-gcc
           export CXX=arm-linux-gnueabihf-g++
-
-          export CMAKE_CFLAGS="-march=armv7-a -mfpu=neon"
-          
-          ./build_debian.sh
+          ./libs/build_debian_patch.sh
       - uses: actions/upload-artifact@v4
         with:
           name: debian-armv7l
