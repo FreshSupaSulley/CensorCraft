@@ -66,11 +66,9 @@ jobs:
           sudo apt-get install -y gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf
 
           cd libs/whisper-jni
-          # Make the new script executable and run it
-          chmod +x ../build_debian_patch.sh
-          export AARCH=armv7l
-          export CC=arm-linux-gnueabihf-gcc
-          export CXX=arm-linux-gnueabihf-g++
+          chmod +x ../build_debian_patch.sh  # Make the patch script executable
+
+          # Run the patched build script
           ../build_debian_patch.sh
       - uses: actions/upload-artifact@v4
         with:
