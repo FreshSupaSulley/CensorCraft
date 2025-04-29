@@ -24,8 +24,8 @@ jobs:
           export PATH="$PWD/fakebin:$PATH"
 
           # Make the new script executable and run it
-          chmod +x libs/build_debian_patch.sh
-          ./libs/build_debian_patch.sh
+          chmod +x ../build_debian_patch.sh
+          ../build_debian_patch.sh
       - uses: actions/upload-artifact@v4
         with:
           name: debian-amd64
@@ -44,11 +44,11 @@ jobs:
 
           cd libs/whisper-jni
           # Make the new script executable and run it
-          chmod +x libs/build_debian_patch.sh
+          chmod +x ../build_debian_patch.sh
           export AARCH=arm64
           export CC=aarch64-linux-gnu-gcc
           export CXX=aarch64-linux-gnu-g++
-          ./libs/build_debian_patch.sh
+          ../build_debian_patch.sh
       - uses: actions/upload-artifact@v4
         with:
           name: debian-arm64
@@ -67,11 +67,11 @@ jobs:
 
           cd libs/whisper-jni
           # Make the new script executable and run it
-          chmod +x libs/build_debian_patch.sh
+          chmod +x ../build_debian_patch.sh
           export AARCH=armv7l
           export CC=arm-linux-gnueabihf-gcc
           export CXX=arm-linux-gnueabihf-g++
-          ./libs/build_debian_patch.sh
+          ../build_debian_patch.sh
       - uses: actions/upload-artifact@v4
         with:
           name: debian-armv7l
