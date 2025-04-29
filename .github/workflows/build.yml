@@ -16,8 +16,8 @@ jobs:
 
       - uses: actions/setup-java@v4
         with:
-          java-version: '21'
-          distribution: 'temurin'
+          java-version: "21"
+          distribution: "temurin"
 
       - run: sudo apt update && sudo apt install -y build-essential cmake unzip wget
 
@@ -45,8 +45,8 @@ jobs:
 
       - uses: actions/setup-java@v4
         with:
-          java-version: '21'
-          distribution: 'temurin'
+          java-version: "21"
+          distribution: "temurin"
 
       - run: brew install cmake
 
@@ -74,8 +74,8 @@ jobs:
 
       - uses: actions/setup-java@v4
         with:
-          java-version: '21'
-          distribution: 'temurin'
+          java-version: "21"
+          distribution: "temurin"
 
       - uses: ilammy/msvc-dev-cmd@v1
 
@@ -93,24 +93,24 @@ jobs:
           name: jscribe-windows
           path: build/libs/
 
-    publish:
-      runs-on: ubuntu-latest
-      needs: [build-linux, build-macos, build-windows]
-      steps:
-        - uses: actions/checkout@v4
-          with:
-            submodules: recursive
+  publish:
+    runs-on: ubuntu-latest
+    needs: [build-linux, build-macos, build-windows]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
-        - uses: actions/setup-java@v4
-          with:
-            java-version: '21'
-            distribution: 'temurin'
+      - uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: "temurin"
 
-        - run: ./gradlew clean build publish
-        - run: ./gradlew jreleaserFullRelease
-          env:
-            JRELEASER_MAVENCENTRAL_USERNAME: ${{ secrets.JRELEASER_MAVENCENTRAL_USERNAME }}
-            JRELEASER_MAVENCENTRAL_PASSWORD: ${{ secrets.JRELEASER_MAVENCENTRAL_PASSWORD }}
-            JRELEASER_GPG_PASSPHRASE: ${{ secrets.JRELEASER_GPG_PASSPHRASE }}
-            JRELEASER_GPG_PUBLIC_KEY: ${{ secrets.JRELEASER_GPG_PUBLIC_KEY }}
-            JRELEASER_GPG_SECRET_KEY: ${{ secrets.JRELEASER_GPG_SECRET_KEY }}
+      - run: ./gradlew clean build publish
+      - run: ./gradlew jreleaserFullRelease
+        env:
+          JRELEASER_MAVENCENTRAL_USERNAME: ${{ secrets.JRELEASER_MAVENCENTRAL_USERNAME }}
+          JRELEASER_MAVENCENTRAL_PASSWORD: ${{ secrets.JRELEASER_MAVENCENTRAL_PASSWORD }}
+          JRELEASER_GPG_PASSPHRASE: ${{ secrets.JRELEASER_GPG_PASSPHRASE }}
+          JRELEASER_GPG_PUBLIC_KEY: ${{ secrets.JRELEASER_GPG_PUBLIC_KEY }}
+          JRELEASER_GPG_SECRET_KEY: ${{ secrets.JRELEASER_GPG_SECRET_KEY }}
