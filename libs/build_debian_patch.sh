@@ -31,7 +31,7 @@ case $AARCH in
     ADD_WRAPPER=true CMAKE_ARGS="-DGGML_AVX=OFF -DGGML_AVX2=OFF -DGGML_FMA=OFF -DGGML_F16C=OFF" build_lib
     ;;
   arm64)
-    # ARM64 architecture: Remove x86-specific flags
+    # ARM64 architecture: Ensure no x86-specific flags are used
     LIB_VARIANT="+fp16" CMAKE_CFLAGS="-march=armv8-a" build_lib  # More generic flag for ARM64
     ADD_WRAPPER=true LIB_VARIANT="+crc" CMAKE_CFLAGS="-march=armv8.1-a+crc" build_lib
     ;;
@@ -41,7 +41,7 @@ case $AARCH in
     export CC=arm-linux-gnueabihf-gcc
     export CXX=arm-linux-gnueabihf-g++
     
-    # ARMv7 architecture: Remove x86-specific flags
+    # ARMv7 architecture: Remove x86-specific flags and use ARMv7-specific ones
     LIB_VARIANT="+neon" CMAKE_CFLAGS="-march=armv7-a -mfpu=neon -mno-unaligned-access" build_lib
     ADD_WRAPPER=true CMAKE_CFLAGS="-mfpu=neon -mno-unaligned-access" build_lib
     ;;
