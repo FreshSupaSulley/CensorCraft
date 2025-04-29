@@ -43,11 +43,9 @@ jobs:
           sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
 
           cd libs/whisper-jni
-          # Make the new script executable and run it
           chmod +x ../build_debian_patch.sh
-          export AARCH=arm64
-          export CC=aarch64-linux-gnu-gcc
-          export CXX=aarch64-linux-gnu-g++
+
+          # Run the patched build script for ARM64
           ../build_debian_patch.sh
       - uses: actions/upload-artifact@v4
         with:
