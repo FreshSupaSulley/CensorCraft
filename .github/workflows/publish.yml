@@ -17,6 +17,10 @@ jobs:
           submodules: recursive
       - name: Build Debian AMD64
         run: |
+          cd libs/whisper-jni
+          chmod +x download-test-model.sh
+          ./download-test-model.sh
+          chmod +x build_debian.sh
           export AARCH=amd64
           ./build_debian.sh
       - uses: actions/upload-artifact@v4
@@ -32,6 +36,10 @@ jobs:
           submodules: recursive
       - name: Build Debian ARM64
         run: |
+          cd libs/whisper-jni
+          chmod +x download-test-model.sh
+          ./download-test-model.sh
+          chmod +x build_debian.sh
           sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
           export AARCH=arm64
           ./build_debian.sh
@@ -48,6 +56,10 @@ jobs:
           submodules: recursive
       - name: Build Debian ARMv7l
         run: |
+          cd libs/whisper-jni
+          chmod +x download-test-model.sh
+          ./download-test-model.sh
+          chmod +x build_debian.sh
           sudo apt-get install -y gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf
           export AARCH=armv7l
           ./build_debian.sh
@@ -64,6 +76,10 @@ jobs:
           submodules: recursive
       - name: Build macOS AMD64
         run: |
+          cd libs/whisper-jni
+          chmod +x download-test-model.sh
+          ./download-test-model.sh
+          chmod +x build_macos.sh
           ./build_macos.sh x86_64
       - uses: actions/upload-artifact@v4
         with:
@@ -78,6 +94,10 @@ jobs:
           submodules: recursive
       - name: Build macOS ARM64
         run: |
+          cd libs/whisper-jni
+          chmod +x download-test-model.sh
+          ./download-test-model.sh
+          chmod +x build_macos.sh
           ./build_macos.sh arm64
       - uses: actions/upload-artifact@v4
         with:
@@ -91,7 +111,10 @@ jobs:
         with:
           submodules: recursive
       - name: Build Windows AMD64
-        run: ./build_win.ps1
+        run: |
+          cd libs/whisper-jni
+          ./download-test-model.ps1
+          ./build_win.ps1
         shell: pwsh
       - uses: actions/upload-artifact@v4
         with:
