@@ -30,12 +30,14 @@ case $AARCH in
     ADD_WRAPPER=true CMAKE_ARGS="-DGGML_AVX=OFF -DGGML_AVX2=OFF -DGGML_FMA=OFF -DGGML_F16C=OFF" build_lib
     ;;
   arm64)
-    LIB_VARIANT="+fp16" CMAKE_CFLAGS="-march=armv8.2-a+fp16" build_lib
+    # Use more generic ARM64 architecture flags
+    LIB_VARIANT="+fp16" CMAKE_CFLAGS="-march=armv8-a+fp16" build_lib  # More generic flag for ARM64
     ADD_WRAPPER=true LIB_VARIANT="+crc" CMAKE_CFLAGS="-march=armv8.1-a+crc" build_lib
     ;;
   armhf|armv7l)
     AARCH=armv7l
-    LIB_VARIANT="+crc" CMAKE_CFLAGS="-march=armv7-a+crc -mfpu=neon-fp-armv8 -mno-unaligned-access" build_lib
+    # Update the flags for armv7l to avoid unsupported options
+    LIB_VARIANT="+crc" CMAKE_CFLAGS="-march=armv7-a+crc -mfpu=neon -mno-unaligned-access" build_lib  # Use corrected flags for ARMv7
     ADD_WRAPPER=true CMAKE_CFLAGS="-mfpu=neon -mno-unaligned-access" build_lib
     ;;
   *)
