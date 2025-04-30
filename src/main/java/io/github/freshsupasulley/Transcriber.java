@@ -45,7 +45,7 @@ public class Transcriber extends Thread implements Runnable {
 		try
 		{
 			LibraryLoader.loadBundledNatives();
-		} catch(IOException | UnknownPlatformException e)
+		} catch(IOException e)
 		{
 			JScribe.logger.error("This platform or architecture is not supported", e);
 			System.exit(1);

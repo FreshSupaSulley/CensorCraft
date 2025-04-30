@@ -38,7 +38,7 @@ public class LibraryLoader {
 		return OS_NAME.contains("nux");
 	}
 	
-	private static String getPlatform() throws UnknownPlatformException
+	private static String getPlatform() throws IOException
 	{
 		if(isWindows())
 		{
@@ -54,7 +54,7 @@ public class LibraryLoader {
 		}
 		else
 		{
-			throw new UnknownPlatformException(String.format("Unknown operating system: %s", OS_NAME));
+			throw new IOException(String.format("Unknown operating system: %s", OS_NAME));
 		}
 	}
 	
@@ -80,12 +80,12 @@ public class LibraryLoader {
 		}
 	}
 	
-	private static String getNativeFolderName() throws UnknownPlatformException
+	private static String getNativeFolderName() throws IOException
 	{
 		return String.format("%s-%s", getPlatform(), getArchitecture());
 	}
 	
-	public static void loadBundledNatives() throws IOException, UnknownPlatformException
+	public static void loadBundledNatives() throws IOException
 	{
 		String nativeFolder = getNativeFolderName();
 		

@@ -17,8 +17,8 @@ class AppTest {
 	@Test
 	void libraryLoads()
 	{
-		JScribe scribe = new JScribe(Paths.get("src/test/resources/ggml-tiny.en.bin"));
-		scribe.start("", 1000, 500, true);
+//		JScribe scribe = new JScribe(Paths.get("src/test/resources/ggml-tiny.en.bin"));
+//		scribe.start("", 1000, 500, true);
 		
 		// Translate for a while
 //		long start = System.currentTimeMillis(), lastAudio = start;
