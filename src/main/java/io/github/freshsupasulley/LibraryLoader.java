@@ -1,16 +1,15 @@
 package io.github.freshsupasulley;
 
+import java.io.File;
 import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
+import java.io.InputStream;
 import java.net.URL;
-import java.nio.file.DirectoryStream;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.util.Collections;
+import java.util.Enumeration;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 
 import de.maxhenkel.rnnoise4j.UnknownPlatformException;
 
@@ -96,35 +95,32 @@ public class LibraryLoader {
 		// Find the path to this library's JAR
 		URL jarUrl = LibraryLoader.class.getProtectionDomain().getCodeSource().getLocation();
 		
-		try(FileSystem fs = FileSystems.newFileSystem(URI.create("jar:" + jarUrl.toURI()), Collections.emptyMap()))
+		try(JarFile jar = new JarFile(jarUrl.getFile()))
 		{
-			Path jarRoot = fs.getPath("/");
-			Path nativePath = jarRoot.resolve(nativeFolder);
+			Enumeration<JarEntry> entries = jar.entries();
 			
-			if(!Files.exists(nativePath))
+			while(entries.hasMoreElements())
 			{
-				throw new UnknownPlatformException("Natives not found at " + nativeFolder);
-			}
-			
-			// Copy all files in the native folder
-			try(DirectoryStream<Path> stream = Files.newDirectoryStream(nativePath))
-			{
-				for(Path file : stream)
+				JarEntry entry = entries.nextElement();
+				
+				// Only load the files, not the directory
+				if(entry.getName().startsWith("natives/" + nativeFolder) && !entry.isDirectory())
 				{
-					if(Files.isRegularFile(file))
+					// Get the input stream for the file in the JAR
+					try(InputStream inputStream = jar.getInputStream(entry))
 					{
-						Path tempFile = tempDir.resolve(file.getFileName().toString());
-						Files.copy(file, tempFile, StandardCopyOption.REPLACE_EXISTING);
-						tempFile.toFile().deleteOnExit();
+						// Copy the file to a temporary location
+						Path tempFilePath = Files.createTempFile(null, null);
+						File tempFile = tempFilePath.toFile();
+						tempFile.deleteOnExit();
 						
-						// Load the native library
-						System.load(tempFile.toAbsolutePath().toString());
+						Files.copy(inputStream, tempFilePath, StandardCopyOption.REPLACE_EXISTING);
+						
+						JScribe.logger.debug("Loading native at {}", tempFile.getAbsolutePath());
+						System.load(tempFile.getAbsolutePath());
 					}
 				}
 			}
-		} catch(URISyntaxException e)
-		{
-			throw new IOException(e);
 		}
 	}
 }

@@ -3,21 +3,24 @@
  */
 package org.example;
 
+import java.nio.file.Paths;
+
 import org.junit.jupiter.api.Test;
+
+import io.github.freshsupasulley.JScribe;
 
 class AppTest {
 	
 	/**
-	 * This doesn't work when running from the IDE on Mac. Thanks Tim Apple!
-	 * (Terminal on my work laptop doesn't let me request mic permissions [OS version or admin problem?] Use VSCode
+	 * Sanity check to ensure the library loads.
 	 */
 	@Test
-	void testModel()
+	void libraryLoads()
 	{
-//		JScribe scribe = new JScribe(Paths.get("src/test/resources/ggml-tiny.en.bin"));
-//		scribe.start("", 1000, 500, true);
-//		
-//		// Translate for a while
+		JScribe scribe = new JScribe(Paths.get("src/test/resources/ggml-tiny.en.bin"));
+		scribe.start("", 1000, 500, true);
+		
+		// Translate for a while
 //		long start = System.currentTimeMillis(), lastAudio = start;
 //		
 //		while(System.currentTimeMillis() - start < 30000 && !scribe.noAudio())
