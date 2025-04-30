@@ -14,27 +14,33 @@ jobs:
     strategy:
       matrix:
         arch: [amd64, arm64]
+
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-      - name: Install cross-compiler (only for arm64)
-        if: matrix.arch == 'arm64'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
 
-      - name: Set cross-compile env (only for arm64)
+      - name: Set up QEMU (for arm64 builds)
         if: matrix.arch == 'arm64'
-        run: |
-          echo "CC=/usr/bin/aarch64-linux-gnu-gcc" >> $GITHUB_ENV
-          echo "CXX=/usr/bin/aarch64-linux-gnu-g++" >> $GITHUB_ENV
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
 
       - name: Build Linux ${{ matrix.arch }}
         run: |
-          cd libs/whisper-jni
-          chmod +x ../build_debian_patch.sh
-          ../build_debian_patch.sh ${{ matrix.arch }}
+          # We don't need Docker for AMD64
+          if [ "${{ matrix.arch }}" = "amd64" ]; then
+            cd libs/whisper-jni
+            chmod +x build_debian.sh
+            build_debian.sh
+          else
+            docker run --rm --platform linux/arm64 \
+              -v "$PWD:/workspace" -w /workspace/libs/whisper-jni \
+              debian:bullseye \
+              bash -c "apt update && apt install -y build-essential cmake git gcc g++ \
+                      && chmod +x build_debian.sh \
+                      && build_debian.sh arm64"
+          fi
 
       - uses: actions/upload-artifact@v4
         with:
