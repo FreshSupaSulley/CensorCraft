@@ -1,6 +1,5 @@
 package io.github.freshsupasulley;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -18,7 +17,7 @@ import de.maxhenkel.rnnoise4j.UnknownPlatformException;
 /**
  * Adapted from RNNoise4J.
  * 
- * @see https://github.com/henkelmax/rnnoise4j
+ * @see <a href="https://github.com/henkelmax/rnnoise4j">RNNoise4J repo</a>
  */
 public class LibraryLoader {
 	
