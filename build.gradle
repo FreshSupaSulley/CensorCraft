@@ -34,6 +34,8 @@ dependencies {
     
     testImplementation libs.junit.jupiter
     testImplementation 'org.slf4j:slf4j-simple:2.0.17'
+    // Import natives
+    testImplementation 'io.github.freshsupasulley:jscribe:0.0.3'
 }
 
 tasks.named('test') {
