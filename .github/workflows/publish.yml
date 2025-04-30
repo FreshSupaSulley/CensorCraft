@@ -30,7 +30,7 @@ jobs:
           echo "CC=/usr/bin/aarch64-linux-gnu-gcc" >> $GITHUB_ENV
           echo "CXX=/usr/bin/aarch64-linux-gnu-g++" >> $GITHUB_ENV
 
-      - name: Build Linux ${{ matrix.arch | upper }}
+      - name: Build Linux ${{ matrix.arch }}
         run: |
           cd libs/whisper-jni
           chmod +x ../build_debian_patch.sh
@@ -51,7 +51,7 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Build macOS ${{ matrix.arch | upper }}
+      - name: Build macOS ${{ matrix.arch }}
         run: |
           cd libs/whisper-jni
           chmod +x build_macos.sh
