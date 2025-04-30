@@ -152,8 +152,8 @@ jobs:
 
             echo "::endgroup::"
           done
-      - run: ./gradlew clean build publish
-      - run: ./gradlew jreleaserDeploy
+      - run: ./gradlew clean build publish --stacktrace
+      - run: ./gradlew jreleaserDeploy --stacktrace
         env:
           JRELEASER_MAVENCENTRAL_USERNAME: ${{ secrets.JRELEASER_MAVENCENTRAL_USERNAME }}
           JRELEASER_MAVENCENTRAL_PASSWORD: ${{ secrets.JRELEASER_MAVENCENTRAL_PASSWORD }}
