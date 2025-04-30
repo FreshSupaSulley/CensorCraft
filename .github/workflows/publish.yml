@@ -13,39 +13,62 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        arch: [amd64, arm64]
+        arch: [amd64]
 
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - name: Set up QEMU (for arm64 builds)
-        if: matrix.arch == 'arm64'
-        uses: docker/setup-qemu-action@v3
-        with:
-          platforms: arm64
-
       - name: Build Linux ${{ matrix.arch }}
         run: |
-          # We don't need Docker for AMD64
-          if [ "${{ matrix.arch }}" = "amd64" ]; then
-            cd libs/whisper-jni
-            chmod +x build_debian.sh
-            ./build_debian.sh
-          else
-            docker run --rm --platform linux/arm64 \
-              -v "$PWD:/workspace" -w /workspace/libs/whisper-jni \
-              debian:bullseye \
-              bash -c "apt update && apt install -y build-essential cmake git gcc g++ default-jdk \
-                      && chmod +x build_debian.sh \
-                      && ./build_debian.sh"
-          fi
+          cd libs/whisper-jni
+          chmod +x build_debian.sh
+          ./build_debian.sh
 
       - uses: actions/upload-artifact@v4
         with:
           name: debian-${{ matrix.arch }}
           path: libs/whisper-jni/src/main/resources/debian-${{ matrix.arch }}
+
+  # Builds for both amd64 and arm64. ARM64 doesn't seem to be very popular so I'm ignoring it unless someone complains (it takes forever to build for it)
+  # build-linux:
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     matrix:
+  #       arch: [amd64, arm64]
+
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         submodules: recursive
+
+  #     - name: Set up QEMU (for arm64 builds)
+  #       if: matrix.arch == 'arm64'
+  #       uses: docker/setup-qemu-action@v3
+  #       with:
+  #         platforms: arm64
+
+  #     - name: Build Linux ${{ matrix.arch }}
+  #       run: |
+  #         # We don't need Docker for AMD64
+  #         if [ "${{ matrix.arch }}" = "amd64" ]; then
+  #           cd libs/whisper-jni
+  #           chmod +x build_debian.sh
+  #           ./build_debian.sh
+  #         else
+  #           docker run --rm --platform linux/arm64 \
+  #             -v "$PWD:/workspace" -w /workspace/libs/whisper-jni \
+  #             debian:bullseye \
+  #             bash -c "apt update && apt install -y build-essential cmake git gcc g++ default-jdk \
+  #                     && chmod +x build_debian.sh \
+  #                     && ./build_debian.sh"
+  #         fi
+
+  #     - uses: actions/upload-artifact@v4
+  #       with:
+  #         name: debian-${{ matrix.arch }}
+  #         path: libs/whisper-jni/src/main/resources/debian-${{ matrix.arch }}
 
   build-macos:
     runs-on: macos-latest
@@ -97,13 +120,21 @@ jobs:
           java-version: "21"
           distribution: "temurin"
 
-      - name: Download artifacts
+      - name: Download and zip artifacts
         run: |
           for platform in debian-amd64 macos-amd64 macos-arm64 win-amd64; do
-            mkdir -p libs/whisper-jni/src/main/resources/$platform
             echo "::group::Downloading $platform"
-            gh run download -n $platform -D libs/whisper-jni/src/main/resources/$platform || echo "Missing artifact: $platform"
+
+            if ! gh run download -n "$platform" -D "src/main/resources/natives/$platform"; then
+              echo "::error::Missing or failed to download artifact: $platform"
+              exit 1
+            fi
+
             echo "::endgroup::"
+
+            # Zip it
+            (cd src/main/resources/natives && zip -r "$platform.zip" "$platform")
+            rm -rf src/main/resources/natives/$platform
           done
 
       # Move all natives into src/main/resources/natives
