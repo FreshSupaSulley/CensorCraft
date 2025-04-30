@@ -32,14 +32,14 @@ jobs:
           if [ "${{ matrix.arch }}" = "amd64" ]; then
             cd libs/whisper-jni
             chmod +x build_debian.sh
-            build_debian.sh
+            ./build_debian.sh
           else
             docker run --rm --platform linux/arm64 \
               -v "$PWD:/workspace" -w /workspace/libs/whisper-jni \
               debian:bullseye \
               bash -c "apt update && apt install -y build-essential cmake git gcc g++ \
                       && chmod +x build_debian.sh \
-                      && build_debian.sh arm64"
+                      && ./build_debian.sh"
           fi
 
       - uses: actions/upload-artifact@v4
