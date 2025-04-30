@@ -37,7 +37,7 @@ jobs:
             docker run --rm --platform linux/arm64 \
               -v "$PWD:/workspace" -w /workspace/libs/whisper-jni \
               debian:bullseye \
-              bash -c "apt update && apt install -y build-essential cmake git gcc g++ \
+              bash -c "apt update && apt install -y build-essential cmake git gcc g++ default-jdk \
                       && chmod +x build_debian.sh \
                       && ./build_debian.sh"
           fi
