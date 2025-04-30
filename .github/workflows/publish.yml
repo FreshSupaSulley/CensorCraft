@@ -23,16 +23,19 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+
       - name: Set cross-compile env (only for arm64)
         if: matrix.arch == 'arm64'
         run: |
           echo "CC=/usr/bin/aarch64-linux-gnu-gcc" >> $GITHUB_ENV
           echo "CXX=/usr/bin/aarch64-linux-gnu-g++" >> $GITHUB_ENV
+
       - name: Build Linux ${{ matrix.arch | upper }}
         run: |
           cd libs/whisper-jni
           chmod +x ../build_debian_patch.sh
           ../build_debian_patch.sh ${{ matrix.arch }}
+
       - uses: actions/upload-artifact@v4
         with:
           name: debian-${{ matrix.arch }}
