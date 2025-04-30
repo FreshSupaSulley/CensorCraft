@@ -38,21 +38,19 @@ public abstract class GUIMixin {
 			component.append(CensorCraft.GUI_TEXT);
 		}
 		
-		// Auto-closable hooray
-		try(Minecraft minecraft = Minecraft.getInstance())
+		Minecraft minecraft = Minecraft.getInstance();
+		
+		final int barWidth = 5, barHeight = minecraft.font.lineHeight * 2;
+		int x = PADDING;
+		
+		if(Config.Client.SHOW_VOLUME_BAR.get())
 		{
-			final int barWidth = 5, barHeight = minecraft.font.lineHeight * 2;
-			int x = PADDING;
-			
-			if(Config.Client.SHOW_VOLUME_BAR.get())
-			{
-				x += barWidth + PADDING;
-				graphics.fill(RenderType.guiOverlay(), PADDING, PADDING + barHeight, PADDING + barWidth, PADDING + barHeight - Math.clamp((int) (CensorCraft.JSCRIBE_VOLUME * barHeight), 1, barHeight), 0xAAFFFFFF);
-			}
-			
-			// Color is ARGB
-			graphics.drawWordWrap(minecraft.font, component, x, PADDING, graphics.guiWidth() - x - PADDING, 0xFFFFFFFF);
+			x += barWidth + PADDING;
+			graphics.fill(RenderType.guiOverlay(), PADDING, PADDING + barHeight, PADDING + barWidth, PADDING + barHeight - Math.clamp((int) (CensorCraft.JSCRIBE_VOLUME * barHeight), 1, barHeight), 0xAAFFFFFF);
 		}
+		
+		// Color is ARGB
+		graphics.drawWordWrap(minecraft.font, component, x, PADDING, graphics.guiWidth() - x - PADDING, 0xFFFFFFFF);
 	}
 	
 	// /**

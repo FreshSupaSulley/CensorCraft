@@ -3,8 +3,8 @@ package com.supasulley.censorcraft.gui;
 import java.util.stream.Collectors;
 
 import com.supasulley.censorcraft.Config;
-import com.supasulley.jscribe.AudioRecorder;
 
+import io.github.freshsupasulley.AudioRecorder;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Checkbox;

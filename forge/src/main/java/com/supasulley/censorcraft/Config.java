@@ -22,7 +22,7 @@ public abstract class Config {
 	public static class Client extends Config {
 		
 		public static ConfigValue<Boolean> SHOW_TRANSCRIPTION, SHOW_VOLUME_BAR, SHOW_DELAY;
-		public static ConfigValue<Long> SAMPLE_LENGTH, SAMPLE_OVERLAP_LENGTH;
+		public static ConfigValue<Integer> TRANSCRIPTION_LATENCY;
 		public static ConfigValue<String> PREFERRED_MIC;
 		
 		@Override
@@ -38,8 +38,7 @@ public abstract class Config {
 			
 			// Recording
 			builder.pop().comment("Only mess with these settings if you know what you're doing").push("transcription");
-			SAMPLE_LENGTH = builder.comment("Audio sample length in milliseconds").defineInRange("sample_length", 2000L, 2000, 10000);
-			SAMPLE_OVERLAP_LENGTH = builder.comment("Number of milliseconds audio samples overlap each other").defineInRange("overlap_length", 500L, 0, 500);
+			TRANSCRIPTION_LATENCY = builder.comment("Transcription speed (in milliseconds)").defineInRange("transcription_latency", 750, 1, Integer.MAX_VALUE);
 			
 			return builder.build();
 		}
@@ -67,7 +66,7 @@ public abstract class Config {
 			TABOO = builder.comment("List of forbidden words (case-insensitive)").defineListAllowEmpty("taboo", List.of("boom"), element -> true);
 			TABOO_COOLDOWN = builder.comment("Delay (in seconds) before a player can be punished again").defineInRange("punishment_cooldown", 3f, 3f, Float.MAX_VALUE);
 			EXPOSE_RATS = builder.comment("Rats on players in the chat if no audio data is being received").define("expose_rats", true);
-			RAT_DELAY = builder.comment("Seconds between ratting on players (expose_rats must be true)").defineInRange("rat_delay", 60f, 10, Float.MAX_VALUE);
+			RAT_DELAY = builder.comment("Seconds between ratting on players (expose_rats must be true)").defineInRange("rat_delay", 60f, 1, Float.MAX_VALUE);
 			CHAT_TABOOS = builder.comment("Sends what the player said to chat").define("chat_taboos", true);
 			KILL_PLAYER = builder.comment("Guarantees the player dies").define("kill_player", true);
 			IGNORE_TOTEMS = builder.comment("Killing the player ignores totems (kill_player must be true)").define("ignore_totem", false);
@@ -83,7 +82,7 @@ public abstract class Config {
 			// Lightning
 			builder.push("lightning");
 			ENABLE_LIGHTNING = builder.define("enable", false);
-			LIGHTNING_STRIKES = builder.comment("Number of lightning bolts").defineInRange("strikes", 1, 1, 1000);
+			LIGHTNING_STRIKES = builder.comment("Number of lightning bolts").comment("Successive lightning bolts don't seem to increase damage significantly").defineInRange("strikes", 1, 1, 1000);
 			builder.pop();
 			
 			return builder.build();

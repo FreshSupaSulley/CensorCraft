@@ -136,7 +136,7 @@ public class WordPacket {
 		// Just a heartbeat, ignore
 		if(packet.payload.isBlank())
 		{
-			CensorCraft.LOGGER.trace("Received heartbeat from {}", player.getUUID());
+			CensorCraft.LOGGER.debug("Received heartbeat from {}", player.getUUID());
 			return;
 		}
 		
@@ -144,22 +144,26 @@ public class WordPacket {
 		
 		// Update trie in case the taboos did
 		tabooTree.update(Config.Server.TABOO.get());
-		
 		String taboo = tabooTree.containsAnyIgnoreCase(participant.appendWord(packet.payload));
 		if(taboo == null)
 			return;
 		
-		// Update punishment timing and clear buffer
-		participant.punish();
+		CensorCraft.LOGGER.info("Taboo said by {}: \"{}\"!", player.getName().getString(), taboo);
+		participant.clearBuffer();
 		
 		// If we need to wait before the player is punished again
-		if(System.currentTimeMillis() - participant.getLastPunishment() < Config.Server.TABOO_COOLDOWN.get() * 1000) // Convert taboo cooldown to ms
+		long lastPunishmentTime = System.currentTimeMillis() - participant.getLastPunishment();
+		
+		if(lastPunishmentTime < Config.Server.TABOO_COOLDOWN.get() * 1000) // Convert taboo cooldown to ms
 		{
-			CensorCraft.LOGGER.info("Can't punish {} this frequently (last punishment at {}ms)", participant.getName(), participant.getLastPunishment());
+			CensorCraft.LOGGER.info("Can't punish {} this frequently (last punishment was {}ms ago)", participant.getName(), lastPunishmentTime);
 			return;
 		}
 		
-		CensorCraft.LOGGER.info("Taboo said by {}: \"{}\"!", player.getName().getString(), taboo);
+		CensorCraft.LOGGER.info("Punishing {}", player.getName().getString());
+		
+		// Update punishment timing and clear buffer
+		participant.updateLastPunishment();
 		
 		// Notify all players of the sin
 		if(Config.Server.CHAT_TABOOS.get())

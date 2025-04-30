@@ -1,0 +1,6 @@
+[submodule "jscribe/whisper-jni"]
+	path = jscribe/whisper-jni
+	url = https://github.com/GiviMAD/whisper-jni
+[submodule "jscribe/libs/whisper-jni"]
+	path = jscribe/libs/whisper-jni
+	url = git@github.com:GiviMAD/whisper-jni.git

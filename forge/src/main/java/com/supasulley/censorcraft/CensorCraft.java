@@ -9,10 +9,10 @@ import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
 import com.supasulley.censorcraft.gui.ConfigScreen;
-import com.supasulley.jscribe.JScribe;
 import com.supasulley.network.Trie;
 import com.supasulley.network.WordPacket;
 
+import io.github.freshsupasulley.JScribe;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -38,6 +38,8 @@ public class CensorCraft {
 	
 	public static final String MODID = "censorcraft";
 	public static final Logger LOGGER = LogUtils.getLogger();
+	
+	private static final long AUDIO_CONTEXT_LENGTH = 3000, OVERLAP_LENGTH = 200;
 	
 	private static JScribe controller;
 	private boolean inGame, paused;
@@ -106,8 +108,8 @@ public class CensorCraft {
 	
 	private void startJScribe()
 	{
-		// Call it 1.5s of audio time
-		if(controller.start(Config.Client.PREFERRED_MIC.get(), 750, 750))
+		// Words cannot exceed AUDIO_CONTEXT_LENGTH
+		if(controller.start(Config.Client.PREFERRED_MIC.get(), Config.Client.TRANSCRIPTION_LATENCY.get(), AUDIO_CONTEXT_LENGTH - Config.Client.TRANSCRIPTION_LATENCY.get() + OVERLAP_LENGTH, true))
 		{
 			MutableComponent component = Component.literal("Now listening to ");
 			component.append(Component.literal(controller.getActiveMicrophone().getName() + ". ").withStyle(style -> style.withBold(true)));

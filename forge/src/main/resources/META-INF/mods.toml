@@ -14,7 +14,7 @@ displayName="${mod_name}"
 # A URL for the "homepage" for this mod, displayed in the mod UI
 displayURL="https://github.com/FreshSupaSulley/CensorCraft"
 # A file name (in the root of the mod JAR) containing a logo for display
-#logoFile="examplemod.png" #optional
+logoFile="censorcraft.png"
 # A text field displayed in the mod UI
 authors="${mod_authors}"
 

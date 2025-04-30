@@ -39,16 +39,19 @@ public class Participant {
 		return buffer.toString();
 	}
 	
+	public void clearBuffer()
+	{
+		buffer.setLength(0);
+	}
+	
+	public void updateLastPunishment()
+	{
+		this.lastPunishment = System.currentTimeMillis();
+	}
+	
 	public void heartbeat()
 	{
 		this.lastHeartbeat = System.currentTimeMillis();
-	}
-	
-	public void punish()
-	{
-		// Don't recount tabooed words
-		this.buffer.setLength(0);
-		this.lastPunishment = System.currentTimeMillis();
 	}
 	
 	public String getName()

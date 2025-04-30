@@ -7,5 +7,5 @@ pluginManagement {
 }
 
 rootProject.name = "censorcraft"
-include("forge", "jscribe");
-//include("forge", "jscribe", "macrophone");
+// Maybe one day add support for different mod loaders
+include("forge");
