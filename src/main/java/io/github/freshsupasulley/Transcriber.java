@@ -1,17 +1,13 @@
 package io.github.freshsupasulley;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.stream.Stream;
 
+import de.maxhenkel.rnnoise4j.UnknownPlatformException;
 import io.github.givimad.whisperjni.WhisperContext;
 import io.github.givimad.whisperjni.WhisperFullParams;
 import io.github.givimad.whisperjni.WhisperJNI;
-import net.lingala.zip4j.ZipFile;
 
 /**
  * Transcriber waits for new audio samples and processes them into text segments using {@linkplain WhisperJNI}.
@@ -39,113 +35,23 @@ public class Transcriber extends Thread implements Runnable {
 		params.suppressNonSpeechTokens = true;
 		params.suppressBlank = true;
 		
+		Transcriber.loadNatives();
+	}
+	
+	public static void loadNatives()
+	{
+		JScribe.logger.info("Loading libraries");
+		
 		try
 		{
-			// Load natives
-			Transcriber.loadNatives();
-		} catch(IOException e)
+			LibraryLoader.loadBundledNatives();
+		} catch(IOException | UnknownPlatformException e)
 		{
-			e.printStackTrace();
+			JScribe.logger.error("This platform or architecture is not supported", e);
 			System.exit(1);
 		}
-	}
-	
-	public static void loadNatives() throws IOException
-	{
-		// Point to directory
-		// System.setProperty("io.github.givimad.whisperjni.libdir", new File("lib/macos-amd64").getAbsolutePath());
-		String osName = System.getProperty("os.name").toLowerCase();
-		String osArch = System.getProperty("os.arch").toLowerCase();
-		
-		JScribe.logger.debug("OS: " + osName);
-		JScribe.logger.debug("Arch: " + osArch);
-		
-		String resourceName = null;
-		
-		// Mac
-		if(osName.contains("mac") || osName.contains("darwin"))
-		{
-			JScribe.logger.debug("On Mac");
-			
-			// osArch doesn't help for differentiating x86-64 / Arm macs
-			// String trueArch = new String(new ProcessBuilder("uname", "-m").start().getInputStream().readAllBytes()).trim();
-			// JScribe.logger.info("True arch: {}", trueArch);
-			
-			String trueArch = osArch;
-			
-			if(trueArch.contains("x86_64"))
-			{
-				resourceName = "macos-amd64";
-			}
-			else if(trueArch.contains("aarch64") || trueArch.contains("arm64"))
-			{
-				resourceName = "macos-arm64";
-			}
-		}
-		else if(osName.contains("win"))
-		{
-			JScribe.logger.debug("On Windows");
-			
-			if(osArch.contains("amd64") || osArch.contains("x86_64"))
-			{
-				resourceName = "win-amd64";
-			}
-		}
-		else if(osName.contains("nix") || osName.contains("nux") || osName.contains("aix"))
-		{
-			JScribe.logger.debug("On Linux");
-			
-			if(osArch.contains("amd64") || osArch.contains("x86_64"))
-			{
-				resourceName = "debian-amd64";
-			}
-			else if(osArch.contains("aarch64") || osArch.contains("arm64"))
-			{
-				resourceName = "debian-arm64";
-			}
-			else if(osArch.contains("armv7") || osArch.contains("arm"))
-			{
-				resourceName = "debian-armv7l";
-			}
-		}
-		
-		if(resourceName == null)
-		{
-			throw new IllegalStateException("Native libraries not available for this OS: " + osName + ", Arch: " + osArch);
-		}
-		
-		JScribe.logger.info("Loading libraries for " + resourceName);
-		
-		Stream.of(extractZipToTemp("natives/" + resourceName).listFiles()).forEach(file ->
-		{
-			JScribe.logger.info("Loading library at " + file);
-			System.load(file.getAbsolutePath());
-			file.deleteOnExit();
-		});
 		
 		WhisperJNI.setLibraryLogger(null);
-	}
-	
-	private static File extractZipToTemp(String zipName) throws IOException
-	{
-		Path tempZip = Files.createTempFile("temp", ".zip");
-		Files.copy(Transcriber.class.getClassLoader().getResourceAsStream(zipName + ".zip"), tempZip, StandardCopyOption.REPLACE_EXISTING);
-		
-		try(ZipFile zip = new ZipFile(tempZip.toFile()))
-		{
-			Path destination = Files.createTempDirectory("temp");
-			destination.toFile().deleteOnExit();
-			
-			// Extract it at the same destination
-			zip.extractAll(destination.toString());
-			
-			// Pass in child name so we're not giving the parent folder back
-			return destination.toFile();
-		} finally
-		{
-			// We can delete the copied, unzipped zip
-			tempZip.toFile().delete();
-		}
 	}
 	
 	public Transcriber(Path modelPath)

@@ -11,25 +11,26 @@ concurrency:
 jobs:
   build-linux:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        arch: [amd64]
-
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - name: Build Linux ${{ matrix.arch }}
+      - name: Build Linux x64
         run: |
           cd libs/whisper-jni
           chmod +x build_debian.sh
           ./build_debian.sh
 
+      - name: Rename output folder to linux-x64
+        run: |
+          cd libs/whisper-jni/src/main/resources
+          mv "debian-amd64" "linux-x64"
+
       - uses: actions/upload-artifact@v4
         with:
-          name: debian-${{ matrix.arch }}
-          path: libs/whisper-jni/src/main/resources/debian-${{ matrix.arch }}
+          name: linux-x64
+          path: libs/whisper-jni/src/main/resources/linux-x64
 
   # Builds for both amd64 and arm64. ARM64 doesn't seem to be very popular so I'm ignoring it unless someone complains (it takes forever to build for it)
   # build-linux:
@@ -75,6 +76,7 @@ jobs:
     strategy:
       matrix:
         arch: [amd64, arm64]
+
     steps:
       - uses: actions/checkout@v4
         with:
@@ -86,30 +88,46 @@ jobs:
           chmod +x build_macos.sh
           ./build_macos.sh ${{ matrix.arch }}
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: macos-${{ matrix.arch }}
-          path: libs/whisper-jni/src/main/resources/macos-${{ matrix.arch }}
+      - name: Rename output folder to mac-arch
+        run: |
+          cd libs/whisper-jni/src/main/resources
+          case "${{ matrix.arch }}" in
+            amd64) mv "macos-amd64" "mac-x64" ;;
+            arm64) mv "macos-arm64" "mac-aarch64" ;;
+          esac
 
-  build-windows-amd64:
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.arch == 'amd64' && 'mac-x64' || 'mac-aarch64' }}
+          path: libs/whisper-jni/src/main/resources/${{ matrix.arch == 'amd64' && 'mac-x64' || 'mac-aarch64' }}
+
+  build-windows:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-      - name: Build Windows AMD64
+
+      - name: Build Windows x64
         run: |
           cd libs/whisper-jni
           ./build_win.ps1
         shell: pwsh
+
+      - name: Rename output folder to windows-x64
+        run: |
+          Rename-Item -Path "libs/whisper-jni/src/main/resources/win-amd64" -NewName "windows-x64"
+        shell: pwsh
+
       - uses: actions/upload-artifact@v4
         with:
-          name: win-amd64
-          path: libs/whisper-jni/src/main/resources/win-amd64
+          name: windows-x64
+          path: libs/whisper-jni/src/main/resources/windows-x64
 
   publish:
     runs-on: ubuntu-latest
-    needs: [build-linux, build-macos, build-windows-amd64]
+    needs: [build-linux, build-macos, build-windows]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -120,12 +138,11 @@ jobs:
           java-version: "21"
           distribution: "temurin"
 
-      - name: Download and zip artifacts
+      - name: Download artifacts
         env:
           GH_TOKEN: ${{ github.token }}
-
         run: |
-          for platform in debian-amd64 macos-amd64 macos-arm64 win-amd64; do
+          for platform in linux-x64 mac-x64 mac-aarch64 windows-x64; do
             echo "::group::Downloading $platform"
 
             if ! gh run download -n "$platform" -D "src/main/resources/natives/$platform"; then
@@ -134,12 +151,7 @@ jobs:
             fi
 
             echo "::endgroup::"
-
-            # Zip it
-            (cd src/main/resources/natives && zip -r "$platform.zip" "$platform")
-            rm -rf src/main/resources/natives/$platform
           done
-
       - run: ./gradlew clean build publish
       - run: ./gradlew jreleaserDeploy
         env:

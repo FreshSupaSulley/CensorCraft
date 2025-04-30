@@ -5,13 +5,7 @@ plugins {
 }
 
 group = 'io.github.freshsupasulley'
-version = '0.0.2'
-
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
-    }
-}
+version = '0.0.3'
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
@@ -37,9 +31,6 @@ dependencies {
     
     // https://mvnrepository.com/artifact/org.slf4j/slf4j-api
     api 'org.slf4j:slf4j-api:2.0.16'
-    
-    // https://mvnrepository.com/artifact/net.lingala.zip4j/zip4j
-    api 'net.lingala.zip4j:zip4j:2.11.5'
     
     testImplementation libs.junit.jupiter
     testImplementation 'org.slf4j:slf4j-simple:2.0.17'
@@ -98,9 +89,10 @@ publishing {
 }
 
 jreleaser {
-    environment {
+	// For local publishing
+    /*environment {
         variables = 'config.toml'
-    }
+    }*/
     
     signing {
         active = 'ALWAYS'
