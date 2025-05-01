@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import de.maxhenkel.rnnoise4j.UnknownPlatformException;
 import io.github.givimad.whisperjni.WhisperContext;
 import io.github.givimad.whisperjni.WhisperFullParams;
 import io.github.givimad.whisperjni.WhisperJNI;
@@ -44,10 +43,16 @@ public class Transcriber extends Thread implements Runnable {
 		
 		try
 		{
-			LibraryLoader.loadBundledNatives();
+			LibraryLoader.loadBundledNatives((a, b) ->
+			{
+				// Load JNI shit last if possible because it depends on whisper being loaded first
+				boolean aJNI = a.getName().toLowerCase().contains("jni");
+				boolean bJNI = b.getName().toLowerCase().contains("jni");
+				return Boolean.compare(aJNI, bJNI);
+			});
 		} catch(IOException e)
 		{
-			JScribe.logger.error("This platform or architecture is not supported", e);
+			JScribe.logger.error("An error occurred loading natives (platform: {}, arch: {})", LibraryLoader.OS_NAME, LibraryLoader.OS_ARCH, e);
 			System.exit(1);
 		}
 		

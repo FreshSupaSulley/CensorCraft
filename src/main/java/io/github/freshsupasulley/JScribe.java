@@ -35,52 +35,40 @@ public class JScribe implements UncaughtExceptionHandler {
 	 * @param latency    audio sample length in milliseconds
 	 * @param overlap    extra audio in milliseconds to catch stray words
 	 * @param denoise    true to denoise audio samples, false for raw audio
-	 * @return true if transcription started, false otherwise
+	 * @throws IOException if JScribe failed to start
 	 */
-	public boolean start(String microphone, long latency, long overlap, boolean denoise)
+	public void start(String microphone, long latency, long overlap, boolean denoise) throws IOException
 	{
 		if(isRunning())
 		{
-			return false;
+			throw new IOException("JScribe is already running");
 		}
 		
 		if(latency <= 0)
 		{
-			throw new IllegalStateException("JScribe is misconfigured");
+			throw new IOException("JScribe is misconfigured");
 		}
 		
 		logger.info("Starting JScribe");
 		
-		// where do i put running = true lol
-		try
-		{
-			recorder = new AudioRecorder(transcriber = new Transcriber(modelPath), microphone, latency, overlap, denoise);
-			
-			// Report errors to this thread
-			recorder.setUncaughtExceptionHandler(this);
-			transcriber.setUncaughtExceptionHandler(this);
-			
-			recorder.start();
-			transcriber.start();
-			
-			return true;
-		} catch(IOException e)
-		{
-			logger.error("Failed to start", e);
-			return false;
-		}
+		recorder = new AudioRecorder(transcriber = new Transcriber(modelPath), microphone, latency, overlap, denoise);
+		
+		// Report errors to this thread
+		recorder.setUncaughtExceptionHandler(this);
+		transcriber.setUncaughtExceptionHandler(this);
+		
+		recorder.start();
+		transcriber.start();
 	}
 	
 	/**
 	 * Stops and waits for live audio transcription to be stopped.
-	 * 
-	 * @return true if stopped, false if wasn't running
 	 */
-	public boolean stop()
+	public void stop()
 	{
 		if(!isRunning())
 		{
-			return false;
+			return;
 		}
 		
 		logger.info("Stopping JScribe");
@@ -100,7 +88,6 @@ public class JScribe implements UncaughtExceptionHandler {
 		}
 		
 		JScribe.logger.info("Stopped JScribe");
-		return true;
 	}
 	
 	/**

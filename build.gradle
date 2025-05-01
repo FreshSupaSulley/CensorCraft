@@ -2,15 +2,17 @@ plugins {
     id 'java-library'
     id 'maven-publish'
     id 'org.jreleaser' version '1.17.0'
+    id 'com.gradleup.shadow' version '9.0.0-beta12'
 }
 
 group = 'io.github.freshsupasulley'
-version = '0.0.4'
+version = '0.0.5'
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
 }
 
+// Building for the same version as forge
 sourceCompatibility = JavaVersion.VERSION_21
 targetCompatibility = JavaVersion.VERSION_21
 
@@ -26,6 +28,7 @@ dependencies {
     // Use macrophone for permissions
     //implementation project(':macrophone')
     
+    // Maybe consider shading these so I can forget about doing it in forge AND handle the old natives exclusion from whisper-jni
     implementation 'io.github.givimad:whisper-jni:1.7.1'
     implementation 'de.maxhenkel.rnnoise4j:rnnoise4j:2.0.2'
     
@@ -44,6 +47,27 @@ test {
     testLogging.showStandardStreams = true
 }
 
+// We are only using shading, no need for jar
+jar.enabled = false
+assemble.dependsOn shadowJar
+
+// Shading to make bundling CensorCraft easier
+shadowJar {
+    archiveClassifier.set('')
+    
+    // Ignore built-in whisper-jni natives
+    exclude 'debian-amd64/**'
+    exclude 'debian-arm64/**'
+    exclude 'debian-armv7l/**'
+    exclude 'macos-amd64/**'
+    exclude 'macos-arm64/**'
+    exclude 'win-amd64/**'
+    
+    relocate 'io.github.givimad.whisperjni', 'io.github.freshsupasulley.shaded.whisperjni'
+    relocate 'de.maxhenkel.rnnoise4j', 'io.github.freshsupasulley.shaded.rnnoise4j'
+    mergeServiceFiles()
+}
+
 java {
     withJavadocJar()
     withSourcesJar()
@@ -52,7 +76,7 @@ java {
 publishing {
     publications {
         maven(MavenPublication) {
-            from components.java
+            artifact shadowJar
             
 	        pom {
 	            name = 'jscribe'
@@ -106,6 +130,10 @@ jreleaser {
                     active = 'ALWAYS'
                     url = 'https://central.sonatype.com/api/v1/publisher'
                     stagingRepository('build/staging-deploy')
+                    
+                    // Double the retry delay as publishing takes a long time
+                    // Alternatively you can set JRELEASER_MAVENCENTRAL_STAGE: UPLOAD and manually publish
+                    retryDelay = 40
                 }
             }
         }

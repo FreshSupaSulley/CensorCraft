@@ -156,7 +156,7 @@ jobs:
       - run: ./gradlew jreleaserDeploy --stacktrace
         env:
           # Don't publish, just upload so I can review it
-          JRELEASER_MAVENCENTRAL_STAGE: UPLOAD
+          # JRELEASER_MAVENCENTRAL_STAGE: UPLOAD
           JRELEASER_MAVENCENTRAL_USERNAME: ${{ secrets.JRELEASER_MAVENCENTRAL_USERNAME }}
           JRELEASER_MAVENCENTRAL_PASSWORD: ${{ secrets.JRELEASER_MAVENCENTRAL_PASSWORD }}
           JRELEASER_GPG_PASSPHRASE: ${{ secrets.JRELEASER_GPG_PASSPHRASE }}
