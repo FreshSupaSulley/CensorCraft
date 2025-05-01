@@ -19,6 +19,14 @@ base {
 	archivesName = mod_id
 }
 
+def rawVersion = System.getProperty('java.version')
+def majorVersion = rawVersion.tokenize('.')[0].toInteger()
+
+// Because mappings doesn't seem to cooperate when you're using a higher version (like 23). Probably due to a Gradle / Java mismatch problem
+if (majorVersion != 21) {
+    throw new GradleException("JVM version 21 is required because mappings won't download otherwise. Detected: ${rawVersion}")
+}
+
 println "Java: ${System.getProperty 'java.version'}, JVM: ${System.getProperty 'java.vm.version'} (${System.getProperty 'java.vendor'}), Arch: ${System.getProperty 'os.arch'}"
 def runtime = Runtime.getRuntime()
 def mb = 1024 * 1024
@@ -110,6 +118,7 @@ minecraft {
 sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 repositories {
+    mavenLocal()
 	maven {
         name = "henkelmax.public"
         url = 'https://maven.maxhenkel.de/repository/public'
@@ -130,7 +139,7 @@ configurations {
 }
 
 dependencies {
-	shade 'io.github.freshsupasulley:jscribe:0.0.2'
+	shade 'io.github.freshsupasulley:jscribe:+'
 	
 	minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
 	
@@ -187,6 +196,7 @@ sourceSets.each {
 }
 
 jar {
+    // We are only using shading, no need for jar task
 	enabled = false
 	manifest {
 		attributes([
@@ -210,15 +220,6 @@ shadowJar {
     exclude "*.sh"
     exclude "*.cmd"
     exclude "*.md"
-    
-    // Don't need to do this anymore!!!!!
-    // Ignore built-in whisper-jni natives
-    /*exclude 'debian-amd64/**'
-    exclude 'debian-arm64/**'
-    exclude 'debian-armv7l/**'
-    exclude 'macos-amd64/**'
-    exclude 'macos-arm64/**'
-    exclude 'win-amd64/**'*/
     
     // Relocate external jars
     relocate 'net.lingala.zip4j', 'com.supasulley.zip4j'

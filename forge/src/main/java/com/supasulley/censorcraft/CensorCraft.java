@@ -108,22 +108,30 @@ public class CensorCraft {
 	
 	private void startJScribe()
 	{
-		// Words cannot exceed AUDIO_CONTEXT_LENGTH
-		if(controller.start(Config.Client.PREFERRED_MIC.get(), Config.Client.TRANSCRIPTION_LATENCY.get(), AUDIO_CONTEXT_LENGTH - Config.Client.TRANSCRIPTION_LATENCY.get() + OVERLAP_LENGTH, true))
+		if(controller.isRunning())
 		{
+			LOGGER.debug("Ignoring start request, JScribe is already running");
+			return;
+		}
+		
+		try
+		{
+			controller.start(Config.Client.PREFERRED_MIC.get(), Config.Client.TRANSCRIPTION_LATENCY.get(), AUDIO_CONTEXT_LENGTH - Config.Client.TRANSCRIPTION_LATENCY.get() + OVERLAP_LENGTH, true);
+			
 			MutableComponent component = Component.literal("Now listening to ");
 			component.append(Component.literal(controller.getActiveMicrophone().getName() + ". ").withStyle(style -> style.withBold(true)));
 			// Puts above inventory bar
 			Minecraft.getInstance().getChatListener().handleSystemMessage(component, true);
+		} catch(IOException e)
+		{
+			LOGGER.error("Failed to start JScribe", e);
 		}
 	}
 	
 	private void stopJScribe()
 	{
-		if(controller.stop())
-		{
-			setGUIText(Component.literal("Stopped recording."));
-		}
+		controller.stop();
+		setGUIText(Component.literal("Stopped recording."));
 	}
 	
 	@SubscribeEvent
@@ -173,7 +181,7 @@ public class CensorCraft {
 		// This is only for client ticks
 		if(event.side != LogicalSide.CLIENT)
 			return;
-		
+			
 		// Update bar height, "smoothly"
 		// Also give the volume a lil boost
 		JSCRIBE_VOLUME = lerp(Math.clamp(controller.getAudioLevel() * 1.5f, 0, 1), controller.getAudioLevel(), 0.1f);
@@ -181,7 +189,7 @@ public class CensorCraft {
 		// If the mic source changed, user restarted it, etc.
 		if(ConfigScreen.restart())
 		{
-//			setGUIText(Component.literal("Restarting...").withStyle(style -> style.withBold(true)));
+			// setGUIText(Component.literal("Restarting...").withStyle(style -> style.withBold(true)));
 			stopJScribe();
 			startJScribe();
 		}
