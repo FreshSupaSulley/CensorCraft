@@ -44,19 +44,20 @@ public class Transcriber extends Thread implements Runnable {
 		
 		try
 		{
-			System.setProperty("io.github.givimad.whisperjni.libdir", LibraryLoader.extractToTemp().toString());
-			LibraryUtils.loadLibrary(JScribe.logger::debug);
+			// Loads in wrong order anyways??
+			// System.setProperty("io.github.givimad.whisperjni.libdir", LibraryLoader.extractToTemp().toString());
+			// LibraryUtils.loadLibrary(JScribe.logger::debug);
 			
-//			LibraryLoader.loadBundledNatives((a, b) ->
-//			{
-//				String nameA = a.getName().toLowerCase();
-//				String nameB = b.getName().toLowerCase();
-//				
-//				int priorityA = getPriority(nameA);
-//				int priorityB = getPriority(nameB);
-//				
-//				return Integer.compare(priorityA, priorityB);
-//			});
+			LibraryLoader.loadBundledNatives((a, b) ->
+			{
+				String nameA = a.getName().toLowerCase();
+				String nameB = b.getName().toLowerCase();
+				
+				int priorityA = getPriority(nameA);
+				int priorityB = getPriority(nameB);
+				
+				return Integer.compare(priorityA, priorityB);
+			});
 			
 			// Then test loading whisper
 			WhisperJNI.setLibraryLogger(null);
@@ -67,19 +68,21 @@ public class Transcriber extends Thread implements Runnable {
 		}
 	}
 	
-//	private static int getPriority(String name)
-//	{
-//		// 0 == highest priority
-//		if(name.contains("whisper_full"))
-//			return 0;
-//		if(name.contains("whisper"))
-//			return 1;
-//		if(name.contains("ggml"))
-//			return 2;
-//		if(name.contains("jni"))
-//			return 3;
-//		return 4;
-//	}
+	private static int getPriority(String name)
+	{
+		// 0 == highest priority
+		if(name.contains("whisper_full"))
+			return 0;
+		if(name.contains("ggml"))
+			return 2;
+		
+		// Load last
+		if(name.contains("jni"))
+			return 4;
+		
+		// Anything else can load at whatever order
+		return 3;
+	}
 	
 	public Transcriber(Path modelPath)
 	{

@@ -9,7 +9,10 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Enumeration;
+import java.util.List;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
@@ -91,80 +94,7 @@ public class LibraryLoader {
 	 * @param nativeComparator used to sift through all natives found at os/arch/*, because natives that depend on each other need to be ordered
 	 * @throws IOException if something went wrong
 	 */
-	// public static void loadBundledNatives(Comparator<JarEntry> nativeComparator) throws IOException
-	// {
-	// String nativeFolder = getNativeFolderName();
-	//
-	// Path tempDir = Files.createTempDirectory("jscribe_natives");
-	// tempDir.toFile().deleteOnExit();
-	//
-	// // Find the path to this library's JAR
-	// URL jarURL = LibraryLoader.class.getProtectionDomain().getCodeSource().getLocation();
-	//
-	// // By default, assume its a file: protocol
-	// String jarFile = jarURL.getFile();
-	//
-	// // If it's a jar: protocol
-	// if(jarURL.getProtocol().equals("jar"))
-	// {
-	// JarURLConnection connection = (JarURLConnection) jarURL.openConnection();
-	//
-	// try
-	// {
-	// jarFile = new File(connection.getJarFileURL().toURI()).getAbsolutePath();
-	// } catch(URISyntaxException e)
-	// {
-	// throw new IOException("Failed to open connection to jar", e);
-	// }
-	// }
-	//
-	// JScribe.logger.info("Loading JAR from {} (file: {})", jarURL, jarFile);
-	//
-	// try(JarFile jar = new JarFile(jarFile))
-	// {
-	// Enumeration<JarEntry> entries = jar.entries();
-	// List<JarEntry> natives = new ArrayList<JarEntry>();
-	//
-	// while(entries.hasMoreElements())
-	// {
-	// JarEntry entry = entries.nextElement();
-	//
-	// // Only load the files, not the directory
-	// if(entry.getName().startsWith("natives/" + nativeFolder) && !entry.isDirectory())
-	// {
-	// JScribe.logger.info("Found native at {}", entry.getName());
-	// natives.add(entry);
-	// }
-	// }
-	//
-	// // The order matters!
-	// natives.sort(nativeComparator);
-	//
-	// for(JarEntry entry : natives)
-	// {
-	// // Get the input stream for the file in the JAR
-	// try(InputStream inputStream = jar.getInputStream(entry))
-	// {
-	// // Copy the file to a temporary location
-	// Path tempFilePath = Files.createTempFile(null, null);
-	// File tempFile = tempFilePath.toFile();
-	// tempFile.deleteOnExit();
-	//
-	// Files.copy(inputStream, tempFilePath, StandardCopyOption.REPLACE_EXISTING);
-	//
-	// JScribe.logger.info("Loading native {} from {}", entry.getName(), tempFile.getAbsolutePath());
-	// System.load(tempFile.getAbsolutePath());
-	// } catch(UnsatisfiedLinkError e)
-	// {
-	// throw new IOException("Failed to load native library at " + entry.getName(), e);
-	// }
-	// }
-	// }
-	//
-	// JScribe.logger.info("Finished loading natives");
-	// }
-	
-	public static Path extractToTemp() throws IOException
+	public static void loadBundledNatives(Comparator<JarEntry> nativeComparator) throws IOException
 	{
 		String nativeFolder = getNativeFolderName();
 		
@@ -188,16 +118,12 @@ public class LibraryLoader {
 			}
 		}
 		
-		JScribe.logger.info("Reading JAR from {} (file: {})", jarURL, jarFile);
-		
-		Path tmpDir = Files.createTempDirectory("jscribe_natives_");
-		tmpDir.toFile().deleteOnExit();
-		
-		JScribe.logger.info("Creating temp directory at {}", tmpDir);
+		JScribe.logger.info("Loading JAR from {} (file: {})", jarURL, jarFile);
 		
 		try(JarFile jar = new JarFile(jarFile))
 		{
 			Enumeration<JarEntry> entries = jar.entries();
+			List<JarEntry> natives = new ArrayList<JarEntry>();
 			
 			while(entries.hasMoreElements())
 			{
@@ -206,20 +132,94 @@ public class LibraryLoader {
 				// Only load the files, not the directory
 				if(entry.getName().startsWith("natives/" + nativeFolder) && !entry.isDirectory())
 				{
-					// Get the input stream for the file in the JAR
-					try(InputStream inputStream = jar.getInputStream(entry))
-					{
-						// Copy the file to a temporary location
-						Path targetPath = tmpDir.resolve(entry.getName());
-						Files.createDirectories(targetPath.getParent());
-						JScribe.logger.info("Extracting native {} to {}", entry.getName(), targetPath);
-						Files.copy(inputStream, targetPath, StandardCopyOption.REPLACE_EXISTING);
-					}
+					JScribe.logger.info("Found native at {}", entry.getName());
+					natives.add(entry);
+				}
+			}
+			
+			// The order matters!
+			natives.sort(nativeComparator);
+			
+			for(JarEntry entry : natives)
+			{
+				// Get the input stream for the file in the JAR
+				try(InputStream inputStream = jar.getInputStream(entry))
+				{
+					// Copy the file to a temporary location
+					Path tempFilePath = Files.createTempFile(null, null);
+					File tempFile = tempFilePath.toFile();
+					tempFile.deleteOnExit();
+					
+					Files.copy(inputStream, tempFilePath, StandardCopyOption.REPLACE_EXISTING);
+					
+					JScribe.logger.info("Loading native {} from {}", entry.getName(), tempFile.getAbsolutePath());
+					System.load(tempFile.getAbsolutePath());
+				} catch(UnsatisfiedLinkError e)
+				{
+					throw new IOException("Failed to extract and load native library " + entry.getName(), e);
 				}
 			}
 		}
 		
 		JScribe.logger.info("Finished loading natives");
-		return tmpDir;
 	}
+	
+	// public static Path extractToTemp() throws IOException
+	// {
+	// String nativeFolder = getNativeFolderName();
+	//
+	// // Find the path to this library's JAR
+	// URL jarURL = LibraryLoader.class.getProtectionDomain().getCodeSource().getLocation();
+	//
+	// // By default, assume its a file: protocol
+	// String jarFile = jarURL.getFile();
+	//
+	// // If it's a jar: protocol
+	// if(jarURL.getProtocol().equals("jar"))
+	// {
+	// JarURLConnection connection = (JarURLConnection) jarURL.openConnection();
+	//
+	// try
+	// {
+	// jarFile = new File(connection.getJarFileURL().toURI()).getAbsolutePath();
+	// } catch(URISyntaxException e)
+	// {
+	// throw new IOException("Failed to open connection to jar", e);
+	// }
+	// }
+	//
+	// JScribe.logger.info("Reading JAR from {} (file: {})", jarURL, jarFile);
+	//
+	// Path tmpDir = Files.createTempDirectory("jscribe_natives_");
+	// tmpDir.toFile().deleteOnExit();
+	//
+	// JScribe.logger.info("Creating temp directory at {}", tmpDir);
+	//
+	// try(JarFile jar = new JarFile(jarFile))
+	// {
+	// Enumeration<JarEntry> entries = jar.entries();
+	//
+	// while(entries.hasMoreElements())
+	// {
+	// JarEntry entry = entries.nextElement();
+	//
+	// // Only load the files, not the directory
+	// if(entry.getName().startsWith("natives/" + nativeFolder) && !entry.isDirectory())
+	// {
+	// // Get the input stream for the file in the JAR
+	// try(InputStream inputStream = jar.getInputStream(entry))
+	// {
+	// // Copy the file to a temporary location
+	// Path targetPath = tmpDir.resolve(entry.getName());
+	// Files.createDirectories(targetPath.getParent());
+	// JScribe.logger.info("Extracting native {} to {}", entry.getName(), targetPath);
+	// Files.copy(inputStream, targetPath, StandardCopyOption.REPLACE_EXISTING);
+	// }
+	// }
+	// }
+	// }
+	//
+	// JScribe.logger.info("Finished loading natives");
+	// return tmpDir.resolve(nativeFolder);
+	// }
 }
