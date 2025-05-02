@@ -2,7 +2,6 @@ plugins {
     id 'java-library'
     id 'maven-publish'
     id 'org.jreleaser' version '1.17.0'
-    id 'com.gradleup.shadow' version '9.0.0-beta12'
 }
 
 group = 'io.github.freshsupasulley'
@@ -32,11 +31,13 @@ repositories {
 dependencies {
     // Use macrophone for permissions
     //implementation project(':macrophone')
+    
+    // These used to be implementation before my dumbass realized this is JNI and shading doesn't work
     implementation 'io.github.givimad:whisper-jni:1.7.1'
     implementation 'de.maxhenkel.rnnoise4j:rnnoise4j:2.0.2'
     
     // Don't bundle
-    shadow 'org.slf4j:slf4j-api:2.0.16'
+    api 'org.slf4j:slf4j-api:2.0.16'
     
     testImplementation libs.junit.jupiter
     testImplementation 'org.slf4j:slf4j-simple:2.0.17'
@@ -50,40 +51,10 @@ test {
     testLogging.showStandardStreams = true
 }
 
-// We are only using shading, no need for jar
-jar.enabled = false
-assemble.dependsOn shadowJar
-
-// Shading to make bundling CensorCraft easier
-shadowJar {
-    archiveClassifier = ''
-    
-    // Ignore built-in whisper-jni natives
-    exclude 'debian-amd64/**'
-    exclude 'debian-arm64/**'
-    exclude 'debian-armv7l/**'
-    exclude 'macos-amd64/**'
-    exclude 'macos-arm64/**'
-    exclude 'win-amd64/**'
-    
-    relocate 'io.github.givimad.whisperjni', 'io.github.freshsupasulley.shaded.whisperjni'
-    relocate 'de.maxhenkel.rnnoise4j', 'io.github.freshsupasulley.shaded.rnnoise4j'
-    
-    mergeServiceFiles()
-}
-
 publishing {
     publications {
         maven(MavenPublication) {
-            //from components.java
-            from components.shadow
-            
-            //artifact(shadowJar) {
-			 //   classifier = null
-			//}
-			
-            artifact(tasks.named("sourcesJar"))
-            artifact(tasks.named("javadocJar"))
+            from components.java
             
 	        pom {
 	            name = 'jscribe'
