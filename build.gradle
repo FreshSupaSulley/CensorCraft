@@ -68,15 +68,17 @@ shadowJar {
     mergeServiceFiles()
 }
 
-java {
+/*java {
     withJavadocJar()
     withSourcesJar()
-}
+}*/
 
 publishing {
     publications {
         maven(MavenPublication) {
-            artifact shadowJar
+            from components.java
+            
+            artifact(shadowJar)
             
 	        pom {
 	            name = 'jscribe'
