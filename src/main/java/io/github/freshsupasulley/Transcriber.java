@@ -4,8 +4,6 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import de.maxhenkel.rnnoise4j.Denoiser;
-import de.maxhenkel.rnnoise4j.UnknownPlatformException;
 import io.github.givimad.whisperjni.WhisperContext;
 import io.github.givimad.whisperjni.WhisperFullParams;
 import io.github.givimad.whisperjni.WhisperJNI;
@@ -47,22 +45,14 @@ public class Transcriber extends Thread implements Runnable {
 		{
 			LibraryLoader.loadBundledNatives((a, b) ->
 			{
-				// Load JNI shit last if possible because it depends on whisper being loaded first
-				boolean aJNI = a.getName().toLowerCase().contains("jni");
-				boolean bJNI = b.getName().toLowerCase().contains("jni");
-				return Boolean.compare(aJNI, bJNI);
+				String nameA = a.getName().toLowerCase();
+				String nameB = b.getName().toLowerCase();
+				int priorityA = nameA.contains("ggml") ? 0 : nameA.contains("jni") ? 2 : 1;
+				int priorityB = nameB.contains("ggml") ? 0 : nameB.contains("jni") ? 2 : 1;
+				return Integer.compare(priorityA, priorityB);
 			});
 			
 			// Then test loading whisper
-			
-			try
-			{
-				Denoiser denoiser = new Denoiser();
-			} catch(UnknownPlatformException e)
-			{
-				throw new IOException(e);
-			}
-			
 			WhisperJNI.setLibraryLogger(null);
 		} catch(IOException | UnsatisfiedLinkError e)
 		{
