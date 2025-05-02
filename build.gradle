@@ -6,7 +6,7 @@ plugins {
 }
 
 group = 'io.github.freshsupasulley'
-version = '0.0.5'
+version = '0.0.6'
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
@@ -28,9 +28,8 @@ dependencies {
     // Use macrophone for permissions
     //implementation project(':macrophone')
     
-    // Maybe consider shading these so I can forget about doing it in forge AND handle the old natives exclusion from whisper-jni
-    implementation 'io.github.givimad:whisper-jni:1.7.1'
-    implementation 'de.maxhenkel.rnnoise4j:rnnoise4j:2.0.2'
+    shadow 'io.github.givimad:whisper-jni:1.7.1'
+    shadow 'de.maxhenkel.rnnoise4j:rnnoise4j:2.0.2'
     
     // https://mvnrepository.com/artifact/org.slf4j/slf4j-api
     api 'org.slf4j:slf4j-api:2.0.16'
@@ -68,10 +67,10 @@ shadowJar {
     mergeServiceFiles()
 }
 
-/*java {
+java {
     withJavadocJar()
     withSourcesJar()
-}*/
+}
 
 publishing {
     publications {
@@ -116,9 +115,9 @@ publishing {
 
 jreleaser {
 	// For local publishing
-    /*environment {
+    environment {
         variables = 'config.toml'
-    }*/
+    }
     
     signing {
         active = 'ALWAYS'
