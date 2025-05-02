@@ -6,7 +6,12 @@ plugins {
 }
 
 group = 'io.github.freshsupasulley'
-version = '0.0.6'
+version = '0.0.7'
+
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
@@ -64,20 +69,21 @@ shadowJar {
     
     relocate 'io.github.givimad.whisperjni', 'io.github.freshsupasulley.shaded.whisperjni'
     relocate 'de.maxhenkel.rnnoise4j', 'io.github.freshsupasulley.shaded.rnnoise4j'
+    
     mergeServiceFiles()
-}
-
-java {
-    withJavadocJar()
-    withSourcesJar()
 }
 
 publishing {
     publications {
         maven(MavenPublication) {
-            from components.java
+            //from components.java
             
-            artifact(shadowJar)
+            artifact(shadowJar) {
+                classifier = null
+            }
+            
+            artifact(tasks.named("sourcesJar"))
+            artifact(tasks.named("javadocJar"))
             
 	        pom {
 	            name = 'jscribe'
@@ -113,9 +119,22 @@ publishing {
     }
 }
 
+// Local testing
+task deployJScribeLocal {
+	dependsOn 'clean', 'build', 'publish'
+	
+	build.mustRunAfter clean
+    publish.mustRunAfter build
+	
+	doLast {
+        println "Deploying"
+    }
+    
+	finalizedBy 'jreleaserDeploy'
+}
+
 jreleaser {
-	// For local publishing
-    environment {
+	environment {
         variables = 'config.toml'
     }
     
