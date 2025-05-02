@@ -33,17 +33,9 @@ dependencies {
     // Use macrophone for permissions
     //implementation project(':macrophone')
     
-<<<<<<< HEAD
     implementation 'io.github.givimad:whisper-jni:1.7.1'
     implementation 'de.maxhenkel.rnnoise4j:rnnoise4j:2.0.2'
     shadow 'org.slf4j:slf4j-api:2.0.16'
-=======
-    shadow 'io.github.givimad:whisper-jni:1.7.1'
-    shadow 'de.maxhenkel.rnnoise4j:rnnoise4j:2.0.2'
-    
-    // https://mvnrepository.com/artifact/org.slf4j/slf4j-api
-    compileOnly 'org.slf4j:slf4j-api:2.0.16'
->>>>>>> refs/remotes/origin/main
     
     testImplementation libs.junit.jupiter
     testImplementation 'org.slf4j:slf4j-simple:2.0.17'
