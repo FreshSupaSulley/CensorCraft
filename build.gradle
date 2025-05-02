@@ -6,7 +6,7 @@ plugins {
 }
 
 group = 'io.github.freshsupasulley'
-version = '0.0.7'
+version = '0.0.8'
 
 java {
     withJavadocJar()
@@ -33,11 +33,9 @@ dependencies {
     // Use macrophone for permissions
     //implementation project(':macrophone')
     
-    shadow 'io.github.givimad:whisper-jni:1.7.1'
-    shadow 'de.maxhenkel.rnnoise4j:rnnoise4j:2.0.2'
-    
-    // https://mvnrepository.com/artifact/org.slf4j/slf4j-api
-    api 'org.slf4j:slf4j-api:2.0.16'
+    implementation 'io.github.givimad:whisper-jni:1.7.1'
+    implementation 'de.maxhenkel.rnnoise4j:rnnoise4j:2.0.2'
+    shadow 'org.slf4j:slf4j-api:2.0.16'
     
     testImplementation libs.junit.jupiter
     testImplementation 'org.slf4j:slf4j-simple:2.0.17'
@@ -57,7 +55,7 @@ assemble.dependsOn shadowJar
 
 // Shading to make bundling CensorCraft easier
 shadowJar {
-    archiveClassifier.set('')
+    archiveClassifier = ''
     
     // Ignore built-in whisper-jni natives
     exclude 'debian-amd64/**'
@@ -77,13 +75,14 @@ publishing {
     publications {
         maven(MavenPublication) {
             //from components.java
+            from components.shadow
             
-            artifact(shadowJar) {
-                classifier = null
-            }
-            
-            artifact(tasks.named("sourcesJar"))
-            artifact(tasks.named("javadocJar"))
+            //artifact(shadowJar) {
+			 //   classifier = null
+			//}
+			
+            //artifact(tasks.named("sourcesJar"))
+            //artifact(tasks.named("javadocJar"))
             
 	        pom {
 	            name = 'jscribe'
@@ -130,7 +129,8 @@ task deployJScribeLocal {
         println "Deploying"
     }
     
-	finalizedBy 'jreleaserDeploy'
+    finalizedBy 'publishToMavenLocal'
+	//finalizedBy 'jreleaserDeploy'
 }
 
 jreleaser {
