@@ -7,6 +7,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import io.github.givimad.whisperjni.WhisperContext;
 import io.github.givimad.whisperjni.WhisperFullParams;
 import io.github.givimad.whisperjni.WhisperJNI;
+import io.github.givimad.whisperjni.internal.LibraryUtils;
 
 /**
  * Transcriber waits for new audio samples and processes them into text segments using {@linkplain WhisperJNI}.
@@ -43,14 +44,19 @@ public class Transcriber extends Thread implements Runnable {
 		
 		try
 		{
-			LibraryLoader.loadBundledNatives((a, b) ->
-			{
-				String nameA = a.getName().toLowerCase();
-				String nameB = b.getName().toLowerCase();
-				int priorityA = nameA.contains("ggml") ? 0 : nameA.contains("jni") ? 2 : 1;
-				int priorityB = nameB.contains("ggml") ? 0 : nameB.contains("jni") ? 2 : 1;
-				return Integer.compare(priorityA, priorityB);
-			});
+			System.setProperty("io.github.givimad.whisperjni.libdir", LibraryLoader.extractToTemp().toString());
+			LibraryUtils.loadLibrary(JScribe.logger::debug);
+			
+//			LibraryLoader.loadBundledNatives((a, b) ->
+//			{
+//				String nameA = a.getName().toLowerCase();
+//				String nameB = b.getName().toLowerCase();
+//				
+//				int priorityA = getPriority(nameA);
+//				int priorityB = getPriority(nameB);
+//				
+//				return Integer.compare(priorityA, priorityB);
+//			});
 			
 			// Then test loading whisper
 			WhisperJNI.setLibraryLogger(null);
@@ -60,6 +66,20 @@ public class Transcriber extends Thread implements Runnable {
 			System.exit(1);
 		}
 	}
+	
+//	private static int getPriority(String name)
+//	{
+//		// 0 == highest priority
+//		if(name.contains("whisper_full"))
+//			return 0;
+//		if(name.contains("whisper"))
+//			return 1;
+//		if(name.contains("ggml"))
+//			return 2;
+//		if(name.contains("jni"))
+//			return 3;
+//		return 4;
+//	}
 	
 	public Transcriber(Path modelPath)
 	{
