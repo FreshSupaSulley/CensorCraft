@@ -32,9 +32,10 @@ repositories {
 dependencies {
     // Use macrophone for permissions
     //implementation project(':macrophone')
-    
     implementation 'io.github.givimad:whisper-jni:1.7.1'
     implementation 'de.maxhenkel.rnnoise4j:rnnoise4j:2.0.2'
+    
+    // Don't bundle
     shadow 'org.slf4j:slf4j-api:2.0.16'
     
     testImplementation libs.junit.jupiter
@@ -81,8 +82,8 @@ publishing {
 			 //   classifier = null
 			//}
 			
-            //artifact(tasks.named("sourcesJar"))
-            //artifact(tasks.named("javadocJar"))
+            artifact(tasks.named("sourcesJar"))
+            artifact(tasks.named("javadocJar"))
             
 	        pom {
 	            name = 'jscribe'
