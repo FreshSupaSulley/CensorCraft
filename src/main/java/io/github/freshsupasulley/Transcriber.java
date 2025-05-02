@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import de.maxhenkel.rnnoise4j.Denoiser;
+import de.maxhenkel.rnnoise4j.UnknownPlatformException;
 import io.github.givimad.whisperjni.WhisperContext;
 import io.github.givimad.whisperjni.WhisperFullParams;
 import io.github.givimad.whisperjni.WhisperJNI;
@@ -50,13 +52,23 @@ public class Transcriber extends Thread implements Runnable {
 				boolean bJNI = b.getName().toLowerCase().contains("jni");
 				return Boolean.compare(aJNI, bJNI);
 			});
-		} catch(IOException e)
+			
+			// Then test loading whisper
+			
+			try
+			{
+				Denoiser denoiser = new Denoiser();
+			} catch(UnknownPlatformException e)
+			{
+				throw new IOException(e);
+			}
+			
+			WhisperJNI.setLibraryLogger(null);
+		} catch(IOException | UnsatisfiedLinkError e)
 		{
 			JScribe.logger.error("An error occurred loading natives (platform: {}, arch: {})", LibraryLoader.OS_NAME, LibraryLoader.OS_ARCH, e);
 			System.exit(1);
 		}
-		
-		WhisperJNI.setLibraryLogger(null);
 	}
 	
 	public Transcriber(Path modelPath)

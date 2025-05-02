@@ -155,7 +155,7 @@ public class LibraryLoader {
 					
 					Files.copy(inputStream, tempFilePath, StandardCopyOption.REPLACE_EXISTING);
 					
-					JScribe.logger.info("Loading native at {}", tempFile.getAbsolutePath());
+					JScribe.logger.info("Loading native {} from {}", entry.getName(), tempFile.getAbsolutePath());
 					System.load(tempFile.getAbsolutePath());
 				} catch(UnsatisfiedLinkError e)
 				{
@@ -163,5 +163,7 @@ public class LibraryLoader {
 				}
 			}
 		}
+		
+		JScribe.logger.info("Finished loading natives");
 	}
 }
