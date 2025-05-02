@@ -6,7 +6,7 @@ plugins {
 }
 
 group = 'io.github.freshsupasulley'
-version = '0.0.7'
+version = '0.0.8'
 
 java {
     withJavadocJar()
@@ -37,7 +37,7 @@ dependencies {
     shadow 'de.maxhenkel.rnnoise4j:rnnoise4j:2.0.2'
     
     // https://mvnrepository.com/artifact/org.slf4j/slf4j-api
-    api 'org.slf4j:slf4j-api:2.0.16'
+    compileOnly 'org.slf4j:slf4j-api:2.0.16'
     
     testImplementation libs.junit.jupiter
     testImplementation 'org.slf4j:slf4j-simple:2.0.17'
