@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.ShortBuffer;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -12,7 +11,6 @@ import java.util.Objects;
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.DataLine;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.Mixer;
 import javax.sound.sampled.TargetDataLine;
@@ -21,7 +19,7 @@ import de.maxhenkel.rnnoise4j.Denoiser;
 import de.maxhenkel.rnnoise4j.UnknownPlatformException;
 import io.github.givimad.libfvadjni.VoiceActivityDetector;
 
-public class AudioRecorder extends Thread implements Runnable {
+class AudioRecorder extends Thread implements Runnable {
 	
 	/** Format Whisper wants (also means wave file) */
 	public static final AudioFormat FORMAT = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 16000, 16, 1, 2, 16000, false);
@@ -41,7 +39,7 @@ public class AudioRecorder extends Thread implements Runnable {
 	private Mixer.Info device;
 	private float loudness;
 	
-	public AudioRecorder(Transcriber listener, String micName, long latency, long overlap, boolean vad, boolean denoise) throws IOException
+	public AudioRecorder(Transcriber listener, String micName, long latency, long overlap, boolean vad, boolean denoise) throws IOException, NoMicrophoneException
 	{
 		this.transcription = listener;
 		this.latency = latency;
@@ -66,11 +64,11 @@ public class AudioRecorder extends Thread implements Runnable {
 			}
 		}
 		
-		List<Mixer.Info> microphones = getMicrophones();
+		List<Mixer.Info> microphones = JScribe.getMicrophones();
 		
 		if(microphones.isEmpty())
 		{
-			throw new IOException("No microphones detected");
+			throw new NoMicrophoneException("No microphones detected");
 		}
 		
 		// Objects.equals allows micName to be null
@@ -79,28 +77,6 @@ public class AudioRecorder extends Thread implements Runnable {
 		
 		setName("Audio Recorder");
 		setDaemon(true);
-	}
-	
-	/**
-	 * @return list of mixers that support the desired {@linkplain AudioFormat} required for transcription.
-	 */
-	public static List<Mixer.Info> getMicrophones()
-	{
-		List<Mixer.Info> names = new ArrayList<Mixer.Info>();
-		Mixer.Info[] mixers = AudioSystem.getMixerInfo();
-		
-		for(Mixer.Info mixerInfo : mixers)
-		{
-			Mixer mixer = AudioSystem.getMixer(mixerInfo);
-			DataLine.Info lineInfo = new DataLine.Info(TargetDataLine.class, FORMAT);
-			
-			if(mixer.isLineSupported(lineInfo))
-			{
-				names.add(mixerInfo);
-			}
-		}
-		
-		return names;
 	}
 	
 	public boolean receivingAudio()

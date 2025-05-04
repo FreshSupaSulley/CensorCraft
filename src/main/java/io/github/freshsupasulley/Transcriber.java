@@ -15,7 +15,7 @@ import io.github.givimad.whisperjni.internal.LibraryUtils;
 /**
  * Transcriber waits for new audio samples and processes them into text segments using {@linkplain WhisperJNI}.
  */
-public class Transcriber extends Thread implements Runnable {
+class Transcriber extends Thread implements Runnable {
 	
 	private final WhisperJNI whisper = new WhisperJNI();
 	private final LinkedBlockingQueue<Recording> recordings = new LinkedBlockingQueue<Recording>();

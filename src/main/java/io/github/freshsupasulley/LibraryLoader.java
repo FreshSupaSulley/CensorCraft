@@ -5,7 +5,7 @@ package io.github.freshsupasulley;
  * 
  * @see <a href="https://github.com/henkelmax/rnnoise4j">RNNoise4J repo</a>
  */
-public class LibraryLoader {
+class LibraryLoader {
 	
 	public static final String OS_NAME = System.getProperty("os.name").toLowerCase();
 	public static final String OS_ARCH = System.getProperty("os.arch").toLowerCase();

@@ -22,9 +22,26 @@ import javax.sound.sampled.UnsupportedAudioFileException;
 
 import org.junit.jupiter.api.Test;
 
+import io.github.freshsupasulley.JScribe;
 import io.github.givimad.libfvadjni.VoiceActivityDetector;
 
 class AppTest {
+	
+	@Test
+	void downloadModel() throws IOException
+	{
+		String[] models = JScribe.getModels();
+		Arrays.toString(models);
+		
+		try
+		{
+			JScribe.downloadModel("tiny", Paths.get("src", "test", "resources", "tiny.bin"));
+		} catch(Exception e)
+		{
+			System.out.println(e);
+			throw e;
+		}
+	}
 	
 	/**
 	 * Sanity check to ensure the library loads.
@@ -34,22 +51,22 @@ class AppTest {
 	@Test
 	void libraryLoads() throws IOException
 	{
-		// JScribe scribe = new JScribe(Paths.get("src/test/resources/ggml-tiny.en.bin"));
-		// scribe.start("", 1000, 500, true);
-		//
-		// // Translate for a while
-		// long start = System.currentTimeMillis(), lastAudio = start;
-		//
-		// while(System.currentTimeMillis() - start < 30000 && !scribe.noAudio())
-		// {
-		// if(System.currentTimeMillis() - lastAudio > 200)
-		// {
-		// lastAudio = System.currentTimeMillis();
-		// System.out.println("Audio level: " + scribe.getAudioLevel());
-		// }
-		//
-		// for(String buffer = null; !(buffer = scribe.getBuffer()).equals(""); System.out.println(buffer));
-		// }
+//		JScribe scribe = new JScribe(Paths.get("src/test/resources/ggml-tiny.en.bin"));
+//		scribe.start("", 1000, 500, true);
+//		
+//		// Translate for a while
+//		long start = System.currentTimeMillis(), lastAudio = start;
+//		
+//		while(System.currentTimeMillis() - start < 30000 && !scribe.noAudio())
+//		{
+//			if(System.currentTimeMillis() - lastAudio > 200)
+//			{
+//				lastAudio = System.currentTimeMillis();
+//				System.out.println("Audio level: " + scribe.getAudioLevel());
+//			}
+//			
+//			for(String buffer = null; !(buffer = scribe.getBuffer()).equals(""); System.out.println(buffer));
+//		}
 	}
 	
 	@Test

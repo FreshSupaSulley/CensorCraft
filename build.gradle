@@ -5,7 +5,7 @@ plugins {
 }
 
 group = 'io.github.freshsupasulley'
-version = '0.0.12'
+version = '0.0.13'
 
 java {
     withJavadocJar()
@@ -36,7 +36,8 @@ dependencies {
     implementation 'io.github.givimad:whisper-jni:1.7.1' // Speech to text
     implementation 'io.github.givimad:libfvad-jni:1.0.0-1' // VAD
     implementation 'de.maxhenkel.rnnoise4j:rnnoise4j:2.0.2' // Helps remove white noise which libfvad appreciates
-    
+	implementation 'org.json:json:20250107' // Helps with parsing API responses for downloading models
+	
     // Don't bundle
     api 'org.slf4j:slf4j-api:2.0.16'
     
