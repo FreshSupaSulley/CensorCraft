@@ -4,9 +4,10 @@ import java.util.stream.Collectors;
 
 import com.supasulley.censorcraft.Config;
 
-import io.github.freshsupasulley.AudioRecorder;
+import io.github.freshsupasulley.JScribe;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.OptionInstance;
+import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Checkbox;
 import net.minecraft.client.gui.components.StringWidget;
@@ -92,7 +93,7 @@ public class ConfigScreen extends Screen {
 		}).build());
 		
 		// layout.addChild(new ForgeSlider(0, 0, optionsWidth, java.awt.Button.HEIGHT, Component.literal("prefix"), Component.literal("suffix"), 30, 1500,
-		OptionInstance<Integer> fov = new OptionInstance<>(null, OptionInstance.cachedConstantTooltip(Component.literal("Transcription speed")), (component, value) ->
+		AbstractWidget slider = new OptionInstance<>(null, OptionInstance.cachedConstantTooltip(Component.literal("Transcription speed")), (component, value) ->
 		{
 			return switch(value)
 			{
@@ -100,15 +101,17 @@ public class ConfigScreen extends Screen {
 				case 1500 -> Component.literal("Slow");
 				default -> Component.literal(value + "ms");
 			};
-		}, new OptionInstance.IntRange(30, 1500), Config.Client.LATENCY.get(), Config.Client.LATENCY::set);
-		layout.addChild(fov.createButton(minecraft.options)); // no clue what minecraft.options is
+		}, new OptionInstance.IntRange(30, 1500), Config.Client.LATENCY.get(), Config.Client.LATENCY::set).createButton(minecraft.options); // no clue what minecraft.options is
+		
+		slider.setWidth(optionsWidth);
+		layout.addChild(slider);
 		
 		// Put it together
 		// Close button
 		final int closeButtonY = addRenderableWidget(Button.builder(Component.literal("Close"), button -> this.onClose()).bounds(this.width / 2 - Button.BIG_WIDTH / 2, this.height - (PADDING + Button.DEFAULT_HEIGHT), Button.BIG_WIDTH, Button.DEFAULT_HEIGHT).build()).getY();
 		
 		// List of microphones on left
-		list = new MicrophoneList(restartButton, PADDING, listY, micListWidth - PADDING * 2, closeButtonY - listY - PADDING, minecraft, AudioRecorder.getMicrophones().stream().map(mic -> mic.getName()).collect(Collectors.toList()));
+		list = new MicrophoneList(restartButton, PADDING, listY, micListWidth - PADDING * 2, closeButtonY - listY - PADDING, minecraft, JScribe.getMicrophones().stream().map(mic -> mic.getName()).collect(Collectors.toList()));
 		addRenderableWidget(list);
 		
 		// List of options on right

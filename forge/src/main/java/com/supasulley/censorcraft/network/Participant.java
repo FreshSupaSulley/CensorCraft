@@ -1,4 +1,4 @@
-package com.supasulley.network;
+package com.supasulley.censorcraft.network;
 
 public class Participant {
 	

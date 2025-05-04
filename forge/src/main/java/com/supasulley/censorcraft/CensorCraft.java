@@ -9,10 +9,11 @@ import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
 import com.supasulley.censorcraft.gui.ConfigScreen;
-import com.supasulley.network.Trie;
-import com.supasulley.network.WordPacket;
+import com.supasulley.censorcraft.network.Trie;
+import com.supasulley.censorcraft.network.WordPacket;
 
 import io.github.freshsupasulley.JScribe;
+import io.github.freshsupasulley.NoMicrophoneException;
 import io.github.freshsupasulley.Transcriptions;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
@@ -128,6 +129,9 @@ public class CensorCraft {
 			component.append(Component.literal(controller.getActiveMicrophone().getName() + ". ").withStyle(style -> style.withBold(true)));
 			// Puts above inventory bar
 			Minecraft.getInstance().getChatListener().handleSystemMessage(component, true);
+		} catch(NoMicrophoneException e)
+		{
+			LOGGER.error("No microphones found", e);
 		} catch(IOException e)
 		{
 			LOGGER.error("Failed to start JScribe", e);
@@ -255,7 +259,7 @@ public class CensorCraft {
 				
 				if(Config.Client.SHOW_DELAY.get())
 				{
-					component.append(Component.literal(String.format("%.1f", controller.getTimeBehind() / 1000f) + "s behind (" + recordings + " recordings)").withColor(0xAAAAAA));
+					component.append(Component.literal(String.format("%.1f", controller.getTimeBehind() / 1000f) + "s behind (" + recordings + " recording" + (recordings != 1 ? "s" : "") + ")").withColor(0xAAAAAA));
 				}
 				
 				setGUIText(component);

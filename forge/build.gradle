@@ -139,12 +139,22 @@ configurations {
 }
 
 dependencies {
-	shade 'io.github.freshsupasulley:jscribe:0.0.11'
+	shade 'io.github.freshsupasulley:jscribe:0.0.12'
 	
 	minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
 	
 	// Apply Mixin AP to generate refmap
 	annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+	
+	testImplementation libs.junit.jupiter
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+test {
+    testLogging.showStandardStreams = true
 }
 
 mixin {

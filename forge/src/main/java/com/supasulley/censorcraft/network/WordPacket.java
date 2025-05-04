@@ -1,4 +1,4 @@
-package com.supasulley.network;
+package com.supasulley.censorcraft.network;
 
 import java.nio.charset.Charset;
 import java.util.HashMap;
@@ -144,7 +144,11 @@ public class WordPacket {
 		
 		// Update trie in case the taboos did
 		tabooTree.update(Config.Server.TABOO.get());
-		String taboo = tabooTree.containsAnyIgnoreCase(participant.appendWord(packet.payload));
+		
+		String word = participant.appendWord(packet.payload);
+		String taboo = Config.Server.ISOLATE_WORDS.get() ? tabooTree.containsAnyIsolatedIgnoreCase(word) : tabooTree.containsAnyIgnoreCase(word);
+		
+		// If we didn't find anything
 		if(taboo == null)
 			return;
 		

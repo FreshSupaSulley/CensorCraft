@@ -52,7 +52,7 @@ public abstract class Config {
 		// General
 		public static ConfigValue<List<? extends String>> TABOO;
 		public static ConfigValue<Float> PUNISHMENT_COOLDOWN, RAT_DELAY;
-		public static ConfigValue<Boolean> CHAT_TABOOS, KILL_PLAYER, IGNORE_TOTEMS;
+		public static ConfigValue<Boolean> CHAT_TABOOS, KILL_PLAYER, IGNORE_TOTEMS, ISOLATE_WORDS;
 		
 		// Explosion
 		public static ConfigValue<Float> EXPLOSION_RADIUS;
@@ -67,6 +67,8 @@ public abstract class Config {
 		{
 			ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
 			TABOO = builder.comment("List of forbidden words (case-insensitive)").defineListAllowEmpty("taboo", List.of("boom"), element -> true);
+			
+			ISOLATE_WORDS = builder.comment("If true, only whole words are considered (surrounded by spaces or word boundaries). If false, partial matches are allowed (e.g., 'art' triggers punishment for 'start')").define("isolate_words", true);
 			PUNISHMENT_COOLDOWN = builder.comment("Delay (in seconds) before a player can be punished again").defineInRange("punishment_cooldown", 3f, 3f, Float.MAX_VALUE);
 			EXPOSE_RATS = builder.comment("Rats on players in the chat if no audio data is being received").define("expose_rats", true);
 			RAT_DELAY = builder.comment("Seconds between ratting on players (expose_rats must be true)").defineInRange("rat_delay", 60f, 1, Float.MAX_VALUE);
