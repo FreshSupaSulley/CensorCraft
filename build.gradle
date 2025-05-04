@@ -91,21 +91,6 @@ publishing {
     }
 }
 
-// Local testing
-task deployJScribeLocal {
-	dependsOn 'clean', 'build', 'publish'
-	
-	build.mustRunAfter clean
-    publish.mustRunAfter build
-	
-	doLast {
-        println "Deploying"
-    }
-    
-    finalizedBy 'publishToMavenLocal'
-	//finalizedBy 'jreleaserDeploy'
-}
-
 jreleaser {
 	environment {
         variables = 'config.toml'
@@ -131,4 +116,25 @@ jreleaser {
             }
         }
     }
+}
+
+// Custom tasks for ease of use
+task deployLocal {
+	group = 'jscribe'
+	description = 'Publishes to maven local'
+	
+	dependsOn 'clean', 'build', 'publish'
+	
+	build.mustRunAfter clean
+    publish.mustRunAfter build
+    
+    finalizedBy 'publishToMavenLocal'
+}
+
+task deployMaven {
+	group = 'jscribe'
+	description = 'Publishes to maven central'
+	
+	dependsOn deployLocal
+	finalizedBy 'jreleaserDeploy'
 }
