@@ -49,6 +49,11 @@ public abstract class GUIMixin {
 			graphics.fill(RenderType.guiOverlay(), PADDING, PADDING + barHeight, PADDING + barWidth, PADDING + barHeight - Math.clamp((int) (CensorCraft.JSCRIBE_VOLUME * barHeight), 1, barHeight), 0xAAFFFFFF);
 		}
 		
+		if(Config.Client.SHOW_VAD.get() && CensorCraft.SPEAKING)
+		{
+			component.append(Component.literal("\nSpeaking"));
+		}
+		
 		// Color is ARGB
 		graphics.drawWordWrap(minecraft.font, component, x, PADDING, graphics.guiWidth() - x - PADDING, 0xFFFFFFFF);
 	}

@@ -154,7 +154,7 @@ public class WordPacket {
 		// If we need to wait before the player is punished again
 		long lastPunishmentTime = System.currentTimeMillis() - participant.getLastPunishment();
 		
-		if(lastPunishmentTime < Config.Server.TABOO_COOLDOWN.get() * 1000) // Convert taboo cooldown to ms
+		if(lastPunishmentTime < Config.Server.PUNISHMENT_COOLDOWN.get() * 1000) // Convert taboo cooldown to ms
 		{
 			CensorCraft.LOGGER.info("Can't punish {} this frequently (last punishment was {}ms ago)", participant.getName(), lastPunishmentTime);
 			return;

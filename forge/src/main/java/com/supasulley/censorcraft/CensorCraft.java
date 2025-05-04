@@ -13,6 +13,7 @@ import com.supasulley.network.Trie;
 import com.supasulley.network.WordPacket;
 
 import io.github.freshsupasulley.JScribe;
+import io.github.freshsupasulley.Transcriptions;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -54,10 +55,15 @@ public class CensorCraft {
 	
 	// GUI
 	private static final long GUI_TIMEOUT = 10000;
+	private static final int TRANSCRIPTION_LENGTH = 100;
+	
 	public static MutableComponent GUI_TEXT;
 	public static float JSCRIBE_VOLUME;
+	public static boolean SPEAKING;
+	
 	private long lastTranscriptionUpdate;
 	private String transcription;
+	private int recordings;
 	
 	public CensorCraft(FMLJavaModLoadingContext context)
 	{
@@ -116,7 +122,7 @@ public class CensorCraft {
 		
 		try
 		{
-			controller.start(Config.Client.PREFERRED_MIC.get(), Config.Client.TRANSCRIPTION_LATENCY.get(), AUDIO_CONTEXT_LENGTH - Config.Client.TRANSCRIPTION_LATENCY.get() + OVERLAP_LENGTH, true);
+			controller.start(Config.Client.PREFERRED_MIC.get(), Config.Client.LATENCY.get(), AUDIO_CONTEXT_LENGTH - Config.Client.LATENCY.get() + OVERLAP_LENGTH, Config.Client.VAD.get(), Config.Client.DENOISE.get());
 			
 			MutableComponent component = Component.literal("Now listening to ");
 			component.append(Component.literal(controller.getActiveMicrophone().getName() + ". ").withStyle(style -> style.withBold(true)));
@@ -184,7 +190,10 @@ public class CensorCraft {
 			
 		// Update bar height, "smoothly"
 		// Also give the volume a lil boost
-		JSCRIBE_VOLUME = lerp(Math.clamp(controller.getAudioLevel() * 1.5f, 0, 1), controller.getAudioLevel(), 0.1f);
+		// Use mth.lerp
+		// JSCRIBE_VOLUME = lerp(Math.clamp(controller.getAudioLevel() * 1.5f, 0, 1), controller.getAudioLevel(), 0.1f);
+		JSCRIBE_VOLUME = Math.clamp(controller.getAudioLevel() * 1.5f, 0, 1);
+		SPEAKING = controller.voiceDetected();
 		
 		// If the mic source changed, user restarted it, etc.
 		if(ConfigScreen.restart())
@@ -211,17 +220,32 @@ public class CensorCraft {
 			// Beyond this point, we need it to be running and actively transcribing
 			// If it's not blank, send it
 			// Send empty packet anyways if we need to keep up with the heartbeat
-			String buffer = controller.getBuffer();
+			Transcriptions results = controller.getTranscriptions();
 			
-			if(!buffer.isBlank())
+			if(!results.isEmpty())
 			{
+				String raw = results.getRawString();
+				
+				// Show end instead of front
+				final int newLength = Math.min(raw.length(), TRANSCRIPTION_LENGTH);
+				String text = "";
+				
+				// If we had to splice it, add an ellipsis
+				if(raw.length() > TRANSCRIPTION_LENGTH)
+				{
+					text += "... ";
+				}
+				
+				text += raw.substring(raw.length() - newLength);
+				
 				lastWordPacket = System.currentTimeMillis();
 				
-				LOGGER.info("Sending \"{}\"", buffer);
-				channel.send(new WordPacket(buffer), PacketDistributor.SERVER.noArg());
+				LOGGER.info("Sending \"{}\"", text);
+				channel.send(new WordPacket(text), PacketDistributor.SERVER.noArg());
 				
 				lastTranscriptionUpdate = System.currentTimeMillis();
-				transcription = buffer;
+				transcription = text;
+				recordings = results.getTotalRecordings();
 			}
 			
 			// Show transcriptions only if necessary
@@ -231,7 +255,7 @@ public class CensorCraft {
 				
 				if(Config.Client.SHOW_DELAY.get())
 				{
-					component.append(Component.literal(String.format("%.1f", controller.getTimeBehind() / 1000f) + "s behind").withColor(0xAAAAAA));
+					component.append(Component.literal(String.format("%.1f", controller.getTimeBehind() / 1000f) + "s behind (" + recordings + " recordings)").withColor(0xAAAAAA));
 				}
 				
 				setGUIText(component);
@@ -249,11 +273,6 @@ public class CensorCraft {
 			lastWordPacket = System.currentTimeMillis();
 			channel.send(new WordPacket(""), PacketDistributor.SERVER.noArg());
 		}
-	}
-	
-	private float lerp(float a, float b, float percentage)
-	{
-		return a + (b - a) * percentage;
 	}
 	
 	private void setGUIText(MutableComponent component)
