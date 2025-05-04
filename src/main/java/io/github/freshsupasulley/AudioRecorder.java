@@ -5,7 +5,9 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.ShortBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioInputStream;
@@ -17,6 +19,7 @@ import javax.sound.sampled.TargetDataLine;
 
 import de.maxhenkel.rnnoise4j.Denoiser;
 import de.maxhenkel.rnnoise4j.UnknownPlatformException;
+import io.github.givimad.libfvadjni.VoiceActivityDetector;
 
 public class AudioRecorder extends Thread implements Runnable {
 	
@@ -29,17 +32,28 @@ public class AudioRecorder extends Thread implements Runnable {
 	/** Can change based on transcription speed */
 	private long latency;
 	
+	// Optional things
+	private VoiceActivityDetector vad;
 	private Denoiser denoiser;
-	private volatile boolean running = true, receivingAudio = true;
+	
+	private volatile boolean running = true, receivingAudio = true, voiceDetected;
 	
 	private Mixer.Info device;
 	private float loudness;
 	
-	public AudioRecorder(Transcriber listener, String micName, long latency, long overlap, boolean denoise) throws IOException
+	public AudioRecorder(Transcriber listener, String micName, long latency, long overlap, boolean vad, boolean denoise) throws IOException
 	{
 		this.transcription = listener;
 		this.latency = latency;
 		this.overlap = overlap;
+		
+		if(vad)
+		{
+			VoiceActivityDetector.loadLibrary();
+			this.vad = VoiceActivityDetector.newInstance();
+			this.vad.setMode(VoiceActivityDetector.Mode.QUALITY);
+			this.vad.setSampleRate(VoiceActivityDetector.SampleRate.fromValue((int) FORMAT.getSampleRate()));
+		}
 		
 		if(denoise)
 		{
@@ -59,7 +73,8 @@ public class AudioRecorder extends Thread implements Runnable {
 			throw new IOException("No microphones detected");
 		}
 		
-		this.device = microphones.stream().filter(mic -> mic.getName().equals(micName)).findFirst().orElse(microphones.getFirst());
+		// Objects.equals allows micName to be null
+		this.device = microphones.stream().filter(mic -> Objects.equals(mic.getName(), micName)).findFirst().orElse(microphones.getFirst());
 		JScribe.logger.info("Using microphone " + device.getName());
 		
 		setName("Audio Recorder");
@@ -91,6 +106,11 @@ public class AudioRecorder extends Thread implements Runnable {
 	public boolean receivingAudio()
 	{
 		return receivingAudio;
+	}
+	
+	public boolean voiceDetected()
+	{
+		return voiceDetected;
 	}
 	
 	public Mixer.Info getMicrophoneInfo()
@@ -134,8 +154,11 @@ public class AudioRecorder extends Thread implements Runnable {
 					
 					if(rawSamples == null)
 					{
-						JScribe.logger.warn("No audio data");
-						receivingAudio = false;
+						window = null;
+						continue;
+					}
+					else if(rawSamples.length == 0)
+					{
 						window = null;
 						continue;
 					}
@@ -178,12 +201,12 @@ public class AudioRecorder extends Thread implements Runnable {
 					}
 					else
 					{
-						JScribe.logger.info("No last samples to prepend");
+						JScribe.logger.trace("No last samples to prepend");
 						window = rawSamples;
 					}
 					
 					// Send to transcriber
-					transcription.newSample(window);
+					transcription.newRecording(window);
 				} catch(InterruptedException e)
 				{
 					JScribe.logger.debug("Interrupted", e);
@@ -217,6 +240,11 @@ public class AudioRecorder extends Thread implements Runnable {
 			JScribe.logger.error("Something went wrong reading audio input", e);
 		} finally
 		{
+			if(vad != null)
+			{
+				vad.close();
+			}
+			
 			if(denoiser != null)
 			{
 				denoiser.close();
@@ -260,17 +288,17 @@ public class AudioRecorder extends Thread implements Runnable {
 	
 	private float[] recordSample(AudioInputStream stream) throws InterruptedException, IOException
 	{
-		// Denoiser wants short samples with a length as a multiple of 480
-		final int sampleSize = 480;
+		// Denoiser wants short samples with a length as a multiple of 480 (30ms of audio)
+		final int subSamplesSizeInShorts = (int) ((FORMAT.getSampleRate() * FORMAT.getChannels()) / 1000f) * 30;
+		
+		// Latency is expected to be at least 30ms
 		int bufferSizeInShorts = (int) (FORMAT.getSampleRate() * latency * FORMAT.getChannels() * (FORMAT.getSampleSizeInBits() / 8) / 1000f) / 2;
 		
-		// Round up to the nearest multiple of 480
-		int roundedBufferSize = (int) Math.ceil(1f * bufferSizeInShorts / sampleSize) * sampleSize;
+		// Round up to the nearest multiple of 480 for denoiser
+		ShortBuffer shortBuffer = ShortBuffer.allocate((int) Math.ceil(1f * bufferSizeInShorts / subSamplesSizeInShorts) * subSamplesSizeInShorts);
 		
-		// Obtain the 16-bit int audio samples (short type in Java)
-		ShortBuffer shortBuffer = ShortBuffer.allocate(roundedBufferSize);
-		
-		boolean hasData = false;
+		boolean hasData = false, hasVoiceActivity = vad == null ? true : false;
+		final int vadStep = (int) ((FORMAT.getSampleRate() * FORMAT.getChannels()) / 1000f) * 10; // 10ms segments
 		
 		while(shortBuffer.hasRemaining())
 		{
@@ -281,26 +309,19 @@ public class AudioRecorder extends Thread implements Runnable {
 				throw new InterruptedException("Audio recorder was interrupted");
 			}
 			
-			// Read raw bytes
-			// Reading a buffer of sampleSize should always be guaranteed as we allocated enough space
-			byte[] sampleBytes = new byte[sampleSize * 2];
+			byte[] subSampleBytes = new byte[subSamplesSizeInShorts * 2]; // convert to bytes
 			
-			if(stream.read(sampleBytes) == -1)
+			if(stream.read(subSampleBytes) == -1)
 			{
 				JScribe.logger.error("End of audio stream");
 				return null;
 			}
 			
 			// Convert to short array
-			short[] shorts = new short[sampleBytes.length / 2];
-			ByteBuffer.wrap(sampleBytes).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(shorts);
+			short[] shorts = new short[subSampleBytes.length / 2];
+			ByteBuffer.wrap(subSampleBytes).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(shorts);
 			
-			if(denoiser != null)
-			{
-				shorts = denoiser.denoise(shorts);
-			}
-			
-			// Calculate RMS
+			// Calculate RMS BEFORE denoising so it doesn't show that there's no audio data
 			long sum = 0;
 			
 			for(short toShort : shorts)
@@ -321,6 +342,39 @@ public class AudioRecorder extends Thread implements Runnable {
 			// The higher the number, the less sensitive to lower values?
 			loudness = 1 - Math.clamp((float) (20 * Math.log10(rms / 32768)) / -100, 0, 1);
 			
+			// Denoising
+			if(denoiser != null)
+			{
+				shorts = denoiser.denoise(shorts);
+			}
+			
+			// VAD Processing
+			if(vad != null)
+			{
+				boolean subSampleVoice = false;
+				
+				// VAD processing with adjusted step size
+				// Avoid catching an entire frame of 0 padded frames by stopping at one step away
+				for(int i = 0; i < shorts.length - vadStep; i += vadStep)
+				{
+					short[] frame = Arrays.copyOfRange(shorts, i, i + vadStep);
+					
+					if(vad.process(frame))
+					{
+						subSampleVoice = true;
+						hasVoiceActivity = true;
+						voiceDetected = true;
+						break;
+					}
+				}
+				
+				// For strictly updating this value live
+				if(!subSampleVoice)
+				{
+					voiceDetected = false;
+				}
+			}
+			
 			shortBuffer.put(shorts);
 		}
 		
@@ -328,15 +382,22 @@ public class AudioRecorder extends Thread implements Runnable {
 		if(!hasData)
 		{
 			JScribe.logger.trace("Audio was recorded, but it seemed to be empty");
+			receivingAudio = false;
 			return null;
 		}
 		
-		// Transform the samples to f32 samples (normalize the values)
-		float[] samples = new float[shortBuffer.capacity()];
-		int i = 0;
+		if(!hasVoiceActivity)
+		{
+			JScribe.logger.trace("No voice activity detected");
+			return new float[0];
+		}
 		
-		// Move position back to 0
+		// Move position back to 0 for normalization
 		shortBuffer.flip();
+		
+		// Normalize the 16-bit short values to float values between -1 and 1
+		float[] samples = new float[shortBuffer.remaining()];
+		int i = 0;
 		
 		while(shortBuffer.hasRemaining())
 		{
@@ -345,6 +406,8 @@ public class AudioRecorder extends Thread implements Runnable {
 			samples[i++] = newVal;
 		}
 		
+		// Return the normalized float samples
 		return samples;
+		
 	}
 }

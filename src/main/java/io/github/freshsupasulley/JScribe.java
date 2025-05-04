@@ -31,27 +31,34 @@ public class JScribe implements UncaughtExceptionHandler {
 	/**
 	 * Starts live audio transcription.
 	 * 
-	 * @param microphone preferred microphone name (can be blank)
-	 * @param latency    audio sample length in milliseconds
-	 * @param overlap    extra audio in milliseconds to catch stray words
-	 * @param denoise    true to denoise audio samples, false for raw audio
-	 * @throws IOException if JScribe failed to start
+	 * @param microphone preferred microphone name (can be null)
+	 * @param latency    audio sample length in milliseconds. Must be at least 30ms. If low, set overlap to be much higher to catch full words.
+	 * @param overlap    extra audio in milliseconds. Samples are collected into a window of this size for context to the transcriber. Must be non-negative.
+	 * @param vad        voice activity detection. Enabling will only transcribe words when voice activity is detected
+	 * @param denoise    true to denoise audio samples to help reduce white noise, false for raw audio
+	 * @throws IllegalStateException {@code latency < 30} or {@code overlap < 0}
+	 * @throws IOException           if JScribe failed to start
 	 */
-	public void start(String microphone, long latency, long overlap, boolean denoise) throws IOException
+	public void start(String microphone, long latency, long overlap, boolean vad, boolean denoise) throws IOException
 	{
 		if(isRunning())
 		{
 			throw new IOException("JScribe is already running");
 		}
 		
-		if(latency <= 0)
+		if(latency < 30)
 		{
-			throw new IOException("JScribe is misconfigured");
+			throw new IllegalArgumentException("Latency must be at least 30ms");
+		}
+		
+		if(overlap < 0)
+		{
+			throw new IllegalArgumentException("Overlap must be non-negative");
 		}
 		
 		logger.info("Starting JScribe");
 		
-		recorder = new AudioRecorder(transcriber = new Transcriber(modelPath), microphone, latency, overlap, denoise);
+		recorder = new AudioRecorder(transcriber = new Transcriber(modelPath), microphone, latency, overlap, vad, denoise);
 		
 		// Report errors to this thread
 		recorder.setUncaughtExceptionHandler(this);
@@ -107,6 +114,14 @@ public class JScribe implements UncaughtExceptionHandler {
 	}
 	
 	/**
+	 * @return true if VAD is enabled and it detected the user is speaking
+	 */
+	public boolean voiceDetected()
+	{
+		return recorder.voiceDetected();
+	}
+	
+	/**
 	 * @return audio level of samples, [0 - 1]
 	 */
 	public float getAudioLevel()
@@ -136,13 +151,13 @@ public class JScribe implements UncaughtExceptionHandler {
 	}
 	
 	/**
-	 * Gets all transcribed words and clears the buffer.
+	 * Gets all transcriptions and clears the buffer.
 	 * 
-	 * @return buffer of transcribed words, or empty string
+	 * @return buffer of transcriptions (can be empty)
 	 */
-	public String getBuffer()
+	public Transcriptions getTranscriptions()
 	{
-		return transcriber.getBuffer();
+		return new Transcriptions(transcriber.getTranscriptions());
 	}
 	
 	@Override

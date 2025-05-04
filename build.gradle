@@ -5,7 +5,7 @@ plugins {
 }
 
 group = 'io.github.freshsupasulley'
-version = '0.0.10'
+version = '0.0.11'
 
 java {
     withJavadocJar()
@@ -33,8 +33,9 @@ dependencies {
     //implementation project(':macrophone')
     
     // These used to be implementation before my dumbass realized this is JNI and shading doesn't work
-    implementation 'io.github.givimad:whisper-jni:1.7.1'
-    implementation 'de.maxhenkel.rnnoise4j:rnnoise4j:2.0.2'
+    implementation 'io.github.givimad:whisper-jni:1.7.1' // Speech to text
+    implementation 'io.github.givimad:libfvad-jni:1.0.0-1' // VAD
+    implementation 'de.maxhenkel.rnnoise4j:rnnoise4j:2.0.2' // Helps remove white noise which libfvad appreciates
     
     // Don't bundle
     api 'org.slf4j:slf4j-api:2.0.16'

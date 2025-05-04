@@ -1,3 +1,4 @@
+# We're gonna hold off on this until we actually need to build natives
 name: Publish to Maven Central
 
 # Only publish to Maven Central manually
@@ -22,10 +23,10 @@ jobs:
           chmod +x build_debian.sh
           ./build_debian.sh
 
-      - name: Rename output folder to linux-x64
-        run: |
-          cd libs/whisper-jni/src/main/resources
-          mv "debian-amd64" "linux-x64"
+      # - name: Rename output folder to linux-x64
+      #   run: |
+      #     cd libs/whisper-jni/src/main/resources
+      #     mv "debian-amd64" "linux-x64"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -88,19 +89,21 @@ jobs:
           chmod +x build_macos.sh
           ./build_macos.sh ${{ matrix.arch }}
 
-      - name: Rename output folder to mac-arch
-        run: |
-          cd libs/whisper-jni/src/main/resources
-          case "${{ matrix.arch }}" in
-            amd64) mv "macos-amd64" "mac-x64" ;;
-            arm64) mv "macos-arm64" "mac-aarch64" ;;
-          esac
+      # - name: Rename output folder to mac-arch
+      #   run: |
+      #     cd libs/whisper-jni/src/main/resources
+      #     case "${{ matrix.arch }}" in
+      #       amd64) mv "macos-amd64" "mac-x64" ;;
+      #       arm64) mv "macos-arm64" "mac-aarch64" ;;
+      #     esac
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.arch == 'amd64' && 'mac-x64' || 'mac-aarch64' }}
-          path: libs/whisper-jni/src/main/resources/${{ matrix.arch == 'amd64' && 'mac-x64' || 'mac-aarch64' }}
+          # name: ${{ matrix.arch == 'amd64' && 'mac-x64' || 'mac-aarch64' }}
+          # path: libs/whisper-jni/src/main/resources/${{ matrix.arch == 'amd64' && 'mac-x64' || 'mac-aarch64' }}
+          name: Upload ${{ matrix.arch }}
+          path: libs/whisper-jni/src/main/resources/${{ matrix.arch }}
 
   build-windows:
     runs-on: windows-latest
@@ -115,15 +118,17 @@ jobs:
           ./build_win.ps1
         shell: pwsh
 
-      - name: Rename output folder to windows-x64
-        run: |
-          Rename-Item -Path "libs/whisper-jni/src/main/resources/win-amd64" -NewName "windows-x64"
-        shell: pwsh
+      # - name: Rename output folder to windows-x64, and only keep static lib
+      #   run: |
+      #     Rename-Item -Path "libs/whisper-jni/src/main/resources/win-amd64" -NewName "windows-x64"
+      #     Remove-Item -Path "libs/whisper-jni/src/main/resources/windows-x64/whisper-jni.dll" -Force
+      #   shell: pwsh
 
       - uses: actions/upload-artifact@v4
         with:
           name: windows-x64
-          path: libs/whisper-jni/src/main/resources/windows-x64
+          # path: libs/whisper-jni/src/main/resources/windows-x64
+          path: libs/whisper-jni/src/main/resources/win-amd64
 
   publish:
     runs-on: ubuntu-latest

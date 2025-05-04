@@ -3,35 +3,172 @@
  */
 package org.example;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.UnsupportedAudioFileException;
 
 import org.junit.jupiter.api.Test;
 
-import io.github.freshsupasulley.JScribe;
+import io.github.givimad.libfvadjni.VoiceActivityDetector;
 
 class AppTest {
 	
 	/**
 	 * Sanity check to ensure the library loads.
+	 * 
+	 * @throws IOException
 	 */
 	@Test
-	void libraryLoads()
+	void libraryLoads() throws IOException
 	{
-//		JScribe scribe = new JScribe(Paths.get("src/test/resources/ggml-tiny.en.bin"));
-//		scribe.start("", 1000, 500, true);
+		// JScribe scribe = new JScribe(Paths.get("src/test/resources/ggml-tiny.en.bin"));
+		// scribe.start("", 1000, 500, true);
+		//
+		// // Translate for a while
+		// long start = System.currentTimeMillis(), lastAudio = start;
+		//
+		// while(System.currentTimeMillis() - start < 30000 && !scribe.noAudio())
+		// {
+		// if(System.currentTimeMillis() - lastAudio > 200)
+		// {
+		// lastAudio = System.currentTimeMillis();
+		// System.out.println("Audio level: " + scribe.getAudioLevel());
+		// }
+		//
+		// for(String buffer = null; !(buffer = scribe.getBuffer()).equals(""); System.out.println(buffer));
+		// }
+	}
+	
+	@Test
+	void loadsInOrder() throws IOException
+	{
+		Files.list(Paths.get("src/main/resources/natives")).filter(file -> file.toFile().isDirectory()).forEach(folder ->
+		{
+			try
+			{
+				List<Path> paths = Files.list(Paths.get("src/main/resources/natives")).filter(file -> file.toFile().isDirectory()).toList();
+				
+				Comparator<String> comparator = (a, b) ->
+				{
+					String nameA = a.toLowerCase();
+					String nameB = b.toLowerCase();
+					
+					int priority = Integer.compare(getPriority(nameA), getPriority(nameB));
+					
+					// Assort by name for consistency otherwise
+					return priority == 0 ? nameA.compareTo(nameB) : priority;
+				};
+				
+				paths.forEach(os ->
+				{
+					System.out.println(os);
+					try
+					{
+						List<String> natives = Files.list(os).filter(file -> !file.toString().contains(".DS_Store")).map(Object::toString).collect(Collectors.toList());
+						natives.sort(comparator);
+						
+						System.out.println(os + " :");
+						for(int i = 0; i < natives.size(); i++)
+						{
+							System.out.println((i + 1) + ": " + natives.get(i));
+						}
+						System.out.println();
+					} catch(IOException e)
+					{
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				});
+			} catch(IOException e)
+			{
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		});
+	}
+	
+	private static int getPriority(String name)
+	{
+		// 0 == highest priority
+		if(name.contains("_full"))
+			return 0;
+		if(name.contains("ggml"))
+			return 2;
 		
-		// Translate for a while
-//		long start = System.currentTimeMillis(), lastAudio = start;
-//		
-//		while(System.currentTimeMillis() - start < 30000 && !scribe.noAudio())
-//		{
-//			if(System.currentTimeMillis() - lastAudio > 200)
-//			{
-//				lastAudio = System.currentTimeMillis();
-//				System.out.println("Audio level: " + scribe.getAudioLevel());
-//			}
-//			
-//			for(String buffer = null; !(buffer = scribe.getBuffer()).equals(""); System.out.println(buffer));
-//		}
+		// Load last
+		if(name.contains("jni"))
+			return 4;
+		
+		// Anything else can load at whatever order
+		return 3;
+	}
+	
+	private Path samplePath = Path.of("/Users/boschert.12/Desktop/shit/jscribe/src/test/resources/jfk.wav");
+	
+	@Test
+	public void testVAD() throws IOException, UnsupportedAudioFileException
+	{
+		var sampleFile = samplePath.toFile();
+		if(!sampleFile.exists() || !sampleFile.isFile())
+		{
+			throw new RuntimeException("Missing sample file");
+		}
+		VoiceActivityDetector.loadLibrary();
+		VoiceActivityDetector vad = VoiceActivityDetector.newInstance();
+		
+		int sampleRate = 16000;
+		vad.setMode(VoiceActivityDetector.Mode.QUALITY);
+		vad.setSampleRate(VoiceActivityDetector.SampleRate.fromValue(sampleRate));
+		short[] samples = readJFKFileSamples();
+		int samplesLength = samples.length;
+		int step = (sampleRate / 1000) * 10; // 10ms step (only allows 10, 20 or 30ms frame)
+		int detection = 0;
+		for(int i = 0; i < samplesLength - step; i += step)
+		{
+			short[] frame = Arrays.copyOfRange(samples, i, i + step);
+			if(vad.process(frame))
+			{
+				detection = i;
+				break;
+			}
+		}
+		System.out.println(detection);
+		assertEquals(640, detection);
+	}
+	
+	private short[] readJFKFileSamples() throws UnsupportedAudioFileException, IOException
+	{
+		// sample is a 16 bit int 16000hz little endian wav file
+		AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(samplePath.toFile());
+		// read all the available data to a little endian capture buffer
+		ByteBuffer captureBuffer = ByteBuffer.allocate(audioInputStream.available());
+		captureBuffer.order(ByteOrder.LITTLE_ENDIAN);
+		int read = audioInputStream.read(captureBuffer.array());
+		if(read == -1)
+		{
+			throw new IOException("Empty file");
+		}
+		// obtain the 16 int audio samples, short type in java
+		var shortBuffer = captureBuffer.asShortBuffer();
+		short[] samples = new short[captureBuffer.capacity() / 2];
+		var i = 0;
+		while(shortBuffer.hasRemaining())
+		{
+			samples[i++] = shortBuffer.get();
+		}
+		return samples;
 	}
 }
