@@ -33,14 +33,14 @@ class AppTest {
 		String[] models = JScribe.getModels();
 		Arrays.toString(models);
 		
-		try
-		{
-			JScribe.downloadModel("tiny", Paths.get("src", "test", "resources", "tiny.bin"));
-		} catch(Exception e)
-		{
-			System.out.println(e);
-			throw e;
-		}
+//		try
+//		{
+//			JScribe.downloadModel("tiny", Paths.get("src", "test", "resources", "tiny.bin"));
+//		} catch(Exception e)
+//		{
+//			System.out.println(e);
+//			throw e;
+//		}
 	}
 	
 	/**

@@ -50,6 +50,8 @@ class Transcriber extends Thread implements Runnable {
 		{
 			// Not dealing with this unless I wanna fork it (hell naww)
 			// System.setProperty("io.github.givimad.whisperjni.libdir", LibraryLoader.extractToTemp().toString());
+			
+			// path needs to be valid on windows, opened a pr :(
 			LibraryUtils.loadLibrary(JScribe.logger::debug);
 			
 			// LibraryLoader.loadBundledNatives((a, b) ->
@@ -67,7 +69,7 @@ class Transcriber extends Thread implements Runnable {
 			WhisperJNI.setLibraryLogger(null);
 		} catch(IOException | UnsatisfiedLinkError e)
 		{
-			JScribe.logger.error("An error occurred loading natives (platform: {}, arch: {})", LibraryLoader.OS_NAME, LibraryLoader.OS_ARCH, e);
+			JScribe.logger.error("An error occurred loading natives (platform: {}, arch: {})", System.getProperty("os.name"), System.getProperty("os.arch"), e);
 			System.exit(1);
 		}
 	}

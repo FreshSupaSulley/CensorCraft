@@ -1,5 +1,5 @@
-# We're gonna hold off on this until we actually need to build natives
-name: Publish to Maven Central
+# Turns out we need this to build natives because whisper-jni freaks out in the IDE
+name: Build whisper-jni natives and publish
 
 # Only publish to Maven Central manually
 on:

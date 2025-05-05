@@ -119,7 +119,9 @@ public class JScribe implements UncaughtExceptionHandler {
 	}
 	
 	/**
-	 * @return list of mixers that support the desired {@linkplain AudioFormat} required for transcription.
+	 * Returns the compatible microphones that support the desired {@link AudioFormat} required for transcription.
+	 * 
+	 * @return list of mixers. Can be empty
 	 */
 	public static List<Mixer.Info> getMicrophones()
 	{
