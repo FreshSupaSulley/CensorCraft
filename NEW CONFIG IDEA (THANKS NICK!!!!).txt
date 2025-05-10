@@ -6,16 +6,16 @@ expose_rats = true
 
 #Shit pertaining to shit
 [punishment]
-	explosino = false
-	lightning = tue
-	elevation = true
-	spawn_entity = true
-	anvil? = true
-	potion_effects = true
+	# explosino = false
+	# lightning = tue
+	# elevation = true
+	# spawn_entity = true
+	# anvil? = true
+	# potion_effects = true
 	obsidian_prison = true (fill with water? mining fatigue? regen potion?)
-	void
-	hell? tp to nether
-	ignite = false
+	# void
+	# hell? tp to nether
+	# ignite = false
 	cobwebs
 	tnt above you
 

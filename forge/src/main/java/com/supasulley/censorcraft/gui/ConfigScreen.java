@@ -59,16 +59,9 @@ public class ConfigScreen extends Screen {
 		grid.defaultCellSetting().alignHorizontallyLeft();
 		
 		// Add all config options!
-		// Restart button also marks the bottom
-		Button restartButton = Button.builder(Component.literal("Restart"), button ->
-		{
-			button.active = false;
-			restartJScribe = true;
-		}).size(Button.SMALL_WIDTH, Button.DEFAULT_HEIGHT).build();
-		
 		GridLayout.RowHelper layout = grid.createRowHelper(1);
 		// Put the restart button in the center with some padding (and conveniently we can set the max width here too for proper centering)
-		layout.addChild(restartButton, grid.newCellSettings().alignHorizontallyCenter());
+		// layout.addChild(restartButton, grid.newCellSettings().alignHorizontallyCenter());
 		layout.addChild(new SpacerElement(optionsWidth, 1));
 		
 		// Everything else is aligned to the left
@@ -107,8 +100,17 @@ public class ConfigScreen extends Screen {
 		layout.addChild(slider);
 		
 		// Put it together
+		Button restartButton = Button.builder(Component.literal("Restart"), button ->
+		{
+			button.active = false;
+			restartJScribe = true;
+		}).bounds(PADDING, this.height - Button.DEFAULT_HEIGHT - PADDING, Button.SMALL_WIDTH, Button.DEFAULT_HEIGHT).build();
+		
 		// Close button
 		final int closeButtonY = addRenderableWidget(Button.builder(Component.literal("Close"), button -> this.onClose()).bounds(this.width / 2 - Button.BIG_WIDTH / 2, this.height - (PADDING + Button.DEFAULT_HEIGHT), Button.BIG_WIDTH, Button.DEFAULT_HEIGHT).build()).getY();
+		
+		// Restart button
+		addRenderableWidget(restartButton);
 		
 		// List of microphones on left
 		list = new MicrophoneList(restartButton, PADDING, listY, micListWidth - PADDING * 2, closeButtonY - listY - PADDING, minecraft, JScribe.getMicrophones().stream().map(mic -> mic.getName()).collect(Collectors.toList()));

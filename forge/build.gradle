@@ -118,7 +118,7 @@ minecraft {
 sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 repositories {
-    mavenLocal()
+    //mavenLocal()
 	maven {
         name = "henkelmax.public"
         url = 'https://maven.maxhenkel.de/repository/public'
@@ -139,7 +139,7 @@ configurations {
 }
 
 dependencies {
-	shade 'io.github.freshsupasulley:jscribe:0.0.12'
+	shade 'io.github.freshsupasulley:jscribe:0.0.13'
 	
 	minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
 	
