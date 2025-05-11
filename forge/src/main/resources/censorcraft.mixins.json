@@ -1,6 +1,6 @@
 {
   "required": true,
-  "minVersion": "0.8",
+  "minVersion": "0.8.2",
   "package": "com.supasulley.censorcraft.mixins",  
   "compatibilityLevel": "JAVA_21",
   "client": [

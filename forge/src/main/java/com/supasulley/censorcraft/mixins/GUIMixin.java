@@ -5,7 +5,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import com.supasulley.censorcraft.CensorCraft;
+import com.supasulley.censorcraft.ClientCensorCraft;
 import com.supasulley.censorcraft.Config;
 
 import net.minecraft.client.DeltaTracker;
@@ -33,9 +33,9 @@ public abstract class GUIMixin {
 	{
 		MutableComponent component = Component.empty();
 		
-		if(CensorCraft.GUI_TEXT != null)
+		if(ClientCensorCraft.GUI_TEXT != null)
 		{
-			component.append(CensorCraft.GUI_TEXT);
+			component.append(ClientCensorCraft.GUI_TEXT);
 		}
 		
 		Minecraft minecraft = Minecraft.getInstance();
@@ -46,10 +46,10 @@ public abstract class GUIMixin {
 		if(Config.Client.SHOW_VOLUME_BAR.get())
 		{
 			x += barWidth + PADDING;
-			graphics.fill(RenderType.guiOverlay(), PADDING, PADDING + barHeight, PADDING + barWidth, PADDING + barHeight - Math.clamp((int) (CensorCraft.JSCRIBE_VOLUME * barHeight), 1, barHeight), 0xAAFFFFFF);
+			graphics.fill(RenderType.guiOverlay(), PADDING, PADDING + barHeight, PADDING + barWidth, PADDING + barHeight - Math.clamp((int) (ClientCensorCraft.JSCRIBE_VOLUME * barHeight), 1, barHeight), 0xAAFFFFFF);
 		}
 		
-		if(Config.Client.SHOW_VAD.get() && CensorCraft.SPEAKING)
+		if(Config.Client.SHOW_VAD.get() && ClientCensorCraft.SPEAKING)
 		{
 			component.append(Component.literal("\nSpeaking"));
 		}

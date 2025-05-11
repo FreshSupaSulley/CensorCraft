@@ -86,7 +86,7 @@ minecraft {
 				int random = 65 + (int) (26 * Math.random());
 				tempUsername += (char) random;
 			}
-						
+			
 			// Comma-separated list of namespaces to load gametests from. Empty = all namespaces.
 			property 'forge.enabledGameTestNamespaces', mod_id
 			args '--username', tempUsername
@@ -118,7 +118,7 @@ minecraft {
 sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 repositories {
-    //mavenLocal()
+    mavenLocal()
 	maven {
         name = "henkelmax.public"
         url = 'https://maven.maxhenkel.de/repository/public'
