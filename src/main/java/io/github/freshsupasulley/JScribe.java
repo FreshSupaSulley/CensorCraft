@@ -11,6 +11,7 @@ import java.net.http.HttpResponse;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -83,11 +84,12 @@ public class JScribe implements UncaughtExceptionHandler {
 	/**
 	 * Downloads a Whisper model in GGML format from Hugging Face.
 	 * 
-	 * @param modelName   name of the model (use {@link JScribe#getModels()})
-	 * @param destination output path
+	 * @param modelName        name of the model (use {@link JScribe#getModels()})
+	 * @param destination      output path
+	 * @param progressListener download progress listener
 	 * @throws IOException if something went wrong
 	 */
-	public static void downloadModel(String modelName, Path destination) throws IOException
+	public static void downloadModel(String modelName, Path destination, Consumer<Float> progressListener) throws IOException
 	{
 		String fileName = "ggml-" + modelName + ".bin";
 		String downloadUrl = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/" + fileName;
@@ -101,6 +103,8 @@ public class JScribe implements UncaughtExceptionHandler {
 		{
 			HttpResponse<InputStream> response = client.send(request, HttpResponse.BodyHandlers.ofInputStream());
 			
+			long totalBytes = response.headers().firstValueAsLong("Content-Length").orElse(-1L);
+			
 			if(response.statusCode() != 200)
 			{
 				throw new IOException("Failed to download model. HTTP status code: " + response.statusCode());
@@ -108,7 +112,18 @@ public class JScribe implements UncaughtExceptionHandler {
 			
 			try(InputStream in = response.body(); FileOutputStream out = new FileOutputStream(destination.toFile()))
 			{
-				in.transferTo(out);
+				byte[] buffer = new byte[8192];
+				long bytesRead = 0;
+				int read;
+				
+				// Wrap the InputStream to track the download progress
+				while((read = in.read(buffer)) != -1)
+				{
+					out.write(buffer, 0, read);
+					bytesRead += read;
+					
+					progressListener.accept(bytesRead * 1f / totalBytes);
+				}
 			}
 			
 			JScribe.logger.info("Model saved to {}", destination.toAbsolutePath());
@@ -116,6 +131,18 @@ public class JScribe implements UncaughtExceptionHandler {
 		{
 			throw new IOException(e);
 		}
+	}
+	
+	/**
+	 * Downloads a Whisper model in GGML format from Hugging Face.
+	 * 
+	 * @param modelName        name of the model (use {@link JScribe#getModels()})
+	 * @param destination      output path
+	 * @throws IOException if something went wrong
+	 */
+	public static void downloadModel(String modelName, Path destination) throws IOException
+	{
+		downloadModel(modelName, destination, (value) -> {});
 	}
 	
 	/**
@@ -263,7 +290,7 @@ public class JScribe implements UncaughtExceptionHandler {
 	 */
 	public boolean voiceDetected()
 	{
-		return recorder.voiceDetected();
+		return isRunning() && recorder.voiceDetected();
 	}
 	
 	/**

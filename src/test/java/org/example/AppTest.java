@@ -31,16 +31,18 @@ class AppTest {
 	void downloadModel() throws IOException
 	{
 		String[] models = JScribe.getModels();
-		Arrays.toString(models);
+		System.out.println(Arrays.toString(models));
 		
-//		try
-//		{
-//			JScribe.downloadModel("tiny", Paths.get("src", "test", "resources", "tiny.bin"));
-//		} catch(Exception e)
-//		{
-//			System.out.println(e);
-//			throw e;
-//		}
+		try
+		{
+			JScribe.downloadModel("tiny", Paths.get("src", "test", "resources", "tiny.bin"), (progress) -> {
+				System.out.println(progress);
+			});
+		} catch(Exception e)
+		{
+			System.out.println(e);
+			throw e;
+		}
 	}
 	
 	/**
@@ -69,69 +71,69 @@ class AppTest {
 //		}
 	}
 	
-	@Test
-	void loadsInOrder() throws IOException
-	{
-		Files.list(Paths.get("src/main/resources/natives")).filter(file -> file.toFile().isDirectory()).forEach(folder ->
-		{
-			try
-			{
-				List<Path> paths = Files.list(Paths.get("src/main/resources/natives")).filter(file -> file.toFile().isDirectory()).toList();
-				
-				Comparator<String> comparator = (a, b) ->
-				{
-					String nameA = a.toLowerCase();
-					String nameB = b.toLowerCase();
-					
-					int priority = Integer.compare(getPriority(nameA), getPriority(nameB));
-					
-					// Assort by name for consistency otherwise
-					return priority == 0 ? nameA.compareTo(nameB) : priority;
-				};
-				
-				paths.forEach(os ->
-				{
-					System.out.println(os);
-					try
-					{
-						List<String> natives = Files.list(os).filter(file -> !file.toString().contains(".DS_Store")).map(Object::toString).collect(Collectors.toList());
-						natives.sort(comparator);
-						
-						System.out.println(os + " :");
-						for(int i = 0; i < natives.size(); i++)
-						{
-							System.out.println((i + 1) + ": " + natives.get(i));
-						}
-						System.out.println();
-					} catch(IOException e)
-					{
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-				});
-			} catch(IOException e)
-			{
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		});
-	}
-	
-	private static int getPriority(String name)
-	{
-		// 0 == highest priority
-		if(name.contains("_full"))
-			return 0;
-		if(name.contains("ggml"))
-			return 2;
-		
-		// Load last
-		if(name.contains("jni"))
-			return 4;
-		
-		// Anything else can load at whatever order
-		return 3;
-	}
+//	@Test
+//	void loadsInOrder() throws IOException
+//	{
+//		Files.list(Paths.get("src/main/resources/natives")).filter(file -> file.toFile().isDirectory()).forEach(folder ->
+//		{
+//			try
+//			{
+//				List<Path> paths = Files.list(Paths.get("src/main/resources/natives")).filter(file -> file.toFile().isDirectory()).toList();
+//				
+//				Comparator<String> comparator = (a, b) ->
+//				{
+//					String nameA = a.toLowerCase();
+//					String nameB = b.toLowerCase();
+//					
+//					int priority = Integer.compare(getPriority(nameA), getPriority(nameB));
+//					
+//					// Assort by name for consistency otherwise
+//					return priority == 0 ? nameA.compareTo(nameB) : priority;
+//				};
+//				
+//				paths.forEach(os ->
+//				{
+//					System.out.println(os);
+//					try
+//					{
+//						List<String> natives = Files.list(os).filter(file -> !file.toString().contains(".DS_Store")).map(Object::toString).collect(Collectors.toList());
+//						natives.sort(comparator);
+//						
+//						System.out.println(os + " :");
+//						for(int i = 0; i < natives.size(); i++)
+//						{
+//							System.out.println((i + 1) + ": " + natives.get(i));
+//						}
+//						System.out.println();
+//					} catch(IOException e)
+//					{
+//						// TODO Auto-generated catch block
+//						e.printStackTrace();
+//					}
+//				});
+//			} catch(IOException e)
+//			{
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
+//		});
+//	}
+//	
+//	private static int getPriority(String name)
+//	{
+//		// 0 == highest priority
+//		if(name.contains("_full"))
+//			return 0;
+//		if(name.contains("ggml"))
+//			return 2;
+//		
+//		// Load last
+//		if(name.contains("jni"))
+//			return 4;
+//		
+//		// Anything else can load at whatever order
+//		return 3;
+//	}
 	
 	private Path samplePath = Path.of("/Users/boschert.12/Desktop/shit/jscribe/src/test/resources/jfk.wav");
 	

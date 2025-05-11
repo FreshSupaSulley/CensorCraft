@@ -5,7 +5,7 @@ plugins {
 }
 
 group = 'io.github.freshsupasulley'
-version = '0.0.13'
+version = '0.0.14'
 
 java {
     withJavadocJar()
@@ -130,6 +130,8 @@ task deployLocal {
     publish.mustRunAfter build
     
     finalizedBy 'publishToMavenLocal'
+    
+    println "Published version ${version}"
 }
 
 task deployMaven {
