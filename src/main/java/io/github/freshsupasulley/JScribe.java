@@ -86,7 +86,7 @@ public class JScribe implements UncaughtExceptionHandler {
 	 * 
 	 * @param modelName        name of the model (use {@link JScribe#getModels()})
 	 * @param destination      output path
-	 * @param progressListener download progress listener
+	 * @param progressListener download progress listener. Progress is a float, [0.0f-1.0f]
 	 * @throws IOException if something went wrong
 	 */
 	public static void downloadModel(String modelName, Path destination, Consumer<Float> progressListener) throws IOException
