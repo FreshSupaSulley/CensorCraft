@@ -3,18 +3,12 @@ package com.supasulley.censorcraft;
 import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
-import com.supasulley.censorcraft.gui.ConfigScreen;
 import com.supasulley.censorcraft.network.IPacket;
 import com.supasulley.censorcraft.network.SetupPacket;
 import com.supasulley.censorcraft.network.WordPacket;
 
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.ConfigScreenHandler.ConfigScreenFactory;
-import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.fml.DistExecutor.SafeRunnable;
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.network.ChannelBuilder;
@@ -29,9 +23,8 @@ public class CensorCraft {
 	
 	// Packets
 	public static final long HEARTBEAT_TIME = 30000, HEARTBEAT_SAFETY_NET = 5000;
-	private SimpleChannel channel;
+	public static SimpleChannel channel;
 	
-	@SuppressWarnings("serial")
 	public CensorCraft(FMLJavaModLoadingContext context)
 	{
 		// Forbidden words are defined at the server level
@@ -40,17 +33,7 @@ public class CensorCraft {
 		// Register ourselves for server and other game events we are interested in
 //		MinecraftForge.registerConfigScreen(null);.EVENT_BUS.register(this);
 		context.getModEventBus().addListener(this::commonSetup);
-		context.getModEventBus().addListener(this::clientSetup);
-		
-		// Only add config screen to clients
-		DistExecutor.safeRunWhenOn(Dist.CLIENT, () -> new SafeRunnable() // why tf isnt saferunnable a functional interface
-		{
-			@Override
-			public void run()
-			{
-				context.getContainer().registerExtensionPoint(ConfigScreenFactory.class, () -> new ConfigScreenFactory((minecraft, screen) -> new ConfigScreen(minecraft, screen)));
-			}
-		});
+//		context.getModEventBus().addListener(this::clientSetup);
 	}
 	
 	// Mod Event Bus events
@@ -87,10 +70,5 @@ public class CensorCraft {
 			}
 			return null;
 		}).consumerMainThread((packet, context) -> packet.consume(context)).add();
-	}
-	
-	public void clientSetup(FMLClientSetupEvent event)
-	{
-		new ClientCensorCraft(channel);
 	}
 }

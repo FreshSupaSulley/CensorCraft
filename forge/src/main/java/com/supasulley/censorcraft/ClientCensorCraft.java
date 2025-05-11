@@ -14,27 +14,27 @@ import io.github.freshsupasulley.Transcriptions;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.ClientPauseChangeEvent;
 import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent.LevelTickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.LogicalSide;
-import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
+import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.network.PacketDistributor;
-import net.minecraftforge.network.SimpleChannel;
 
+@Mod.EventBusSubscriber(modid = CensorCraft.MODID, value = Dist.CLIENT)
 public class ClientCensorCraft {
 	
 	private static final long AUDIO_CONTEXT_LENGTH = 3000, OVERLAP_LENGTH = 200;
 	
-	private JScribe controller;
-	private boolean inGame, paused;
+	private static JScribe controller;
+	private static boolean inGame, paused;
 	
 	// Packets
-	private SimpleChannel channel;
 	public static final long HEARTBEAT_TIME = 30000, HEARTBEAT_SAFETY_NET = 5000;
-	private long lastWordPacket;
+	private static long lastWordPacket;
 	
 	// GUI
 	private static final long GUI_TIMEOUT = 10000;
@@ -44,15 +44,12 @@ public class ClientCensorCraft {
 	public static float JSCRIBE_VOLUME;
 	public static boolean SPEAKING;
 	
-	private long lastTranscriptionUpdate;
-	private String transcription;
-	private int recordings;
+	private static long lastTranscriptionUpdate;
+	private static String transcription;
+	private static int recordings;
 	
-	public ClientCensorCraft(SimpleChannel channel)
+	static
 	{
-		this.channel = channel;
-		
-		MinecraftForge.EVENT_BUS.register(this);
 		MinecraftForge.registerConfigScreen((minecraft, screen) -> new ConfigScreen(minecraft, screen));
 		
 		// Some common setup code
@@ -73,27 +70,7 @@ public class ClientCensorCraft {
 		}
 	}
 	
-	public void clientSetup(FMLClientSetupEvent event)
-	{
-		// Some common setup code
-		CensorCraft.LOGGER.info("Copying model to temp directory");
-		
-		try
-		{
-			Path tempZip = Files.createTempFile("model", ".en.bin");
-			tempZip.toFile().deleteOnExit();
-			Files.copy(CensorCraft.class.getClassLoader().getResourceAsStream("ggml-tiny.en.bin"), tempZip, StandardCopyOption.REPLACE_EXISTING);
-			CensorCraft.LOGGER.info("Put whisper model at {}", tempZip);
-			
-			controller = new JScribe(CensorCraft.LOGGER, tempZip);
-		} catch(IOException e)
-		{
-			CensorCraft.LOGGER.error("Failed to load model");
-			e.printStackTrace();
-		}
-	}
-	
-	private void startJScribe()
+	private static void startJScribe()
 	{
 		if(controller.isRunning())
 		{
@@ -118,14 +95,14 @@ public class ClientCensorCraft {
 		}
 	}
 	
-	private void stopJScribe()
+	private static void stopJScribe()
 	{
 		controller.stop();
 		setGUIText(Component.literal("Stopped recording."));
 	}
 	
 	@SubscribeEvent
-	public void onPause(ClientPauseChangeEvent.Post event)
+	public static void onPause(ClientPauseChangeEvent.Post event)
 	{
 		// This event is so weird. Detects pausing like every tick regardless if you're in game
 		if(inGame && event.isPaused() != paused)
@@ -145,7 +122,7 @@ public class ClientCensorCraft {
 	}
 	
 	@SubscribeEvent
-	public void onJoinWorld(ClientPlayerNetworkEvent.LoggingIn event)
+	public static void onJoinWorld(ClientPlayerNetworkEvent.LoggingIn event)
 	{
 		inGame = true;
 		CensorCraft.LOGGER.debug("Client logged out event fired");
@@ -153,7 +130,7 @@ public class ClientCensorCraft {
 	}
 	
 	@SubscribeEvent
-	public void onLeaveWorld(ClientPlayerNetworkEvent.LoggingOut event)
+	public static void onLeaveWorld(ClientPlayerNetworkEvent.LoggingOut event)
 	{
 		inGame = false;
 		CensorCraft.LOGGER.debug("Client logged out event fired");
@@ -166,7 +143,7 @@ public class ClientCensorCraft {
 	 * @param event {@linkplain LevelTickEvent}
 	 */
 	@SubscribeEvent
-	public void onLevelTick(LevelTickEvent event)
+	public static void onLevelTick(LevelTickEvent event)
 	{
 		if(event.side != LogicalSide.CLIENT) return;
 		
@@ -223,7 +200,7 @@ public class ClientCensorCraft {
 				lastWordPacket = System.currentTimeMillis();
 				
 				CensorCraft.LOGGER.info("Sending \"{}\"", text);
-				channel.send(new WordPacket(text), PacketDistributor.SERVER.noArg());
+				CensorCraft.channel.send(new WordPacket(text), PacketDistributor.SERVER.noArg());
 				
 				lastTranscriptionUpdate = System.currentTimeMillis();
 				transcription = text;
@@ -253,7 +230,7 @@ public class ClientCensorCraft {
 		{
 			CensorCraft.LOGGER.info("Sending heartbeat (paused: {})", paused);
 			lastWordPacket = System.currentTimeMillis();
-			channel.send(new WordPacket(""), PacketDistributor.SERVER.noArg());
+			CensorCraft.channel.send(new WordPacket(""), PacketDistributor.SERVER.noArg());
 		}
 	}
 	

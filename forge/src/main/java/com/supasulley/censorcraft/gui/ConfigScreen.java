@@ -13,6 +13,7 @@ import net.minecraft.client.gui.components.Checkbox;
 import net.minecraft.client.gui.components.StringWidget;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.layouts.GridLayout;
+import net.minecraft.client.gui.layouts.LinearLayout;
 import net.minecraft.client.gui.layouts.SpacerElement;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -99,25 +100,32 @@ public class ConfigScreen extends Screen {
 		slider.setWidth(optionsWidth);
 		layout.addChild(slider);
 		
+		LinearLayout buttonLayout = LinearLayout.horizontal().spacing(PADDING);
+		
 		// Put it together
-		Button restartButton = Button.builder(Component.literal("Restart"), button ->
+		Button restartButton = buttonLayout.addChild(Button.builder(Component.literal("Restart"), button ->
 		{
 			button.active = false;
 			restartJScribe = true;
-		}).bounds(PADDING, this.height - Button.DEFAULT_HEIGHT - PADDING, Button.SMALL_WIDTH, Button.DEFAULT_HEIGHT).build();
+		}).size(Button.SMALL_WIDTH, Button.DEFAULT_HEIGHT).build());//.bounds(PADDING, this.height - Button.DEFAULT_HEIGHT - PADDING, Button.SMALL_WIDTH, Button.DEFAULT_HEIGHT).build();
 		
 		// Close button
-		final int closeButtonY = addRenderableWidget(Button.builder(Component.literal("Close"), button -> this.onClose()).bounds(this.width / 2 - Button.BIG_WIDTH / 2, this.height - (PADDING + Button.DEFAULT_HEIGHT), Button.BIG_WIDTH, Button.DEFAULT_HEIGHT).build()).getY();
+		buttonLayout.addChild(Button.builder(Component.literal("Close"), button -> this.onClose()).size(Button.BIG_WIDTH, Button.DEFAULT_HEIGHT).build()).getY();
 		
-		// Restart button
-		addRenderableWidget(restartButton);
+		buttonLayout.arrangeElements();
+		
+		int layoutX = (this.width - buttonLayout.getWidth()) / 2;
+		int layoutY = this.height - (PADDING + Button.DEFAULT_HEIGHT);
+		buttonLayout.setPosition(layoutX, layoutY);
+		
+		buttonLayout.visitWidgets(this::addRenderableWidget);
 		
 		// List of microphones on left
-		list = new MicrophoneList(restartButton, PADDING, listY, micListWidth - PADDING * 2, closeButtonY - listY - PADDING, minecraft, JScribe.getMicrophones().stream().map(mic -> mic.getName()).collect(Collectors.toList()));
+		list = new MicrophoneList(restartButton, PADDING, listY, micListWidth - PADDING * 2, layoutY - listY - PADDING, minecraft, JScribe.getMicrophones().stream().map(mic -> mic.getName()).collect(Collectors.toList()));
 		addRenderableWidget(list);
 		
 		// List of options on right
-		int optionsX = addRenderableWidget(new ScrollArea(grid, list.getRight() + listSpacing + PADDING, listY, optionsWidth, closeButtonY - listY - PADDING * 2)).getX();
+		int optionsX = addRenderableWidget(new ScrollArea(grid, list.getRight() + listSpacing + PADDING, listY, optionsWidth, layoutY - listY - PADDING * 2)).getX();
 		
 		// Add text
 		addRenderableWidget(new StringWidget(PADDING, PADDING, micListWidth, font.lineHeight, Component.literal("Select Microphone"), font));
