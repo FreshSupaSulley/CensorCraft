@@ -136,13 +136,15 @@ public class JScribe implements UncaughtExceptionHandler {
 	/**
 	 * Downloads a Whisper model in GGML format from Hugging Face.
 	 * 
-	 * @param modelName        name of the model (use {@link JScribe#getModels()})
-	 * @param destination      output path
+	 * @param modelName   name of the model (use {@link JScribe#getModels()})
+	 * @param destination output path
 	 * @throws IOException if something went wrong
 	 */
 	public static void downloadModel(String modelName, Path destination) throws IOException
 	{
-		downloadModel(modelName, destination, (value) -> {});
+		downloadModel(modelName, destination, (value) ->
+		{
+		});
 	}
 	
 	/**
@@ -189,6 +191,16 @@ public class JScribe implements UncaughtExceptionHandler {
 	public JScribe(Path modelPath)
 	{
 		this(logger, modelPath);
+	}
+	
+	/**
+	 * Gets the model provided in the constructor.
+	 * 
+	 * @return model path
+	 */
+	public Path getModel()
+	{
+		return modelPath;
 	}
 	
 	/**
