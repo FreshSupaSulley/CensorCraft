@@ -11,9 +11,10 @@ import java.net.http.HttpResponse;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioSystem;
@@ -22,6 +23,7 @@ import javax.sound.sampled.Mixer;
 import javax.sound.sampled.TargetDataLine;
 
 import org.json.JSONArray;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,7 +44,7 @@ public class JScribe implements UncaughtExceptionHandler {
 	 * @return array of model names
 	 * @throws IOException if something went wrong
 	 */
-	public static String[] getModels() throws IOException
+	public static Model[] getModels() throws IOException
 	{
 		String apiUrl = "https://huggingface.co/api/models/ggerganov/whisper.cpp/tree/main";
 		
@@ -58,23 +60,23 @@ public class JScribe implements UncaughtExceptionHandler {
 			}
 			
 			JSONArray files = new JSONArray(response.body());
-			List<String> models = new ArrayList<String>();
+			List<Model> models = new ArrayList<Model>();
 			
 			// This only takes proper models (not encoding ones)
 			Pattern pattern = Pattern.compile("ggml-(.+?)\\.bin");
 			
 			for(int i = 0; i < files.length(); i++)
 			{
-				String fileName = files.getJSONObject(i).getString("path");
-				Matcher matcher = pattern.matcher(fileName);
+				JSONObject json = files.getJSONObject(i);
+				Matcher matcher = pattern.matcher(json.getString("path"));
 				
 				if(matcher.find())
 				{
-					models.add(matcher.group(1));
+					models.add(new Model(matcher.group(1), json.getLong("size")));
 				}
 			}
 			
-			return models.toArray(new String[0]);
+			return models.toArray(Model[]::new);
 		} catch(InterruptedException e)
 		{
 			throw new IOException(e);
@@ -82,14 +84,27 @@ public class JScribe implements UncaughtExceptionHandler {
 	}
 	
 	/**
+	 * Gets the basic information about a model from Hugging Face, or <code>null</code> if the model wasn't found. Useful if you have hardcoded strings of model
+	 * names and want to ensure it's still hosted.
+	 * 
+	 * @param modelName name of the model
+	 * @return {@linkplain Model} instance, or <code>null</code> if the model wasn't found.
+	 * @throws IOException if something went wrong
+	 */
+	public static Model getModelInfo(String modelName) throws IOException
+	{
+		return Stream.of(getModels()).filter(model -> model.name().equals(modelName)).findFirst().orElse(null);
+	}
+	
+	/**
 	 * Downloads a Whisper model in GGML format from Hugging Face.
 	 * 
 	 * @param modelName        name of the model (use {@link JScribe#getModels()})
 	 * @param destination      output path
-	 * @param progressListener download progress listener. Progress is a float, [0.0f-1.0f]
+	 * @param progressListener download progress listener
 	 * @throws IOException if something went wrong
 	 */
-	public static void downloadModel(String modelName, Path destination, Consumer<Float> progressListener) throws IOException
+	public static void downloadModel(String modelName, Path destination, BiConsumer<Long, Long> progressListener) throws IOException
 	{
 		String fileName = "ggml-" + modelName + ".bin";
 		String downloadUrl = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/" + fileName;
@@ -122,7 +137,7 @@ public class JScribe implements UncaughtExceptionHandler {
 					out.write(buffer, 0, read);
 					bytesRead += read;
 					
-					progressListener.accept(bytesRead * 1f / totalBytes);
+					progressListener.accept(bytesRead, totalBytes);
 				}
 			}
 			
@@ -142,7 +157,7 @@ public class JScribe implements UncaughtExceptionHandler {
 	 */
 	public static void downloadModel(String modelName, Path destination) throws IOException
 	{
-		downloadModel(modelName, destination, (value) ->
+		downloadModel(modelName, destination, (a, b) ->
 		{
 		});
 	}

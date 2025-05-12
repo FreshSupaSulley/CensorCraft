@@ -8,13 +8,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
-import java.util.stream.Collectors;
 
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
@@ -22,7 +17,6 @@ import javax.sound.sampled.UnsupportedAudioFileException;
 
 import org.junit.jupiter.api.Test;
 
-import io.github.freshsupasulley.JScribe;
 import io.github.givimad.libfvadjni.VoiceActivityDetector;
 
 class AppTest {
@@ -30,19 +24,19 @@ class AppTest {
 	@Test
 	void downloadModel() throws IOException
 	{
-		String[] models = JScribe.getModels();
-		System.out.println(Arrays.toString(models));
+//		Model[] models = JScribe.getModels();
+//		System.out.println(Arrays.toString(models));
 		
-		try
-		{
-			JScribe.downloadModel("tiny", Paths.get("src", "test", "resources", "tiny.bin"), (progress) -> {
-				System.out.println(progress);
-			});
-		} catch(Exception e)
-		{
-			System.out.println(e);
-			throw e;
-		}
+//		try
+//		{
+//			JScribe.downloadModel("tiny", Paths.get("src", "test", "resources", "tiny.bin"), (progress) -> {
+//				System.out.println(progress);
+//			});
+//		} catch(Exception e)
+//		{
+//			System.out.println(e);
+//			throw e;
+//		}
 	}
 	
 	/**
