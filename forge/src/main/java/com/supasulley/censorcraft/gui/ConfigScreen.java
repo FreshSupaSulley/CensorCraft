@@ -2,9 +2,11 @@ package com.supasulley.censorcraft.gui;
 
 import java.util.stream.Collectors;
 
+import com.supasulley.censorcraft.ClientCensorCraft;
 import com.supasulley.censorcraft.Config;
 
 import io.github.freshsupasulley.JScribe;
+import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.OptionInstance;
 import net.minecraft.client.gui.components.AbstractWidget;
@@ -12,9 +14,7 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Checkbox;
 import net.minecraft.client.gui.components.StringWidget;
 import net.minecraft.client.gui.components.Tooltip;
-import net.minecraft.client.gui.layouts.GridLayout;
 import net.minecraft.client.gui.layouts.LinearLayout;
-import net.minecraft.client.gui.layouts.SpacerElement;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
@@ -55,15 +55,8 @@ public class ConfigScreen extends Screen {
 		final int micListWidth = this.width / 3;
 		final int optionsWidth = this.width - micListWidth - listSpacing - PADDING;
 		
-		GridLayout grid = new GridLayout();
-		grid.rowSpacing(PADDING);
-		grid.defaultCellSetting().alignHorizontallyLeft();
-		
-		// Add all config options!
-		GridLayout.RowHelper layout = grid.createRowHelper(1);
-		// Put the restart button in the center with some padding (and conveniently we can set the max width here too for proper centering)
-		// layout.addChild(restartButton, grid.newCellSettings().alignHorizontallyCenter());
-		layout.addChild(new SpacerElement(optionsWidth, 1));
+		LinearLayout layout = LinearLayout.vertical().spacing(PADDING / 2);
+//		layout.addChild(new SpacerElement(optionsWidth, 1));
 		
 		// Everything else is aligned to the left
 		layout.addChild(Checkbox.builder(Component.literal("Show speech"), font).tooltip(Tooltip.create(Component.literal("Displays live audio transcriptions"))).selected(Config.Client.SHOW_TRANSCRIPTION.get()).onValueChange((button, value) ->
@@ -100,6 +93,8 @@ public class ConfigScreen extends Screen {
 		slider.setWidth(optionsWidth);
 		layout.addChild(slider);
 		
+		layout.addChild(Button.builder(Component.literal("Open models folder"), pButton -> Util.getPlatform().openPath(ClientCensorCraft.getModelDir())).build());
+		
 		LinearLayout buttonLayout = LinearLayout.horizontal().spacing(PADDING);
 		
 		// Put it together
@@ -125,7 +120,7 @@ public class ConfigScreen extends Screen {
 		addRenderableWidget(list);
 		
 		// List of options on right
-		int optionsX = addRenderableWidget(new ScrollArea(grid, list.getRight() + listSpacing + PADDING, listY, optionsWidth, layoutY - listY - PADDING * 2)).getX();
+		int optionsX = addRenderableWidget(new ScrollArea(layout, list.getRight() + listSpacing + PADDING, listY, optionsWidth, layoutY - listY - PADDING * 2)).getX();
 		
 		// Add text
 		addRenderableWidget(new StringWidget(PADDING, PADDING, micListWidth, font.lineHeight, Component.literal("Select Microphone"), font));

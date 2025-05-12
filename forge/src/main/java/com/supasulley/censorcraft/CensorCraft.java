@@ -50,7 +50,7 @@ public class CensorCraft {
 //			channel.messageBuilder(SetupPacket.class, NetworkDirection.LOGIN_TO_CLIENT).encoder((packet, buffer) -> packet.encode(buffer)).decoder(buffer -> new SetupPacket(buffer)).consumerMainThread((packet, context) -> packet.consume(context)).add();
 //			channel.messageBuilder(WordPacket.class, NetworkDirection.PLAY_TO_SERVER).encoder(WordPacket::encode).decoder(WordPacket::new).consumerMainThread(WordPacket::consume).add();
 			
-			register(channel, NetworkDirection.LOGIN_TO_CLIENT, SetupPacket.class);
+			register(channel, NetworkDirection.CONFIGURATION_TO_CLIENT, SetupPacket.class);
 			register(channel, NetworkDirection.PLAY_TO_SERVER, WordPacket.class);
 			// channel.messageBuilder(WordPacket.class,
 			// NetworkDirection.PLAY_TO_SERVER).encoder(WordPacket::encode).decoder(WordPacket::decode).consumerMainThread(WordPacket::consume).add();

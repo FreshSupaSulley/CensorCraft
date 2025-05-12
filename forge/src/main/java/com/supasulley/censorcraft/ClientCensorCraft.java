@@ -22,6 +22,7 @@ import net.minecraftforge.event.TickEvent.LevelTickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.loading.FMLPaths;
 import net.minecraftforge.network.PacketDistributor;
 
 @Mod.EventBusSubscriber(modid = CensorCraft.MODID, value = Dist.CLIENT)
@@ -29,7 +30,10 @@ public class ClientCensorCraft {
 	
 	private static final long AUDIO_CONTEXT_LENGTH = 3000, OVERLAP_LENGTH = 200;
 	
+	// JScribe
 	private static JScribe controller;
+	private static Path model;
+	
 	private static boolean inGame, paused;
 	
 	// Packets
@@ -52,22 +56,52 @@ public class ClientCensorCraft {
 	{
 		MinecraftForge.registerConfigScreen((minecraft, screen) -> new ConfigScreen(minecraft, screen));
 		
-		// Some common setup code
-		CensorCraft.LOGGER.info("Copying model to temp directory");
+		final String tinyModel = "tiny.en";
+		
+		// If we don't have tiny.en in the models directory yet (probably one of the first times booting this mod)
+		if(!hasModel(tinyModel))
+		{
+			try
+			{
+				model = getModelPath(tinyModel);
+				CensorCraft.LOGGER.info("Copying built-in model to {}", model);
+				
+				Files.copy(CensorCraft.class.getClassLoader().getResourceAsStream(tinyModel + ".bin"), model, StandardCopyOption.REPLACE_EXISTING);
+				CensorCraft.LOGGER.info("Put built-in model at {}", tinyModel);
+			} catch(IOException e)
+			{
+				CensorCraft.LOGGER.error("Failed to extract fallback model", e);
+				System.exit(1);
+			}
+		}
+		
+		controller = new JScribe(CensorCraft.LOGGER, model);
+	}
+	
+	public static Path getModelDir()
+	{
+		Path models = FMLPaths.CONFIGDIR.get().resolve("censorcraft/models");
 		
 		try
 		{
-			Path tempZip = Files.createTempFile("model", ".en.bin");
-			tempZip.toFile().deleteOnExit();
-			Files.copy(CensorCraft.class.getClassLoader().getResourceAsStream("ggml-tiny.en.bin"), tempZip, StandardCopyOption.REPLACE_EXISTING);
-			CensorCraft.LOGGER.info("Put whisper model at {}", tempZip);
-			
-			controller = new JScribe(CensorCraft.LOGGER, tempZip);
+			Files.createDirectories(models);
 		} catch(IOException e)
 		{
-			CensorCraft.LOGGER.error("Failed to load model");
-			e.printStackTrace();
+			CensorCraft.LOGGER.error("Failed to create model directory {}", models, e);
 		}
+		
+		return models;
+	}
+	
+	public static Path getModelPath(String modelName)
+	{
+		return getModelDir().resolve(modelName + ".bin");
+	}
+	
+	// needs to someday include tiny.en (built in model)
+	public static boolean hasModel(String modelName)
+	{
+		return getModelPath(modelName).toFile().exists();
 	}
 	
 	private static void startJScribe()
@@ -77,6 +111,9 @@ public class ClientCensorCraft {
 			CensorCraft.LOGGER.debug("Ignoring start request, JScribe is already running");
 			return;
 		}
+		
+		// Model might have changed, might as well reinstantiate
+		controller = new JScribe(model);
 		
 		try
 		{
@@ -125,7 +162,6 @@ public class ClientCensorCraft {
 	public static void onJoinWorld(ClientPlayerNetworkEvent.LoggingIn event)
 	{
 		inGame = true;
-		CensorCraft.LOGGER.debug("Client logged out event fired");
 		startJScribe();
 	}
 	
@@ -133,7 +169,6 @@ public class ClientCensorCraft {
 	public static void onLeaveWorld(ClientPlayerNetworkEvent.LoggingOut event)
 	{
 		inGame = false;
-		CensorCraft.LOGGER.debug("Client logged out event fired");
 		stopJScribe();
 	}
 	
@@ -145,8 +180,9 @@ public class ClientCensorCraft {
 	@SubscribeEvent
 	public static void onLevelTick(LevelTickEvent event)
 	{
-		if(event.side != LogicalSide.CLIENT) return;
-		
+		if(event.side != LogicalSide.CLIENT)
+			return;
+			
 		// Update bar height, "smoothly"
 		// Also give the volume a lil boost
 		// Use mth.lerp
@@ -237,5 +273,18 @@ public class ClientCensorCraft {
 	private static void setGUIText(MutableComponent component)
 	{
 		GUI_TEXT = component;
+	}
+	
+	/**
+	 * Restarts JScribe. The model needs to exist!
+	 * 
+	 * @param model name of model in model dir
+	 */
+	public static void restart(String model)
+	{
+		ClientCensorCraft.model = getModelPath(model);
+		
+		stopJScribe();
+		startJScribe();
 	}
 }

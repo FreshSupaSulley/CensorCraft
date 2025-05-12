@@ -101,10 +101,9 @@ public abstract class Config {
 		{
 			ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
 			
-			TABOO = builder.comment("List of forbidden words (case-insensitive)").defineListAllowEmpty("taboo", List.of("boom", "fart"), element -> true);
-			
-			PREFERRED_MODEL = builder.comment("Name of the model players should use for transcription. This determines the language and accuracy. Better models have larger download sizes.").comment("See https://github.com/ggml-org/whisper.cpp/blob/master/models/README.md#available-models").define("preferred_model", "tiny.en");
-			// ENFORCE_MODEL = builder.comment("Requires players download the preferred model").define("enforce_model", false);
+			TABOO = builder.comment("List of forbidden words and phrases (case-insensitive)").defineListAllowEmpty("taboo", List.of("boom", "fart poop"), element -> true);
+			PREFERRED_MODEL = builder.comment("Name of the model players need to use for transcription (determines the language and accuracy). Better models have larger file sizes.").comment("See https://github.com/ggml-org/whisper.cpp/blob/master/models/README.md#available-models").define("preferred_model", "tiny.en");
+//			ENFORCE_MODEL = builder.comment("Requires players download the preferred model").define("enforce_model", false);
 			
 			MONITOR_CHAT = builder.comment("Punishes for sending forbidden words to chat").define("monitor_chat", true);
 			ISOLATE_WORDS = builder.comment("If true, only whole words are considered (surrounded by spaces or word boundaries). If false, partial matches are allowed (e.g., 'art' triggers punishment for 'start')").define("isolate_words", true);
