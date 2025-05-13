@@ -121,7 +121,7 @@ class Transcriber extends Thread implements Runnable {
 				
 				for(int i = 0; i < numRecordings; i++)
 				{
-					Recording sample = recordings.take();
+					Recording sample = recordings.poll();
 					collectRecordings[i] = sample.samples();
 					
 					// The first timestamp is all we care about
@@ -189,9 +189,6 @@ class Transcriber extends Thread implements Runnable {
 		} catch(IOException e)
 		{
 			JScribe.logger.error("Failed to init whisper", e);
-		} catch(InterruptedException e)
-		{
-			JScribe.logger.debug("Interrupted waiting for new sample", e);
 		} finally
 		{
 			// Ensure running is set to false

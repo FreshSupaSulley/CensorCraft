@@ -11,6 +11,8 @@ import java.net.http.HttpResponse;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.function.BiConsumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -34,7 +36,6 @@ public class JScribe implements UncaughtExceptionHandler {
 	
 	static Logger logger = LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
 	
-	private final Path modelPath;
 	private AudioRecorder recorder;
 	private Transcriber transcriber;
 	
@@ -97,14 +98,14 @@ public class JScribe implements UncaughtExceptionHandler {
 	}
 	
 	/**
-	 * Downloads a Whisper model in GGML format from Hugging Face.
+	 * Asynchronously downloads a Whisper model in GGML format from Hugging Face.
 	 * 
 	 * @param modelName        name of the model (use {@link JScribe#getModels()})
 	 * @param destination      output path
 	 * @param progressListener download progress listener
-	 * @throws IOException if something went wrong
+	 * @return {@linkplain CompletableFuture} object representing the download
 	 */
-	public static void downloadModel(String modelName, Path destination, BiConsumer<Long, Long> progressListener) throws IOException
+	public static CompletableFuture<Void> downloadModel(String modelName, Path destination, BiConsumer<Long, Long> progressListener)
 	{
 		String fileName = "ggml-" + modelName + ".bin";
 		String downloadUrl = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/" + fileName;
@@ -112,17 +113,16 @@ public class JScribe implements UncaughtExceptionHandler {
 		JScribe.logger.info("Downloading model {} from {} to {}", modelName, downloadUrl, destination.toAbsolutePath());
 		
 		HttpRequest request = HttpRequest.newBuilder().uri(URI.create(downloadUrl)).build();
-		
 		// It sends you to a unique node so follow the redirect
-		try(HttpClient client = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.ALWAYS).build())
+		HttpClient client = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.ALWAYS).build();
+		
+		return client.sendAsync(request, HttpResponse.BodyHandlers.ofInputStream()).thenAcceptAsync((response) ->
 		{
-			HttpResponse<InputStream> response = client.send(request, HttpResponse.BodyHandlers.ofInputStream());
-			
 			long totalBytes = response.headers().firstValueAsLong("Content-Length").orElse(-1L);
 			
 			if(response.statusCode() != 200)
 			{
-				throw new IOException("Failed to download model. HTTP status code: " + response.statusCode());
+				throw new CompletionException(new IOException("Failed to download model. HTTP status code: " + response.statusCode()));
 			}
 			
 			try(InputStream in = response.body(); FileOutputStream out = new FileOutputStream(destination.toFile()))
@@ -139,13 +139,13 @@ public class JScribe implements UncaughtExceptionHandler {
 					
 					progressListener.accept(bytesRead, totalBytes);
 				}
+			} catch(IOException e)
+			{
+				throw new CompletionException(e);
 			}
 			
 			JScribe.logger.info("Model saved to {}", destination.toAbsolutePath());
-		} catch(InterruptedException e)
-		{
-			throw new IOException(e);
-		}
+		});
 	}
 	
 	/**
@@ -189,38 +189,28 @@ public class JScribe implements UncaughtExceptionHandler {
 	/**
 	 * Initializes a new {@link JScribe} instance with a custom logger.
 	 * 
-	 * @param logger    custom logger
-	 * @param modelPath path to GGML formatted Whisper model
+	 * @param logger custom logger
 	 */
-	public JScribe(Logger logger, Path modelPath)
+	public JScribe(Logger logger)
 	{
 		JScribe.logger = logger;
-		this.modelPath = modelPath;
 	}
 	
-	/**
-	 * Uses the default root logger.
-	 * 
-	 * @param modelPath path to GGML formatted Whisper model
-	 */
-	public JScribe(Path modelPath)
-	{
-		this(logger, modelPath);
-	}
-	
-	/**
-	 * Gets the model provided in the constructor.
-	 * 
-	 * @return model path
-	 */
-	public Path getModel()
-	{
-		return modelPath;
-	}
-	
+	//
+	// /**
+	// * Gets the model provided in the constructor.
+	// *
+	// * @return model path
+	// */
+	// public Path getModel()
+	// {
+	// return modelPath;
+	// }
+	//
 	/**
 	 * Starts live audio transcription.
 	 * 
+	 * @param modelPath  path to GGML formatted Whisper model
 	 * @param microphone preferred microphone name (can be null). Use {@link JScribe#getMicrophones()} to get microphones that support the required audio format.
 	 * @param latency    audio sample length in milliseconds. Must be at least 30ms. If low, set overlap to be much higher to catch full words.
 	 * @param overlap    extra audio in milliseconds. Samples are collected into a window of this size for context to the transcriber. Must be non-negative.
@@ -230,7 +220,7 @@ public class JScribe implements UncaughtExceptionHandler {
 	 * @throws NoMicrophoneException    if no usable microphones were found
 	 * @throws IOException              if already running or something went wrong
 	 */
-	public void start(String microphone, long latency, long overlap, boolean vad, boolean denoise) throws IOException, NoMicrophoneException
+	public void start(Path modelPath, String microphone, long latency, long overlap, boolean vad, boolean denoise) throws IOException, NoMicrophoneException
 	{
 		if(isRunning())
 		{
