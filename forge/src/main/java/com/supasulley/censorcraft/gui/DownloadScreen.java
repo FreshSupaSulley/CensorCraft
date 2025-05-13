@@ -1,64 +1,88 @@
 package com.supasulley.censorcraft.gui;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.concurrent.CompletableFuture;
 
 import com.supasulley.censorcraft.CensorCraft;
 import com.supasulley.censorcraft.ClientCensorCraft;
+import com.supasulley.censorcraft.network.SetupPacket;
 
 import io.github.freshsupasulley.JScribe;
 import io.github.freshsupasulley.Model;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.PopupScreen;
-import net.minecraft.client.gui.screens.DisconnectedScreen;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 
 public class DownloadScreen extends Screen {
 	
+	private CompletableFuture<Void> downloadTask;
+	private Path downloadPath;
+	
 	private long downloaded;
-	private boolean complete;
 	
 	private Model model;
 	
-	public DownloadScreen(String modelName)
+	public DownloadScreen(Model model)
 	{
-		super(Component.literal("Downloading ").append(Component.literal(modelName).withStyle(Style.EMPTY.withBold(true))));
+		super(Component.literal("Downloading ").append(Component.literal(model.name()).withStyle(Style.EMPTY.withBold(true))));
 		
-		Thread thread = new Thread(() ->
+		this.model = model;
+		
+		// Update title to include size
+		downloadTask = JScribe.downloadModel(model.name(), downloadPath = ClientCensorCraft.getModelPath(model.name()), (downloaded, total) ->
 		{
-			try
+			this.downloaded = downloaded;
+		}).whenComplete((success, error) ->
+		{
+			// On success
+			if(error == null)
 			{
-				// Verification that the server is requesting a model that actually exists on hugging face
-				model = JScribe.getModelInfo(modelName);
-				
-				if(model == null)
-				{
-					minecraft.execute(() -> minecraft.setScreen(new DisconnectedScreen(null, Component.literal("Server requested a model that doesn't exist"), Component.literal("Ask the server owner to fix their config"))));
-				}
-				else
-				{
-					// Update title to include size
-					JScribe.downloadModel(modelName, ClientCensorCraft.getModelPath(modelName), (downloaded, total) ->
-					{
-						this.downloaded = downloaded;
-					});
-					
-					complete = true;
-					minecraft.execute(() -> minecraft.setScreen(new PopupScreen.Builder(this, Component.literal("Downloaded model")).setMessage(Component.literal("Reconnect to join. You can manage downloaded models in the mod config menu.")).addButton(CommonComponents.GUI_OK, (screen) -> Minecraft.getInstance().setScreen(null)).build()));
-				}
-			} catch(IOException e)
+				minecraft.execute(() -> minecraft.setScreen(new PopupScreen.Builder(new TitleScreen(), Component.literal("Downloaded model")).setMessage(Component.literal("Reconnect to join. You can manage downloaded models in the mod config menu.")).addButton(CommonComponents.GUI_OK, PopupScreen::onClose).build()));
+			}
+			// On error
+			else
 			{
-				CensorCraft.LOGGER.error("Something went wrong downloading model {}", modelName, e);
-				minecraft.execute(() -> minecraft.setScreen(new DisconnectedScreen(null, Component.literal("An error occurred downloading the model"), Component.literal(e.getMessage()))));
+				minecraft.execute(() -> minecraft.setScreen(SetupPacket.errorScreen("An error occurred downloading the model", error)));
 			}
 		});
+	}
+	
+	@Override
+	public void onClose()
+	{
+		super.onClose();
 		
-		thread.setDaemon(true);
-		thread.setName("CensorCraft Model Downloader");
-		thread.start();
+		CensorCraft.LOGGER.info("{} model download cancelled", model.name());
+		
+		try
+		{
+			if(Files.deleteIfExists(downloadPath))
+			{
+				CensorCraft.LOGGER.warn("Deleted incomplete model at {}", downloadPath);
+			}
+			else
+			{
+				CensorCraft.LOGGER.warn("Incomplete model at {} does not exist", downloadPath);
+			}
+		} catch(IOException e)
+		{
+			CensorCraft.LOGGER.error("Failed to delete incomplete model download at {}", downloadPath, e);
+		}
+		
+		downloadTask.cancel(true);
+	}
+	
+	@Override
+	protected void init()
+	{
+		addRenderableWidget(Button.builder(Component.literal("Cancel"), button -> this.onClose()).bounds(this.width / 2 - Button.BIG_WIDTH / 2, this.height - Button.DEFAULT_HEIGHT - ClientCensorCraft.PADDING, Button.BIG_WIDTH, Button.DEFAULT_HEIGHT).build());
 	}
 	
 	@Override
@@ -66,12 +90,8 @@ public class DownloadScreen extends Screen {
 	{
 		super.render(graphics, pMouseX, pMouseY, pPartialTick);
 		
-		if(model == null)
-		{
-			graphics.drawCenteredString(font, Component.literal("Validating..."), this.width / 2, this.height / 2, 0xFFFFFFFF);
-		}
 		// Don't draw the progress bar when done (it shows underneath the popup and looks ugly asf)
-		else if(!complete)
+		if(!downloadTask.isDone())
 		{
 			// Cutoff the byte suffix
 			graphics.drawCenteredString(font, title, this.width / 2, this.height / 4, 0xFFFFFFFF);

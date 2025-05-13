@@ -20,8 +20,6 @@ import net.minecraft.network.chat.MutableComponent;
 public abstract class GUIMixin {
 	
 	// private static final ResourceLocation MICROPHONE_ICON = ResourceLocation.fromNamespaceAndPath(CensorCraft.MODID, "textures/microphone.png");
-	private static final int PADDING = 5;
-	
 	// @Inject(method = "tick", at = @At("RETURN"))
 	// private void tick(CallbackInfo info)
 	// {
@@ -41,12 +39,12 @@ public abstract class GUIMixin {
 		Minecraft minecraft = Minecraft.getInstance();
 		
 		final int barWidth = 5, barHeight = minecraft.font.lineHeight * 2;
-		int x = PADDING;
+		int x = ClientCensorCraft.PADDING;
 		
 		if(Config.Client.SHOW_VOLUME_BAR.get())
 		{
-			x += barWidth + PADDING;
-			graphics.fill(RenderType.guiOverlay(), PADDING, PADDING + barHeight, PADDING + barWidth, PADDING + barHeight - Math.clamp((int) (ClientCensorCraft.JSCRIBE_VOLUME * barHeight), 1, barHeight), 0xAAFFFFFF);
+			x += barWidth + ClientCensorCraft.PADDING;
+			graphics.fill(RenderType.guiOverlay(), ClientCensorCraft.PADDING, ClientCensorCraft.PADDING + barHeight, ClientCensorCraft.PADDING + barWidth, ClientCensorCraft.PADDING + barHeight - Math.clamp((int) (ClientCensorCraft.JSCRIBE_VOLUME * barHeight), 1, barHeight), 0xAAFFFFFF);
 		}
 		
 		if(Config.Client.SHOW_VAD.get() && ClientCensorCraft.SPEAKING)
@@ -55,7 +53,7 @@ public abstract class GUIMixin {
 		}
 		
 		// Color is ARGB
-		graphics.drawWordWrap(minecraft.font, component, x, PADDING, graphics.guiWidth() - x - PADDING, 0xFFFFFFFF);
+		graphics.drawWordWrap(minecraft.font, component, x, ClientCensorCraft.PADDING, graphics.guiWidth() - x - ClientCensorCraft.PADDING, 0xFFFFFFFF);
 	}
 	
 	// /**

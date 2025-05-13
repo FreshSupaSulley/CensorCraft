@@ -28,11 +28,12 @@ import net.minecraftforge.network.PacketDistributor;
 @Mod.EventBusSubscriber(modid = CensorCraft.MODID, value = Dist.CLIENT)
 public class ClientCensorCraft {
 	
-	private static final long AUDIO_CONTEXT_LENGTH = 3000, OVERLAP_LENGTH = 200;
+	private static final long OVERLAP_LENGTH = 200;
 	
 	// JScribe
 	private static JScribe controller;
 	private static Path model;
+	private static long audioContextLength;
 	
 	private static boolean inGame, paused;
 	
@@ -41,6 +42,7 @@ public class ClientCensorCraft {
 	private static long lastWordPacket;
 	
 	// GUI
+	public static final int PADDING = 5;
 	private static final long GUI_TIMEOUT = 10000;
 	private static final int TRANSCRIPTION_LENGTH = 100;
 	
@@ -63,7 +65,7 @@ public class ClientCensorCraft {
 		{
 			try
 			{
-				model = getModelPath(tinyModel);
+				Path model = getModelPath(tinyModel);
 				CensorCraft.LOGGER.info("Copying built-in model to {}", model);
 				
 				Files.copy(CensorCraft.class.getClassLoader().getResourceAsStream(tinyModel + ".bin"), model, StandardCopyOption.REPLACE_EXISTING);
@@ -75,7 +77,7 @@ public class ClientCensorCraft {
 			}
 		}
 		
-		controller = new JScribe(CensorCraft.LOGGER, model);
+		controller = new JScribe(CensorCraft.LOGGER);
 	}
 	
 	public static Path getModelDir()
@@ -113,11 +115,9 @@ public class ClientCensorCraft {
 		}
 		
 		// Model might have changed, might as well reinstantiate
-		controller = new JScribe(model);
-		
 		try
 		{
-			controller.start(Config.Client.PREFERRED_MIC.get(), Config.Client.LATENCY.get(), AUDIO_CONTEXT_LENGTH - Config.Client.LATENCY.get() + OVERLAP_LENGTH, Config.Client.VAD.get(), Config.Client.DENOISE.get());
+			controller.start(model, Config.Client.PREFERRED_MIC.get(), Config.Client.LATENCY.get(), audioContextLength - Config.Client.LATENCY.get() + OVERLAP_LENGTH, Config.Client.VAD.get(), Config.Client.DENOISE.get());
 			
 			MutableComponent component = Component.literal("Now listening to ");
 			component.append(Component.literal(controller.getActiveMicrophone().getName() + ". ").withStyle(style -> style.withBold(true)));
@@ -158,6 +158,7 @@ public class ClientCensorCraft {
 		}
 	}
 	
+	// its expected that SetupPacket will be consumed before this
 	@SubscribeEvent
 	public static void onJoinWorld(ClientPlayerNetworkEvent.LoggingIn event)
 	{
@@ -198,8 +199,8 @@ public class ClientCensorCraft {
 			startJScribe();
 		}
 		
-		// If we're supposed to be recording AND we're not paused
-		if(inGame && !paused)
+		// If we're supposed to be recording AND we're not paused AND the player is alive
+		if(inGame && !paused && Minecraft.getInstance().player.isAlive()) // is this gonna throw nulls
 		{
 			if(!controller.isRunning())
 			{
@@ -280,11 +281,11 @@ public class ClientCensorCraft {
 	 * 
 	 * @param model name of model in model dir
 	 */
-	public static void restart(String model)
+	public static void setup(Path model, long audioContextLength)
 	{
-		ClientCensorCraft.model = getModelPath(model);
-		
 		stopJScribe();
+		ClientCensorCraft.model = model;
+		ClientCensorCraft.audioContextLength = audioContextLength;
 		startJScribe();
 	}
 }

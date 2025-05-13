@@ -20,8 +20,6 @@ import net.minecraft.network.chat.Component;
 
 public class ConfigScreen extends Screen {
 	
-	private static final int PADDING = 5;
-	
 	private Minecraft minecraft;
 	private MicrophoneList list;
 	private static boolean restartJScribe;
@@ -50,12 +48,12 @@ public class ConfigScreen extends Screen {
 	protected void init()
 	{
 		// Lists
-		final int listY = PADDING * 2 + font.lineHeight;
+		final int listY = ClientCensorCraft.PADDING * 2 + font.lineHeight;
 		final int listSpacing = 40;
 		final int micListWidth = this.width / 3;
-		final int optionsWidth = this.width - micListWidth - listSpacing - PADDING;
+		final int optionsWidth = this.width - micListWidth - listSpacing - ClientCensorCraft.PADDING;
 		
-		LinearLayout layout = LinearLayout.vertical().spacing(PADDING / 2);
+		LinearLayout layout = LinearLayout.vertical().spacing(ClientCensorCraft.PADDING / 2);
 //		layout.addChild(new SpacerElement(optionsWidth, 1));
 		
 		// Everything else is aligned to the left
@@ -95,7 +93,7 @@ public class ConfigScreen extends Screen {
 		
 		layout.addChild(Button.builder(Component.literal("Open models folder"), pButton -> Util.getPlatform().openPath(ClientCensorCraft.getModelDir())).build());
 		
-		LinearLayout buttonLayout = LinearLayout.horizontal().spacing(PADDING);
+		LinearLayout buttonLayout = LinearLayout.horizontal().spacing(ClientCensorCraft.PADDING);
 		
 		// Put it together
 		Button restartButton = buttonLayout.addChild(Button.builder(Component.literal("Restart"), button ->
@@ -110,20 +108,20 @@ public class ConfigScreen extends Screen {
 		buttonLayout.arrangeElements();
 		
 		int layoutX = (this.width - buttonLayout.getWidth()) / 2;
-		int layoutY = this.height - (PADDING + Button.DEFAULT_HEIGHT);
+		int layoutY = this.height - (ClientCensorCraft.PADDING + Button.DEFAULT_HEIGHT);
 		buttonLayout.setPosition(layoutX, layoutY);
 		
 		buttonLayout.visitWidgets(this::addRenderableWidget);
 		
 		// List of microphones on left
-		list = new MicrophoneList(restartButton, PADDING, listY, micListWidth - PADDING * 2, layoutY - listY - PADDING, minecraft, JScribe.getMicrophones().stream().map(mic -> mic.getName()).collect(Collectors.toList()));
+		list = new MicrophoneList(restartButton, ClientCensorCraft.PADDING, listY, micListWidth - ClientCensorCraft.PADDING * 2, layoutY - listY - ClientCensorCraft.PADDING, minecraft, JScribe.getMicrophones().stream().map(mic -> mic.getName()).collect(Collectors.toList()));
 		addRenderableWidget(list);
 		
 		// List of options on right
-		int optionsX = addRenderableWidget(new ScrollArea(layout, list.getRight() + listSpacing + PADDING, listY, optionsWidth, layoutY - listY - PADDING * 2)).getX();
+		int optionsX = addRenderableWidget(new ScrollArea(layout, list.getRight() + listSpacing + ClientCensorCraft.PADDING, listY, optionsWidth, layoutY - listY - ClientCensorCraft.PADDING * 2)).getX();
 		
 		// Add text
-		addRenderableWidget(new StringWidget(PADDING, PADDING, micListWidth, font.lineHeight, Component.literal("Select Microphone"), font));
-		addRenderableWidget(new StringWidget(optionsX, PADDING, optionsWidth, font.lineHeight, Component.literal("Options"), font));
+		addRenderableWidget(new StringWidget(ClientCensorCraft.PADDING, ClientCensorCraft.PADDING, micListWidth, font.lineHeight, Component.literal("Select Microphone"), font));
+		addRenderableWidget(new StringWidget(optionsX, ClientCensorCraft.PADDING, optionsWidth, font.lineHeight, Component.literal("Options"), font));
 	}
 }
