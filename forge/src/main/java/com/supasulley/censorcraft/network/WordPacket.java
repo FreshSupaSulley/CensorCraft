@@ -240,42 +240,18 @@ public class WordPacket implements IPacket {
 		{
 			if(Config.Server.TELEPORT.get())
 			{
-				player.setPos(pos.x, pos.y + Config.Server.LAUNCH_HEIGHT.get(), pos.z);
+				player.teleportTo(pos.x, pos.y + Config.Server.LAUNCH_HEIGHT.get(), pos.z);
 			}
 			else
 			{
 				player.addDeltaMovement(new Vec3(0, Config.Server.LAUNCH_HEIGHT.get(), 0));
+				player.hurtMarked = true;
 			}
 		}
 		
 		if(Config.Server.ENABLE_IGNITE.get())
 		{
 			player.igniteForSeconds(Config.Server.IGNITE_SECONDS.get());
-		}
-		
-		// circle alg is wrong, makes an X
-		if(Config.Server.ENABLE_ANVIL.get())
-		{
-			final int anvilRadius = Config.Server.ANVIL_RADIUS.get();
-			final int anvilHeight = Config.Server.ANVIL_HEIGHT.get();
-			
-			final float anvilCenter = anvilRadius / 2f;
-			
-			for(int i = 0; i < anvilRadius * anvilRadius; i++)
-			{
-				int x = i % anvilRadius, y = i / anvilRadius;
-				
-				float destX = anvilCenter - x;
-				float destY = anvilCenter - y;
-				
-				// Distance formula, because we're making a circle
-				if(Math.sqrt(destX * destX + destY * destY) < anvilRadius)
-				{
-					int anvilX = (int) (player.getBlockX() + x - anvilCenter);
-					int anvilZ = (int) (player.getBlockZ() + y - anvilCenter);
-					player.level().setBlock(new BlockPos(anvilX, player.getBlockY() + anvilHeight, anvilZ), Blocks.ANVIL.defaultBlockState(), 68); // no idea what pFlags does
-				}
-			}
 		}
 		
 		if(Config.Server.ENABLE_DIMENSION.get())

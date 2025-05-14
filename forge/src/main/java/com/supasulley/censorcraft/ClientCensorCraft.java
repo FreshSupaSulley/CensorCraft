@@ -4,19 +4,30 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.Optional;
 
 import com.supasulley.censorcraft.gui.ConfigScreen;
+import com.supasulley.censorcraft.gui.DownloadScreen;
 import com.supasulley.censorcraft.network.WordPacket;
 
 import io.github.freshsupasulley.JScribe;
+import io.github.freshsupasulley.Model;
 import io.github.freshsupasulley.NoMicrophoneException;
 import io.github.freshsupasulley.Transcriptions;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.PopupScreen;
+import net.minecraft.client.gui.screens.DisconnectedScreen;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.TitleScreen;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.Style;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.ClientPauseChangeEvent;
 import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
+import net.minecraftforge.client.event.ScreenEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent.LevelTickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -40,6 +51,10 @@ public class ClientCensorCraft {
 	// Packets
 	public static final long HEARTBEAT_TIME = 30000, HEARTBEAT_SAFETY_NET = 5000;
 	private static long lastWordPacket;
+	
+	// Setup
+	private static boolean disconnectFlag;
+	private static String requestedModel;
 	
 	// GUI
 	public static final int PADDING = 5;
@@ -139,6 +154,49 @@ public class ClientCensorCraft {
 	}
 	
 	@SubscribeEvent
+	public static void screenEvent(ScreenEvent.Opening event)
+	{
+		// I don't need to do this instanceof check but it makes me feel better
+		if(event.getNewScreen() instanceof DisconnectedScreen && disconnectFlag)
+		{
+			disconnectFlag = false;
+			
+			try
+			{
+				// Probably ok that this happens in the main thread
+				Model model = JScribe.getModelInfo(requestedModel);
+				
+				if(model == null)
+				{
+					event.setNewScreen(errorScreen("Server requested a model that doesn't exist (" + requestedModel + ")", "Ask the server owner to fix the config"));
+				}
+				else
+				{
+					event.setNewScreen(new PopupScreen.Builder(new TitleScreen(), Component.literal("Missing model")).setMessage(Component.literal("This server requires a transcription model to play (").append(Component.literal(requestedModel + ", " + model.getSizeFancy()).withStyle(Style.EMPTY.withBold(true))).append(")\n\nDownload the model?")).addButton(CommonComponents.GUI_YES, (screen) ->
+					{
+						Minecraft.getInstance().setScreen(new DownloadScreen(model));
+					}).addButton(CommonComponents.GUI_NO, PopupScreen::onClose).build());
+				}
+			} catch(IOException e)
+			{
+				event.setNewScreen(errorScreen("Failed to get model info", e));
+			}
+		}
+	}
+	
+	public static Screen errorScreen(String title, String reason)
+	{
+		// return new ErrorScreen(Component.literal(title), Component.literal(reason));
+		return new PopupScreen.Builder(new TitleScreen(), Component.literal(title).withColor(-65536)).setMessage(Component.literal(reason)).addButton(CommonComponents.GUI_OK, PopupScreen::onClose).build();
+	}
+	
+	public static Screen errorScreen(String title, Throwable t)
+	{
+		CensorCraft.LOGGER.error(title, t);
+		return errorScreen(title, t.getLocalizedMessage() == null ? t.getClass().toString() : t.getLocalizedMessage());
+	}
+	
+	@SubscribeEvent
 	public static void onPause(ClientPauseChangeEvent.Post event)
 	{
 		// This event is so weird. Detects pausing like every tick regardless if you're in game
@@ -200,7 +258,7 @@ public class ClientCensorCraft {
 		}
 		
 		// If we're supposed to be recording AND we're not paused AND the player is alive
-		if(inGame && !paused && Minecraft.getInstance().player.isAlive()) // is this gonna throw nulls
+		if(inGame && !paused && Optional.ofNullable(Minecraft.getInstance().player).map(LocalPlayer::isAlive).orElse(false)) // no clue if .player can be null but im compensating for it anyways
 		{
 			if(!controller.isRunning())
 			{
@@ -287,5 +345,11 @@ public class ClientCensorCraft {
 		ClientCensorCraft.model = model;
 		ClientCensorCraft.audioContextLength = audioContextLength;
 		startJScribe();
+	}
+	
+	public static void requestModelDownload(String model)
+	{
+		disconnectFlag = true;
+		requestedModel = model;
 	}
 }

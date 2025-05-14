@@ -7,7 +7,6 @@ import java.util.concurrent.CompletableFuture;
 
 import com.supasulley.censorcraft.CensorCraft;
 import com.supasulley.censorcraft.ClientCensorCraft;
-import com.supasulley.censorcraft.network.SetupPacket;
 
 import io.github.freshsupasulley.JScribe;
 import io.github.freshsupasulley.Model;
@@ -49,7 +48,8 @@ public class DownloadScreen extends Screen {
 			// On error
 			else
 			{
-				minecraft.execute(() -> minecraft.setScreen(SetupPacket.errorScreen("An error occurred downloading the model", error)));
+				this.onClose(); // delete the incomplete model?
+				minecraft.execute(() -> minecraft.setScreen(ClientCensorCraft.errorScreen("An error occurred downloading the model", error)));
 			}
 		});
 	}

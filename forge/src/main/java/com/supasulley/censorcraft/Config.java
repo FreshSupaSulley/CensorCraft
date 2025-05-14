@@ -76,10 +76,6 @@ public abstract class Config {
 		public static ConfigValue<Boolean> ENABLE_IGNITE;
 		public static ConfigValue<Float> IGNITE_SECONDS;
 		
-		// Anvil
-		public static ConfigValue<Boolean> ENABLE_ANVIL;
-		public static ConfigValue<Integer> ANVIL_HEIGHT, ANVIL_RADIUS;
-		
 		// Dimension
 		public static ConfigValue<Boolean> ENABLE_DIMENSION, ENABLE_SAFE_TELEPORT, AVOID_NETHER_ROOF, SUMMON_DIRT, ENABLE_FALLBACK;
 		public static ConfigValue<Dimension> DIMENSION, FALLBACK_DIMENSION;
@@ -144,13 +140,6 @@ public abstract class Config {
 			builder.comment("Puts the player on fire").push("ignite");
 			ENABLE_IGNITE = builder.define("enable", false);
 			IGNITE_SECONDS = builder.comment("Amount of seconds player is on fire for").defineInRange("ignite_seconds", 5f, 0, Float.MAX_VALUE);
-			builder.pop();
-			
-			// Anvil
-			builder.comment("Summons an anvil on top of the player").push("anvil");
-			ENABLE_ANVIL = builder.define("enable", false);
-			ANVIL_HEIGHT = builder.comment("Number of blocks above the player the anvil(s) will spawn").defineInRange("anvil_height", 1, 1, Integer.MAX_VALUE);
-			ANVIL_RADIUS = builder.comment("Number of blocks that make up the radius of the anvil circle").defineInRange("anvil_radius", 1, 1, Integer.MAX_VALUE);
 			builder.pop();
 			
 			// Dimension
