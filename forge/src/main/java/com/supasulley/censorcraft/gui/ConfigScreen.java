@@ -3,19 +3,23 @@ package com.supasulley.censorcraft.gui;
 import java.util.stream.Collectors;
 
 import com.supasulley.censorcraft.ClientCensorCraft;
-import com.supasulley.censorcraft.Config;
+import com.supasulley.censorcraft.config.Config;
 
 import io.github.freshsupasulley.JScribe;
+import io.github.freshsupasulley.LibraryLoader;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.OptionInstance;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Checkbox;
+import net.minecraft.client.gui.components.PopupScreen;
 import net.minecraft.client.gui.components.StringWidget;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.layouts.LinearLayout;
+import net.minecraft.client.gui.layouts.SpacerElement;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 
 public class ConfigScreen extends Screen {
@@ -54,7 +58,7 @@ public class ConfigScreen extends Screen {
 		final int optionsWidth = this.width - micListWidth - listSpacing - ClientCensorCraft.PADDING;
 		
 		LinearLayout layout = LinearLayout.vertical().spacing(ClientCensorCraft.PADDING / 2);
-//		layout.addChild(new SpacerElement(optionsWidth, 1));
+		// layout.addChild(new SpacerElement(optionsWidth, 1));
 		
 		// Everything else is aligned to the left
 		layout.addChild(Checkbox.builder(Component.literal("Show speech"), font).tooltip(Tooltip.create(Component.literal("Displays live audio transcriptions"))).selected(Config.Client.SHOW_TRANSCRIPTION.get()).onValueChange((button, value) ->
@@ -67,7 +71,7 @@ public class ConfigScreen extends Screen {
 			Config.Client.SHOW_VOLUME_BAR.set(value);
 		}).build());
 		
-		layout.addChild(Checkbox.builder(Component.literal("Show voice detection"), font).tooltip(Tooltip.create(Component.literal("Indicates when speech is detected"))).selected(Config.Client.VAD.get()).onValueChange((button, value) ->
+		layout.addChild(Checkbox.builder(Component.literal("Show voice detection"), font).tooltip(Tooltip.create(Component.literal("Indicates when speech is detected"))).selected(Config.Client.SHOW_VAD.get()).onValueChange((button, value) ->
 		{
 			Config.Client.SHOW_VAD.set(value);
 		}).build()).active = Config.Client.VAD.get();
@@ -93,6 +97,19 @@ public class ConfigScreen extends Screen {
 		
 		layout.addChild(Button.builder(Component.literal("Open models folder"), pButton -> Util.getPlatform().openPath(ClientCensorCraft.getModelDir())).build());
 		
+		// Experimental
+		layout.addChild(new SpacerElement(optionsWidth, 6));
+		layout.addChild(new StringWidget(Component.literal("Experimental"), font));
+		layout.addChild(Checkbox.builder(Component.literal("Use GPU (Windows x64 only)"), font).tooltip(Tooltip.create(Component.literal("Use Vulkan for GPU acceleration. Does not work on all machines"))).selected(Config.Client.USE_VULKAN.get() && LibraryLoader.canUseVulkan()).onValueChange((button, value) ->
+		{
+			Config.Client.USE_VULKAN.set(value);
+			
+			if(ClientCensorCraft.librariesLoaded)
+			{
+				minecraft.setScreen(new PopupScreen.Builder(this, Component.literal("Requires restart")).setMessage(Component.literal("Libraries are already loaded. Restart Minecraft for changes to take effect.")).addButton(CommonComponents.GUI_OK, PopupScreen::onClose).build());
+			}
+		}).build()).active = LibraryLoader.canUseVulkan();
+		
 		LinearLayout buttonLayout = LinearLayout.horizontal().spacing(ClientCensorCraft.PADDING);
 		
 		// Put it together
@@ -100,7 +117,7 @@ public class ConfigScreen extends Screen {
 		{
 			button.active = false;
 			restartJScribe = true;
-		}).size(Button.SMALL_WIDTH, Button.DEFAULT_HEIGHT).build());//.bounds(PADDING, this.height - Button.DEFAULT_HEIGHT - PADDING, Button.SMALL_WIDTH, Button.DEFAULT_HEIGHT).build();
+		}).size(Button.SMALL_WIDTH, Button.DEFAULT_HEIGHT).build());// .bounds(PADDING, this.height - Button.DEFAULT_HEIGHT - PADDING, Button.SMALL_WIDTH, Button.DEFAULT_HEIGHT).build();
 		
 		// Close button
 		buttonLayout.addChild(Button.builder(Component.literal("Close"), button -> this.onClose()).size(Button.BIG_WIDTH, Button.DEFAULT_HEIGHT).build()).getY();

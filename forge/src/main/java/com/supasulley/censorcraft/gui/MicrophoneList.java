@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Optional;
 
 import com.supasulley.censorcraft.CensorCraft;
-import com.supasulley.censorcraft.Config;
+import com.supasulley.censorcraft.config.Config;
 import com.supasulley.censorcraft.gui.MicrophoneList.MicrophoneEntry;
 
 import net.minecraft.client.Minecraft;

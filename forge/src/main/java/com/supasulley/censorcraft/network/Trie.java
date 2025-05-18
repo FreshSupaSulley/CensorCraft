@@ -1,10 +1,11 @@
 package com.supasulley.censorcraft.network;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
-
-import com.supasulley.censorcraft.CensorCraft;
 
 public class Trie {
 	
@@ -23,13 +24,10 @@ public class Trie {
 		
 		if(!newList.equals(list))
 		{
-			CensorCraft.LOGGER.info("Updating tabooed words");
 			list = new ArrayList<String>();
 			root = new TrieNode();
 			newList.forEach(item -> insert(item));
 		}
-		
-		CensorCraft.LOGGER.info(list.toString());
 	}
 	
 	private void insert(String word)

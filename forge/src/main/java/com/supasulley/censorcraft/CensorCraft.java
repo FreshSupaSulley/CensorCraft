@@ -3,7 +3,9 @@ package com.supasulley.censorcraft;
 import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
+import com.supasulley.censorcraft.config.Config;
 import com.supasulley.censorcraft.network.IPacket;
+import com.supasulley.censorcraft.network.PunishedPacket;
 import com.supasulley.censorcraft.network.SetupPacket;
 import com.supasulley.censorcraft.network.WordPacket;
 
@@ -52,6 +54,7 @@ public class CensorCraft {
 			
 			register(channel, NetworkDirection.CONFIGURATION_TO_CLIENT, SetupPacket.class);
 			register(channel, NetworkDirection.PLAY_TO_SERVER, WordPacket.class);
+			register(channel, NetworkDirection.PLAY_TO_CLIENT, PunishedPacket.class);
 			// channel.messageBuilder(WordPacket.class,
 			// NetworkDirection.PLAY_TO_SERVER).encoder(WordPacket::encode).decoder(WordPacket::decode).consumerMainThread(WordPacket::consume).add();
 		});

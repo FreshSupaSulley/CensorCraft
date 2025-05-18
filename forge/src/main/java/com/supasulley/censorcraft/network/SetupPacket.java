@@ -4,7 +4,7 @@ import java.nio.charset.Charset;
 
 import com.supasulley.censorcraft.CensorCraft;
 import com.supasulley.censorcraft.ClientCensorCraft;
-import com.supasulley.censorcraft.Config;
+import com.supasulley.censorcraft.config.Config;
 
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;

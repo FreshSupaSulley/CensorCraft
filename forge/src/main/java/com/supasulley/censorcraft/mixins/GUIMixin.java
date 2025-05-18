@@ -6,7 +6,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import com.supasulley.censorcraft.ClientCensorCraft;
-import com.supasulley.censorcraft.Config;
+import com.supasulley.censorcraft.config.Config;
 
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;

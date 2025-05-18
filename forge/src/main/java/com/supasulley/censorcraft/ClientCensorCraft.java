@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.Optional;
 
+import com.supasulley.censorcraft.config.Config;
 import com.supasulley.censorcraft.gui.ConfigScreen;
 import com.supasulley.censorcraft.gui.DownloadScreen;
 import com.supasulley.censorcraft.network.WordPacket;
@@ -30,6 +31,7 @@ import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.client.event.ScreenEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent.LevelTickEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.fml.common.Mod;
@@ -42,11 +44,12 @@ public class ClientCensorCraft {
 	private static final long OVERLAP_LENGTH = 200;
 	
 	// JScribe
+	public static boolean librariesLoaded;
 	private static JScribe controller;
 	private static Path model;
 	private static long audioContextLength;
 	
-	private static boolean inGame, paused;
+	private static boolean loggedIn, paused;
 	
 	// Packets
 	public static final long HEARTBEAT_TIME = 30000, HEARTBEAT_SAFETY_NET = 5000;
@@ -91,8 +94,6 @@ public class ClientCensorCraft {
 				System.exit(1);
 			}
 		}
-		
-		controller = new JScribe(CensorCraft.LOGGER);
 	}
 	
 	public static Path getModelDir()
@@ -123,15 +124,26 @@ public class ClientCensorCraft {
 	
 	private static void startJScribe()
 	{
-		if(controller.isRunning())
+		if(controller != null && controller.isRunning())
 		{
 			CensorCraft.LOGGER.debug("Ignoring start request, JScribe is already running");
 			return;
 		}
 		
+		JScribe.Builder builder = new JScribe.Builder(CensorCraft.LOGGER);
+		
+		if(Config.Client.USE_VULKAN.get())
+		{
+			CensorCraft.LOGGER.warn("Enabling Vulkan");
+			builder.useVulkan();
+		}
+		
+		controller = builder.build();
+		
 		// Model might have changed, might as well reinstantiate
 		try
 		{
+			librariesLoaded = true;
 			controller.start(model, Config.Client.PREFERRED_MIC.get(), Config.Client.LATENCY.get(), audioContextLength - Config.Client.LATENCY.get() + OVERLAP_LENGTH, Config.Client.VAD.get(), Config.Client.DENOISE.get());
 			
 			MutableComponent component = Component.literal("Now listening to ");
@@ -141,7 +153,7 @@ public class ClientCensorCraft {
 		} catch(NoMicrophoneException e)
 		{
 			CensorCraft.LOGGER.error("No microphones found", e);
-		} catch(IOException e)
+		} catch(Exception e)
 		{
 			CensorCraft.LOGGER.error("Failed to start JScribe", e);
 		}
@@ -149,6 +161,12 @@ public class ClientCensorCraft {
 	
 	private static void stopJScribe()
 	{
+		if(controller == null)
+		{
+			CensorCraft.LOGGER.error("Tried to stop JScribe when controller is not initialized", new Throwable()); // get the stacktrace if this happens
+			return;
+		}
+		
 		controller.stop();
 		setGUIText(Component.literal("Stopped recording."));
 	}
@@ -200,7 +218,7 @@ public class ClientCensorCraft {
 	public static void onPause(ClientPauseChangeEvent.Post event)
 	{
 		// This event is so weird. Detects pausing like every tick regardless if you're in game
-		if(inGame && event.isPaused() != paused)
+		if(loggedIn && event.isPaused() != paused)
 		{
 			paused = event.isPaused();
 			CensorCraft.LOGGER.info("Paused: {}", paused);
@@ -220,15 +238,24 @@ public class ClientCensorCraft {
 	@SubscribeEvent
 	public static void onJoinWorld(ClientPlayerNetworkEvent.LoggingIn event)
 	{
-		inGame = true;
+		CensorCraft.LOGGER.info("LoggingIn event fired");
+		loggedIn = true;
 		startJScribe();
 	}
 	
 	@SubscribeEvent
 	public static void onLeaveWorld(ClientPlayerNetworkEvent.LoggingOut event)
 	{
-		inGame = false;
+		CensorCraft.LOGGER.info("LoggingOut event fired");
+		loggedIn = false;
 		stopJScribe();
+	}
+	
+	@SubscribeEvent
+	public static void onRespawn(PlayerEvent.PlayerRespawnEvent event)
+	{
+		CensorCraft.LOGGER.info("Player respawned");
+		startJScribe();
 	}
 	
 	/**
@@ -241,7 +268,16 @@ public class ClientCensorCraft {
 	{
 		if(event.side != LogicalSide.CLIENT)
 			return;
-			
+		
+		@SuppressWarnings("resource")
+		boolean playerAlive = Optional.ofNullable(Minecraft.getInstance().player).map(LocalPlayer::isAlive).orElse(false);
+		
+		// If player is dead, don't run JScribe
+		if(!playerAlive && controller.isRunning())
+		{
+			stopJScribe();
+		}
+		
 		// Update bar height, "smoothly"
 		// Also give the volume a lil boost
 		// Use mth.lerp
@@ -258,7 +294,7 @@ public class ClientCensorCraft {
 		}
 		
 		// If we're supposed to be recording AND we're not paused AND the player is alive
-		if(inGame && !paused && Optional.ofNullable(Minecraft.getInstance().player).map(LocalPlayer::isAlive).orElse(false)) // no clue if .player can be null but im compensating for it anyways
+		if(loggedIn && !paused && playerAlive) // no clue if .player can be null but im compensating for it anyways
 		{
 			if(!controller.isRunning())
 			{
@@ -341,7 +377,7 @@ public class ClientCensorCraft {
 	 */
 	public static void setup(Path model, long audioContextLength)
 	{
-		stopJScribe();
+//		stopJScribe();
 		ClientCensorCraft.model = model;
 		ClientCensorCraft.audioContextLength = audioContextLength;
 		startJScribe();
@@ -351,5 +387,13 @@ public class ClientCensorCraft {
 	{
 		disconnectFlag = true;
 		requestedModel = model;
+	}
+	
+	public static void punished()
+	{
+		if(controller != null && controller.isRunning())
+		{
+			controller.clearRecordingQueue();
+		}
 	}
 }

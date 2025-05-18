@@ -1,5 +1,14 @@
 package com.supasulley.censorcraft.network;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
+import com.supasulley.censorcraft.CensorCraft;
+import com.supasulley.censorcraft.config.punishments.PunishmentOption;
+
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraftforge.network.PacketDistributor;
+
 public class Participant {
 	
 	private String name;
@@ -39,14 +48,11 @@ public class Participant {
 		return buffer.toString();
 	}
 	
-	public void clearBuffer()
+	public void punish(List<PunishmentOption> punishments, ServerPlayer player)
 	{
+		CensorCraft.channel.send(new PunishedPacket(punishments.stream().map(PunishmentOption::getName).collect(Collectors.toList()).toArray(String[]::new)), PacketDistributor.PLAYER.with(player));
 		buffer.setLength(0);
-	}
-	
-	public void updateLastPunishment()
-	{
-		this.lastPunishment = System.currentTimeMillis();
+		heartbeat();
 	}
 	
 	public void heartbeat()
