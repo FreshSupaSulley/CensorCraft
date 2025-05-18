@@ -62,7 +62,7 @@ public class ClientCensorCraft {
 	// GUI
 	public static final int PADDING = 5;
 	private static final long GUI_TIMEOUT = 10000;
-	private static final int TRANSCRIPTION_LENGTH = 100;
+	private static final int MAX_TRANSCRIPTION_LENGTH = 30;
 	
 	public static MutableComponent GUI_TEXT;
 	public static float JSCRIBE_VOLUME;
@@ -124,13 +124,13 @@ public class ClientCensorCraft {
 	
 	private static void startJScribe()
 	{
-		if(controller != null && controller.isRunning())
+		if(controller != null && controller.isAlive())
 		{
 			CensorCraft.LOGGER.debug("Ignoring start request, JScribe is already running");
 			return;
 		}
 		
-		JScribe.Builder builder = new JScribe.Builder(CensorCraft.LOGGER);
+		JScribe.Builder builder = new JScribe.Builder().setLogger(CensorCraft.LOGGER).warmUpModel();
 		
 		if(Config.Client.USE_VULKAN.get())
 		{
@@ -140,16 +140,14 @@ public class ClientCensorCraft {
 		
 		controller = builder.build();
 		
+		// Reset debug params
+		recordings = 0;
+		
 		// Model might have changed, might as well reinstantiate
 		try
 		{
 			librariesLoaded = true;
-			controller.start(model, Config.Client.PREFERRED_MIC.get(), Config.Client.LATENCY.get(), audioContextLength - Config.Client.LATENCY.get() + OVERLAP_LENGTH, Config.Client.VAD.get(), Config.Client.DENOISE.get());
-			
-			MutableComponent component = Component.literal("Now listening to ");
-			component.append(Component.literal(controller.getActiveMicrophone().getName() + ". ").withStyle(style -> style.withBold(true)));
-			// Puts above inventory bar
-			Minecraft.getInstance().getChatListener().handleSystemMessage(component, true);
+			controller.start(model, Config.Client.PREFERRED_MIC.get(), Config.Client.LATENCY.get(), audioContextLength - Config.Client.LATENCY.get() + OVERLAP_LENGTH, true, Config.Client.VAD.get(), Config.Client.DENOISE.get());
 		} catch(NoMicrophoneException e)
 		{
 			CensorCraft.LOGGER.error("No microphones found", e);
@@ -163,12 +161,12 @@ public class ClientCensorCraft {
 	{
 		if(controller == null)
 		{
-			CensorCraft.LOGGER.error("Tried to stop JScribe when controller is not initialized", new Throwable()); // get the stacktrace if this happens
+			//CensorCraft.LOGGER.error("Tried to stop JScribe when controller is not initialized", new Throwable()); // get the stacktrace if this happens
 			return;
 		}
 		
 		controller.stop();
-		setGUIText(Component.literal("Stopped recording."));
+//		setGUIText(Component.literal("Stopped recording."));
 	}
 	
 	@SubscribeEvent
@@ -293,8 +291,12 @@ public class ClientCensorCraft {
 			startJScribe();
 		}
 		
-		// If we're supposed to be recording AND we're not paused AND the player is alive
-		if(loggedIn && !paused && playerAlive) // no clue if .player can be null but im compensating for it anyways
+		if(controller.isInitializing())
+		{
+			setGUIText(Component.literal("Initializing..."));
+		}
+		// If we're supposed to be recording
+		else if(loggedIn && !paused && playerAlive) // no clue if .player can be null but im compensating for it anyways
 		{
 			if(!controller.isRunning())
 			{
@@ -317,20 +319,19 @@ public class ClientCensorCraft {
 				String raw = results.getRawString();
 				
 				// Show end instead of front
-				final int newLength = Math.min(raw.length(), TRANSCRIPTION_LENGTH);
+				final int newLength = Math.min(raw.length(), MAX_TRANSCRIPTION_LENGTH);
 				String text = "";
 				
 				// If we had to splice it, add an ellipsis
-				if(raw.length() > TRANSCRIPTION_LENGTH)
+				if(raw.length() > MAX_TRANSCRIPTION_LENGTH)
 				{
 					text += "... ";
 				}
 				
 				text += raw.substring(raw.length() - newLength);
 				
-				lastWordPacket = System.currentTimeMillis();
-				
 				CensorCraft.LOGGER.info("Sending \"{}\"", text);
+				lastWordPacket = System.currentTimeMillis();
 				CensorCraft.channel.send(new WordPacket(text), PacketDistributor.SERVER.noArg());
 				
 				lastTranscriptionUpdate = System.currentTimeMillis();
@@ -338,21 +339,47 @@ public class ClientCensorCraft {
 				recordings = results.getTotalRecordings();
 			}
 			
-			// Show transcriptions only if necessary
-			if(Config.Client.SHOW_TRANSCRIPTION.get() && System.currentTimeMillis() - lastTranscriptionUpdate < GUI_TIMEOUT)
+			MutableComponent component = Component.empty();
+			
+			// 15000 warning
+			if(controller.getTimeBehind() > 15000)
 			{
-				MutableComponent component = Component.literal(transcription + "\n").withColor(0xFFFFFF);
-				
-				if(Config.Client.SHOW_DELAY.get())
+				component.append(Component.literal("CensorCraft is far behind\n").withStyle(style -> style.withBold(true).withColor(0xFF0000)).append(Component.literal("Consider raising transcription latency\n").withStyle(style -> style.withBold(false).withColor(0xFFFFFF))));
+			}
+			
+			// Show transcriptions only if necessary
+			if(Config.Client.SHOW_TRANSCRIPTION.get())// && System.currentTimeMillis() - lastTranscriptionUpdate < GUI_TIMEOUT)
+			{
+				if(transcription != null && !transcription.isBlank())
 				{
-					component.append(Component.literal(String.format("%.1f", controller.getTimeBehind() / 1000f) + "s behind (" + recordings + " recording" + (recordings != 1 ? "s" : "") + ")").withColor(0xAAAAAA));
+					component.append(Component.literal(transcription + "\n").withColor(0xFFFFFF));
 				}
 				
-				setGUIText(component);
+				if(Config.Client.DEBUG.get())
+				{
+					component.append(Component.literal(String.format("%.1f", controller.getTimeBehind() / 1000f) + "s behind\n").withColor(0xAAAAAA));
+					component.append(Component.literal("Last transcribed " + recordings + " recording" + (recordings != 1 ? "s" : "") + "\n")).withColor(0xAAAAAA);
+					component.append(Component.literal(controller.getTranscriptionBacklog() + " samples queued\n"));
+					component.append(Component.literal("Using " + model.getFileName() + " model\n"));
+				}
 			}
-			else
+//			else
+//			{
+//				setGUIText(Component.empty());
+//			}
+			
+			setGUIText(component);
+		}
+		// If we're NOT supposed to be running
+		else
+		{
+			if(controller.isShuttingDown())
 			{
-				setGUIText(Component.empty());
+				setGUIText(Component.literal("Stopping..."));
+			}
+			else if(!controller.isAlive())
+			{
+				setGUIText(Component.literal("Stopped"));
 			}
 		}
 		
@@ -393,7 +420,7 @@ public class ClientCensorCraft {
 	{
 		if(controller != null && controller.isRunning())
 		{
-			controller.clearRecordingQueue();
+			controller.reset();
 		}
 	}
 }

@@ -1,6 +1,7 @@
 package com.supasulley.censorcraft.network;
 
 import java.nio.charset.Charset;
+import java.util.Arrays;
 import java.util.List;
 
 import com.supasulley.censorcraft.CensorCraft;
@@ -45,7 +46,7 @@ public class PunishedPacket implements IPacket {
 	@Override
 	public void consume(Context context)
 	{
-		CensorCraft.LOGGER.info("Received punished packet");
+		CensorCraft.LOGGER.info("Received punished packet: {}", Arrays.toString(punishments));
 		
 		// Client is the only one (so far) that needs to be executed client side
 		// Needs to match getName() of PunishmentOption

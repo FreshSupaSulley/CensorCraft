@@ -35,7 +35,7 @@ public abstract class Config {
 	
 	public static class Client extends Config {
 		
-		public static ConfigValue<Boolean> SHOW_TRANSCRIPTION, SHOW_VOLUME_BAR, SHOW_DELAY, SHOW_VAD, VAD, DENOISE, USE_VULKAN;
+		public static ConfigValue<Boolean> SHOW_TRANSCRIPTION, SHOW_VOLUME_BAR, DEBUG, SHOW_VAD, VAD, DENOISE, USE_VULKAN;
 		public static ConfigValue<Integer> LATENCY;
 		public static ConfigValue<String> PREFERRED_MIC;
 		
@@ -48,9 +48,9 @@ public abstract class Config {
 			// INDICATE_RECORDING = builder.comment("Shows permanent text in-game indicating recording status").define("indicate_recording", true);
 			SHOW_TRANSCRIPTION = builder.comment("Display live transcription").define("show_transcription", true);
 			SHOW_VOLUME_BAR = builder.comment("Display microphone volume").define("show_mic_volume", false);
-			SHOW_DELAY = builder.comment("Display how far behind transcription is").define("show_delay", false);
 			SHOW_VAD = builder.comment("Shows when you are speaking. VAD must be true").define("show_vad", false);
-			LATENCY = builder.comment("Transcription speed (in milliseconds)").defineInRange("latency", 750, 30, Integer.MAX_VALUE);
+			DEBUG = builder.comment("Shows helpful debugging information").define("debug", false);
+			LATENCY = builder.comment("Transcription latency (in milliseconds). Internally represents the size of an individual audio sample").defineInRange("latency", 750, 30, Integer.MAX_VALUE);
 			USE_VULKAN = builder.comment("Uses Vulkan-built libraries for Windows GPU support. Can break on some machines").define("use_vulkan", LibraryLoader.canUseVulkan());
 			
 			// Recording

@@ -13,6 +13,7 @@ import net.minecraft.client.OptionInstance;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Checkbox;
+import net.minecraft.client.gui.components.MultiLineTextWidget;
 import net.minecraft.client.gui.components.PopupScreen;
 import net.minecraft.client.gui.components.StringWidget;
 import net.minecraft.client.gui.components.Tooltip;
@@ -66,23 +67,18 @@ public class ConfigScreen extends Screen {
 			Config.Client.SHOW_TRANSCRIPTION.set(value);
 		}).build());
 		
-		layout.addChild(Checkbox.builder(Component.literal("Show microphone volume"), font).tooltip(Tooltip.create(Component.literal("Displays a volume bar indicating your microphone volume"))).selected(Config.Client.SHOW_VOLUME_BAR.get()).onValueChange((button, value) ->
+		layout.addChild(Checkbox.builder(Component.literal("Show microphone volume"), font).selected(Config.Client.SHOW_VOLUME_BAR.get()).onValueChange((button, value) ->
 		{
 			Config.Client.SHOW_VOLUME_BAR.set(value);
 		}).build());
 		
-		layout.addChild(Checkbox.builder(Component.literal("Show voice detection"), font).tooltip(Tooltip.create(Component.literal("Indicates when speech is detected"))).selected(Config.Client.SHOW_VAD.get()).onValueChange((button, value) ->
+		layout.addChild(Checkbox.builder(Component.literal("Indicate when speaking"), font).tooltip(Tooltip.create(Component.literal("Text appears when voice is detected"))).selected(Config.Client.SHOW_VAD.get()).onValueChange((button, value) ->
 		{
 			Config.Client.SHOW_VAD.set(value);
 		}).build()).active = Config.Client.VAD.get();
 		
-		layout.addChild(Checkbox.builder(Component.literal("Show delay"), font).tooltip(Tooltip.create(Component.literal("Displays how far behind transcription is"))).selected(Config.Client.SHOW_DELAY.get()).onValueChange((button, value) ->
-		{
-			Config.Client.SHOW_DELAY.set(value);
-		}).build());
-		
 		// layout.addChild(new ForgeSlider(0, 0, optionsWidth, java.awt.Button.HEIGHT, Component.literal("prefix"), Component.literal("suffix"), 30, 1500,
-		AbstractWidget slider = new OptionInstance<>(null, OptionInstance.cachedConstantTooltip(Component.literal("Transcription speed")), (component, value) ->
+		AbstractWidget slider = new OptionInstance<>(null, OptionInstance.cachedConstantTooltip(Component.literal("Latency")), (component, value) ->
 		{
 			return switch(value)
 			{
@@ -94,6 +90,12 @@ public class ConfigScreen extends Screen {
 		
 		slider.setWidth(optionsWidth);
 		layout.addChild(slider);
+		
+		// Add warning about latency
+		Component component = Component.literal("Lower latency = faster transcriptions, but more intensive on hardware");
+		layout.addChild(new MultiLineTextWidget(component, font).setMaxWidth(optionsWidth));
+		
+		layout.addChild(new SpacerElement(optionsWidth, 6));
 		
 		layout.addChild(Button.builder(Component.literal("Open models folder"), pButton -> Util.getPlatform().openPath(ClientCensorCraft.getModelDir())).build());
 		
@@ -109,6 +111,11 @@ public class ConfigScreen extends Screen {
 				minecraft.setScreen(new PopupScreen.Builder(this, Component.literal("Requires restart")).setMessage(Component.literal("Libraries are already loaded. Restart Minecraft for changes to take effect.")).addButton(CommonComponents.GUI_OK, PopupScreen::onClose).build());
 			}
 		}).build()).active = LibraryLoader.canUseVulkan();
+		
+		layout.addChild(Checkbox.builder(Component.literal("Debug"), font).tooltip(Tooltip.create(Component.literal("Displays useful debugging information"))).selected(Config.Client.DEBUG.get()).onValueChange((button, value) ->
+		{
+			Config.Client.DEBUG.set(value);
+		}).build());
 		
 		LinearLayout buttonLayout = LinearLayout.horizontal().spacing(ClientCensorCraft.PADDING);
 		

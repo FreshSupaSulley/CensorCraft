@@ -1,0 +1,15 @@
+need a max backlog or something, then a way to show that transcription is very behind
+//silent mic no longer gets picked up as no audio is being detected (i think ill ignore this one [should i disable the noAudio ratting? ask nick if his mic goes silent when no speaking])
+option in punishments to ignore globals
+
+JFK is leaking through some fucking how
+Rat detection doesnt really work... did it actually break or is it really due to a small trickle?
+
+//jscribe doesnt start on logging in?
+i think fixed?
+
+play minecraft disk
+custom sound effect
+
+cycled forbidden words??
+//pad silence?? (i think you have to. Or just update to newer commits where they accept 100ms)

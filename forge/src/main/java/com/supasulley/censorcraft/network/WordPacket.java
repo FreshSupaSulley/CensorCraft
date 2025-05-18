@@ -7,6 +7,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.UUID;
 
 import com.supasulley.censorcraft.CensorCraft;
@@ -195,7 +196,7 @@ public class WordPacket implements IPacket {
 	{
 		// This is a server-side tick only
 		// Don't rat on players if setting is disabled
-		if(event.side == LogicalSide.CLIENT || !Config.Server.EXPOSE_RATS.get())
+		if(event.side == LogicalSide.CLIENT || !Config.Server.EXPOSE_RATS.get() || Optional.ofNullable(event.level.getServer()).map(level -> level.isSingleplayer()).orElse(false))
 			return;
 		
 		// Only rat on players at regular intervals

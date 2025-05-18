@@ -31,6 +31,11 @@ public abstract class GUIMixin {
 	{
 		MutableComponent component = Component.empty();
 		
+		if(Config.Client.SHOW_VAD.get() && ClientCensorCraft.SPEAKING)
+		{
+			component.append(Component.literal("Speaking\n").withColor(0xAAAAAA));
+		}
+		
 		if(ClientCensorCraft.GUI_TEXT != null)
 		{
 			component.append(ClientCensorCraft.GUI_TEXT);
@@ -45,11 +50,6 @@ public abstract class GUIMixin {
 		{
 			x += barWidth + ClientCensorCraft.PADDING;
 			graphics.fill(RenderType.guiOverlay(), ClientCensorCraft.PADDING, ClientCensorCraft.PADDING + barHeight, ClientCensorCraft.PADDING + barWidth, ClientCensorCraft.PADDING + barHeight - Math.clamp((int) (ClientCensorCraft.JSCRIBE_VOLUME * barHeight), 1, barHeight), 0xAAFFFFFF);
-		}
-		
-		if(Config.Client.SHOW_VAD.get() && ClientCensorCraft.SPEAKING)
-		{
-			component.append(Component.literal("\nSpeaking"));
 		}
 		
 		// Color is ARGB
