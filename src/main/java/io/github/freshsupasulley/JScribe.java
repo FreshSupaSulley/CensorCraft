@@ -36,6 +36,7 @@ public class JScribe implements UncaughtExceptionHandler {
 	
 	static Logger logger = LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
 	
+	private boolean useVulkan;
 	private AudioRecorder recorder;
 	private Transcriber transcriber;
 	
@@ -102,7 +103,7 @@ public class JScribe implements UncaughtExceptionHandler {
 	 * 
 	 * @param modelName        name of the model (use {@link JScribe#getModels()})
 	 * @param destination      output path
-	 * @param progressListener download progress listener
+	 * @param progressListener download progress listener, where the first long is the bytes downloaded so far and the second is the total amount of bytes
 	 * @return {@linkplain CompletableFuture} object representing the download
 	 */
 	public static CompletableFuture<Void> downloadModel(String modelName, Path destination, BiConsumer<Long, Long> progressListener)
@@ -190,10 +191,12 @@ public class JScribe implements UncaughtExceptionHandler {
 	 * Initializes a new {@link JScribe} instance with a custom logger.
 	 * 
 	 * @param logger custom logger
+	 * @param vulkan use vulkan
 	 */
-	public JScribe(Logger logger)
+	private JScribe(Logger logger, boolean useVulkan)
 	{
 		JScribe.logger = logger;
+		this.useVulkan = useVulkan;
 	}
 	
 	//
@@ -239,7 +242,7 @@ public class JScribe implements UncaughtExceptionHandler {
 		
 		logger.info("Starting JScribe");
 		
-		recorder = new AudioRecorder(transcriber = new Transcriber(modelPath), microphone, latency, overlap, vad, denoise);
+		recorder = new AudioRecorder(transcriber = new Transcriber(modelPath, useVulkan), microphone, latency, overlap, vad, denoise);
 		
 		// Report errors to this thread
 		recorder.setUncaughtExceptionHandler(this);
@@ -247,6 +250,17 @@ public class JScribe implements UncaughtExceptionHandler {
 		
 		recorder.start();
 		transcriber.start();
+	}
+	
+	/**
+	 * Clears the transcription recording queue.
+	 */
+	public void clearRecordingQueue()
+	{
+		if(isRunning())
+		{
+			transcriber.clearRecordings();
+		}
 	}
 	
 	/**
@@ -289,9 +303,8 @@ public class JScribe implements UncaughtExceptionHandler {
 	}
 	
 	/**
-	 * Returns true if no audio is being received, meaning there's an open stream to a microphone but it's not returning any data. This can happen, for example,
-	 * when running in some IDEs on macOS due to permission problems. Ensure this is running with {@link JScribe#isRunning()} first, otherwise it will return true
-	 * anyways.
+	 * Returns true if no audio is being received, meaning there's an open stream to a microphone but it's not returning any data. This can happen when running in
+	 * the Eclipse IDE on macOS due to permission problems. Ensure this is running with {@link JScribe#isRunning()} first, otherwise it will always return true.
 	 * 
 	 * @return true if we're not receiving any audio data from the client, or JScribe is not running
 	 */
@@ -360,5 +373,52 @@ public class JScribe implements UncaughtExceptionHandler {
 	{
 		JScribe.logger.error("JScribe ended early due to an unhandled error in thread " + t.getName(), e);
 		stop();
+	}
+	
+	/**
+	 * Helper class to build JScribe instances.
+	 */
+	public static class Builder {
+		
+		private boolean vulkan;
+		
+		/**
+		 * Sets the logger all JScribe operations will use.
+		 * 
+		 * @param logger {@link Logger} instance
+		 * @return this, for chaining
+		 */
+		public Builder setLogger(Logger logger)
+		{
+			JScribe.logger = logger;
+			return this;
+		}
+		
+		/**
+		 * Enables Vulkan support <b>only</b> if using Windows AMD 64.
+		 * 
+		 * @return this, for chaining
+		 */
+		public Builder useVulkan()
+		{
+			if(!LibraryLoader.canUseVulkan())
+			{
+				logger.error("Can't use Vulkan, wrong platform / arch ({}, {})", LibraryLoader.OS_NAME, LibraryLoader.OS_ARCH);
+				return this;
+			}
+			
+			this.vulkan = true;
+			return this;
+		}
+		
+		/**
+		 * Builds a new JScribe instance. Use {@linkplain JScribe#start} to begin live audio transcription.
+		 * 
+		 * @return new {@linkplain JScribe} instance
+		 */
+		public JScribe build()
+		{
+			return new JScribe(logger, vulkan);
+		}
 	}
 }

@@ -39,39 +39,31 @@ class Transcriber extends Thread implements Runnable {
 		params.suppressNonSpeechTokens = true;
 		params.suppressBlank = true;
 		
-		Transcriber.loadWhisperJNI();
+		// Transcriber.loadWhisperJNI();
 	}
 	
-	private static void loadWhisperJNI()
+	private static void loadWhisperJNI() throws IOException
 	{
-		JScribe.logger.info("Loading libraries");
+		JScribe.logger.info("Loading whisper-jni");
+		// Not dealing with this unless I wanna fork it (hell naww)
+		// System.setProperty("io.github.givimad.whisperjni.libdir", LibraryLoader.extractToTemp().toString());
 		
-		try
-		{
-			// Not dealing with this unless I wanna fork it (hell naww)
-			// System.setProperty("io.github.givimad.whisperjni.libdir", LibraryLoader.extractToTemp().toString());
-			
-			// path needs to be valid on windows, opened a pr :(
-			LibraryUtils.loadLibrary(JScribe.logger::debug);
-			
-			// LibraryLoader.loadBundledNatives((a, b) ->
-			// {
-			// String nameA = a.getName().toLowerCase();
-			// String nameB = b.getName().toLowerCase();
-			//
-			// int difference = Integer.compare(getPriority(nameA), getPriority(nameB));
-			//
-			// // Assort by name for consistency otherwise
-			// return difference == 0 ? nameA.compareTo(nameB) : difference;
-			// });
-			
-			// Then test loading whisper
-			WhisperJNI.setLibraryLogger(null);
-		} catch(IOException | UnsatisfiedLinkError e)
-		{
-			JScribe.logger.error("An error occurred loading natives (platform: {}, arch: {})", System.getProperty("os.name"), System.getProperty("os.arch"), e);
-			System.exit(1);
-		}
+		// path needs to be valid on windows, opened a pr :(
+		LibraryUtils.loadLibrary(JScribe.logger::debug);
+		
+		// LibraryLoader.loadBundledNatives((a, b) ->
+		// {
+		// String nameA = a.getName().toLowerCase();
+		// String nameB = b.getName().toLowerCase();
+		//
+		// int difference = Integer.compare(getPriority(nameA), getPriority(nameB));
+		//
+		// // Assort by name for consistency otherwise
+		// return difference == 0 ? nameA.compareTo(nameB) : difference;
+		// });
+		
+		// Then test loading whisper
+		WhisperJNI.setLibraryLogger(JScribe.logger::info);
 	}
 	
 	// private static int getPriority(String name)
@@ -90,11 +82,35 @@ class Transcriber extends Thread implements Runnable {
 	// return 1;
 	// }
 	
-	public Transcriber(Path modelPath)
+	public Transcriber(Path modelPath, boolean useVulkan)
 	{
 		this.modelPath = modelPath;
 		setName("JScribe Transcriber");
 		setDaemon(true);
+		
+		try
+		{
+			if(!useVulkan)
+			{
+				Transcriber.loadWhisperJNI();
+			}
+			else
+			{
+				if(!LibraryLoader.canUseVulkan())
+					throw new IOException("This system can't load Vulkan natives");
+				
+				JScribe.logger.info("Loading Vulkan natives");
+				
+				Path tempDir = LibraryLoader.extractFolderToTemp("win-amd64-vulkan");
+				System.load(tempDir.resolve("ggml.dll").toAbsolutePath().toString());
+				System.load(tempDir.resolve("whisper.dll").toAbsolutePath().toString());
+				System.load(tempDir.resolve("whisper-jni.dll").toAbsolutePath().toString());
+			}
+		} catch(IOException | UnsatisfiedLinkError e)
+		{
+			JScribe.logger.error("An error occurred loading natives (platform: {}, arch: {})", System.getProperty("os.name"), System.getProperty("os.arch"), e);
+			System.exit(1);
+		}
 	}
 	
 	@Override
@@ -194,6 +210,11 @@ class Transcriber extends Thread implements Runnable {
 			// Ensure running is set to false
 			shutdown();
 		}
+	}
+	
+	public void clearRecordings()
+	{
+		recordings.clear();
 	}
 	
 	public void shutdown()
