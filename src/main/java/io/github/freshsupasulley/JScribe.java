@@ -1,5 +1,6 @@
 package io.github.freshsupasulley;
 
+import java.io.BufferedInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -8,26 +9,34 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.ShortBuffer;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.DataLine;
 import javax.sound.sampled.Mixer;
 import javax.sound.sampled.TargetDataLine;
+import javax.sound.sampled.UnsupportedAudioFileException;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import io.github.freshsupasulley.Transcriber.Recording;
 
 /**
  * The entry point of the JScribe library.
@@ -36,9 +45,11 @@ public class JScribe implements UncaughtExceptionHandler {
 	
 	static Logger logger = LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
 	
-	private boolean useVulkan;
+	private boolean useVulkan, warmUpModel;
 	private AudioRecorder recorder;
 	private Transcriber transcriber;
+	
+	private State state;
 	
 	/**
 	 * Gets all available Whisper models in GGML format from Hugging Face. Useful to pass into {@link JScribe#downloadModel}.
@@ -187,16 +198,11 @@ public class JScribe implements UncaughtExceptionHandler {
 		return names;
 	}
 	
-	/**
-	 * Initializes a new {@link JScribe} instance with a custom logger.
-	 * 
-	 * @param logger custom logger
-	 * @param vulkan use vulkan
-	 */
-	private JScribe(Logger logger, boolean useVulkan)
+	private JScribe(Logger logger, boolean useVulkan, boolean warmUpModel)
 	{
 		JScribe.logger = logger;
 		this.useVulkan = useVulkan;
+		this.warmUpModel = warmUpModel;
 	}
 	
 	//
@@ -221,11 +227,11 @@ public class JScribe implements UncaughtExceptionHandler {
 	 * @param denoise    true to denoise audio samples to help reduce white noise, false for raw audio
 	 * @throws IllegalArgumentException {@code latency < 30} or {@code overlap < 0}
 	 * @throws NoMicrophoneException    if no usable microphones were found
-	 * @throws IOException              if already running or something went wrong
+	 * @throws IOException              if {@link #isAlive()} or something went wrong
 	 */
-	public void start(Path modelPath, String microphone, long latency, long overlap, boolean vad, boolean denoise) throws IOException, NoMicrophoneException
+	public void start(Path modelPath, String microphone, long latency, long overlap, boolean padAudio, boolean vad, boolean denoise) throws IOException, NoMicrophoneException
 	{
-		if(isRunning())
+		if(isAlive())
 		{
 			throw new IOException("JScribe is already running");
 		}
@@ -240,27 +246,74 @@ public class JScribe implements UncaughtExceptionHandler {
 			throw new IllegalArgumentException("Overlap must be non-negative");
 		}
 		
+		state = State.INITIALIZING;
+		
 		logger.info("Starting JScribe");
 		
-		recorder = new AudioRecorder(transcriber = new Transcriber(modelPath, useVulkan), microphone, latency, overlap, vad, denoise);
+		recorder = new AudioRecorder(transcriber = new Transcriber(modelPath, useVulkan), microphone, latency, overlap, padAudio, vad, denoise);
 		
 		// Report errors to this thread
 		recorder.setUncaughtExceptionHandler(this);
 		transcriber.setUncaughtExceptionHandler(this);
 		
-		recorder.start();
+		// We need the transcriber to start first
 		transcriber.start();
+		
+		CompletableFuture<Void> future = new CompletableFuture<Void>();
+		
+		// If we enabled warming up the model
+		if(warmUpModel)
+		{
+			try
+			{
+				logger.info("Warming up transcriber");
+				transcriber.newRecording(new Recording(System.currentTimeMillis(), readWavToFloatSamples(JScribe.class.getClassLoader().getResourceAsStream("jfk.wav")), () ->
+				{
+					future.complete(null);
+				}));
+			} catch(InterruptedException | IOException | UnsupportedAudioFileException e)
+			{
+				future.completeExceptionally(e);
+			}
+		}
+		else
+		{
+			// No warm-up, skip it
+			future.complete(null);
+		}
+		
+		// Start recording AFTER we're warmed up
+		future.orTimeout(10, TimeUnit.SECONDS).exceptionally(e ->
+		{
+			logger.error("Failed to warm-up transcriber", e);
+			return null;
+		}).thenRun(() ->
+		{
+			recorder.start();
+			state = State.RUNNING;
+		});
 	}
 	
 	/**
-	 * Clears the transcription recording queue.
+	 * Clears the transcription recording queue and abandons the current recording.
 	 */
-	public void clearRecordingQueue()
+	public void reset()
 	{
 		if(isRunning())
 		{
+			recorder.clear();
 			transcriber.clearRecordings();
 		}
+	}
+	
+	/**
+	 * Gets the number of audio samples in the queue waiting to be processed.
+	 * 
+	 * @return number of audio samples
+	 */
+	public int getTranscriptionBacklog()
+	{
+		return transcriber.backlog();
 	}
 	
 	/**
@@ -274,6 +327,7 @@ public class JScribe implements UncaughtExceptionHandler {
 		}
 		
 		logger.info("Stopping JScribe");
+		state = State.STOPPING;
 		
 		recorder.shutdown();
 		transcriber.shutdown();
@@ -290,16 +344,48 @@ public class JScribe implements UncaughtExceptionHandler {
 		}
 		
 		JScribe.logger.info("Stopped JScribe");
+		state = null;
 	}
 	
 	/**
-	 * Returns true if this is running in any capacity is still alive (recording audio, transcribing, etc.).
+	 * Initializing is the stage before running, where JScribe loads the model and starts worker threads. If configured, also runs a "warm-up" audio sample to the
+	 * transcriber.
 	 * 
-	 * @return true if running, false otherwise (error or simply stopped)
+	 * @return true if JScribe is initializing, false otherwise
+	 */
+	public boolean isInitializing()
+	{
+		return state == State.INITIALIZING;
+	}
+	
+	/**
+	 * Returns true if transcribing live audio.
+	 * 
+	 * @return true if running, false otherwise
 	 */
 	public boolean isRunning()
 	{
-		return transcriber != null && recorder != null && transcriber.isAlive() && recorder.isAlive();
+		return state == State.RUNNING;
+	}
+	
+	/**
+	 * Returns true if JScribe is shutting down.
+	 * 
+	 * @return true if shutting down, false otherwise
+	 */
+	public boolean isShuttingDown()
+	{
+		return state == State.STOPPING;
+	}
+	
+	/**
+	 * Returns true if JScribe's worker threads are still running. This differs from {@link JScribe#isRunning()} where this will return true while shutting down.
+	 * 
+	 * @return true if alive, false otherwise
+	 */
+	public boolean isAlive()
+	{
+		return transcriber != null && recorder != null && (transcriber.isAlive() || recorder.isAlive());
 	}
 	
 	/**
@@ -324,7 +410,7 @@ public class JScribe implements UncaughtExceptionHandler {
 	}
 	
 	/**
-	 * Returns the current volume using RMS.
+	 * Returns the current volume using RMS (0 when not running).
 	 * 
 	 * @return audio level of samples, [0 - 1].
 	 */
@@ -380,7 +466,7 @@ public class JScribe implements UncaughtExceptionHandler {
 	 */
 	public static class Builder {
 		
-		private boolean vulkan;
+		private boolean vulkan, warmUpModel;
 		
 		/**
 		 * Sets the logger all JScribe operations will use.
@@ -391,6 +477,17 @@ public class JScribe implements UncaughtExceptionHandler {
 		public Builder setLogger(Logger logger)
 		{
 			JScribe.logger = logger;
+			return this;
+		}
+		
+		/**
+		 * Passes dummy audio into transcriber to warm-up the model (considered part of initialization).
+		 * 
+		 * @return this, for chaining
+		 */
+		public Builder warmUpModel()
+		{
+			this.warmUpModel = true;
 			return this;
 		}
 		
@@ -418,7 +515,33 @@ public class JScribe implements UncaughtExceptionHandler {
 		 */
 		public JScribe build()
 		{
-			return new JScribe(logger, vulkan);
+			return new JScribe(logger, vulkan, warmUpModel);
 		}
+	}
+	
+	private static enum State
+	{
+		INITIALIZING, RUNNING, STOPPING;
+	}
+	
+	public static float[] readWavToFloatSamples(InputStream stream) throws IOException, UnsupportedAudioFileException
+	{
+		// Decode WAV header and get PCM stream
+		AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(new BufferedInputStream(stream)); // https://stackoverflow.com/questions/5529754/java-io-ioexception-mark-reset-not-supported
+		
+		// Create a short buffer with proper byte order (little endian)
+		ByteBuffer byteBuffer = ByteBuffer.wrap(audioInputStream.readAllBytes()).order(ByteOrder.LITTLE_ENDIAN);
+		ShortBuffer shortBuffer = byteBuffer.asShortBuffer();
+		
+		// Allocate the float array
+		float[] samples = new float[shortBuffer.remaining()];
+		
+		for(int i = 0; i < samples.length; i++)
+		{
+			// Normalize the short to a float between -1 and 1
+			samples[i] = shortBuffer.get() / 32768f;
+		}
+		
+		return samples;
 	}
 }

@@ -5,17 +5,22 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.github.freshsupasulley.Transcriptions.Transcription;
 import io.github.givimad.whisperjni.WhisperContext;
 import io.github.givimad.whisperjni.WhisperFullParams;
 import io.github.givimad.whisperjni.WhisperJNI;
+import io.github.givimad.whisperjni.WhisperState;
 import io.github.givimad.whisperjni.internal.LibraryUtils;
 
 /**
  * Transcriber waits for new audio samples and processes them into text segments using {@linkplain WhisperJNI}.
  */
 class Transcriber extends Thread implements Runnable {
+	
+	// Maximum length a single transcription request can be
+	private static final int MAX_LENGTH_MS = 30000;
 	
 	private final WhisperJNI whisper = new WhisperJNI();
 	private final LinkedBlockingQueue<Recording> recordings = new LinkedBlockingQueue<Recording>();
@@ -25,7 +30,8 @@ class Transcriber extends Thread implements Runnable {
 	private static final WhisperFullParams params;
 	
 	private Path modelPath;
-	private boolean running = true, processing;
+	private boolean running = true;
+	private AtomicBoolean abandonSample = new AtomicBoolean();
 	
 	private long lastTimestamp = System.currentTimeMillis();
 	
@@ -50,37 +56,9 @@ class Transcriber extends Thread implements Runnable {
 		
 		// path needs to be valid on windows, opened a pr :(
 		LibraryUtils.loadLibrary(JScribe.logger::debug);
-		
-		// LibraryLoader.loadBundledNatives((a, b) ->
-		// {
-		// String nameA = a.getName().toLowerCase();
-		// String nameB = b.getName().toLowerCase();
-		//
-		// int difference = Integer.compare(getPriority(nameA), getPriority(nameB));
-		//
-		// // Assort by name for consistency otherwise
-		// return difference == 0 ? nameA.compareTo(nameB) : difference;
-		// });
-		
 		// Then test loading whisper
 		WhisperJNI.setLibraryLogger(JScribe.logger::info);
 	}
-	
-	// private static int getPriority(String name)
-	// {
-	// // 0 == highest priority
-	// // For simplicity we're only loading the full static version so no need to differentiate windows natives
-	// // if(name.contains("_full"))
-	// // return 0;
-	// if(name.contains("ggml"))
-	// return 0;
-	// // Load last
-	// if(name.contains("jni"))
-	// return 2;
-	//
-	// // Anything else can load at whatever order
-	// return 1;
-	// }
 	
 	public Transcriber(Path modelPath, boolean useVulkan)
 	{
@@ -116,47 +94,61 @@ class Transcriber extends Thread implements Runnable {
 	@Override
 	public void run()
 	{
-		try(WhisperContext ctx = whisper.init(modelPath))
+		try(WhisperContext ctx = whisper.initNoState(modelPath); WhisperState state = whisper.initState(ctx))
 		{
 			while(running)
 			{
+				abandonSample.set(false);
+				
 				if(recordings.size() == 0)
 				{
-					processing = false;
 					lastTimestamp = System.currentTimeMillis();
 					continue;
 				}
 				
-				processing = true;
+				float[] cumulative = new float[(int) (AudioRecorder.FORMAT.getSampleRate() * (MAX_LENGTH_MS / 1000f))];
 				
-				// Squash all requests into one batch to stay up to date
-				final int numRecordings = recordings.size();
-				float[][] collectRecordings = new float[numRecordings][];
+				int sampleIndex = 0;
+				int numRecordings = 0;
 				long firstTimestamp = 0;
-				int bufferSize = 0;
 				
-				for(int i = 0; i < numRecordings; i++)
+				List<Runnable> runnables = new ArrayList<Runnable>();
+				
+				// Keep harvesting until there's no more recordings in the queue
+				for(Recording sample = null; (sample = recordings.poll()) != null; numRecordings++)
 				{
-					Recording sample = recordings.poll();
-					collectRecordings[i] = sample.samples();
-					
-					// The first timestamp is all we care about
-					if(firstTimestamp == 0)
+					if(numRecordings == 0)
 					{
-						firstTimestamp = sample.timestamp();
+						firstTimestamp = sample.timeReceived();
 					}
 					
-					bufferSize += collectRecordings[i].length;
+					int sampleLength = sample.samples().length;
+					
+					if(sampleIndex + sampleLength > cumulative.length)
+					{
+						JScribe.logger.warn("JScribe can't keep up! Tried to transcribe audio longer than {}ms", MAX_LENGTH_MS);
+						break; // abandon the next samples who cares
+					}
+					
+					// Copy samples from this recording into cumulative window
+					System.arraycopy(sample.samples(), 0, cumulative, sampleIndex, sampleLength);
+					sampleIndex += sampleLength;
+					
+					// Also keep track of any completables
+					if(sample.callback() != null)
+					{
+						runnables.add(sample.callback());
+					}
+				}
+				
+				if(numRecordings == 0)
+				{
+					continue;
 				}
 				
 				// Now merge into one
-				float[] toProcess = new float[bufferSize];
-				
-				for(int bufferIndex = 0, i = 0; i < numRecordings; i++)
-				{
-					System.arraycopy(collectRecordings[i], 0, toProcess, bufferIndex, collectRecordings[i].length);
-					bufferIndex += collectRecordings[i].length;
-				}
+				float[] toProcess = new float[sampleIndex];
+				System.arraycopy(cumulative, 0, toProcess, 0, sampleIndex);
 				
 				// final float[] samples2 = toProcess;
 				// Thread thread = new Thread(() ->
@@ -172,10 +164,10 @@ class Transcriber extends Thread implements Runnable {
 				// });
 				// thread.start();
 				
-				JScribe.logger.debug("Transcribing {} recordings", numRecordings);
+				JScribe.logger.debug("Transcribing {} recordings (length {})", numRecordings, toProcess.length);
 				
 				// Pass samples to whisper
-				int result = whisper.full(ctx, params, toProcess, toProcess.length);
+				int result = whisper.fullWithState(ctx, state, params, toProcess, toProcess.length);
 				
 				if(result != 0)
 				{
@@ -183,23 +175,35 @@ class Transcriber extends Thread implements Runnable {
 					continue;
 				}
 				
-				int numSegments = whisper.fullNSegments(ctx);
+				int numSegments = whisper.fullNSegmentsFromState(state);
 				
-				for(int i = 0; i < numSegments; i++)
+				// does it need to be atomic?
+				if(!abandonSample.get())
 				{
-					String text = whisper.fullGetSegmentText(ctx, i).trim();
-					// can suppress this in whisper context
-					// if(text.equals("."))
-					// continue;
-					// if(text.equals("[BLANK_AUDIO]"))
-					// continue;
-					
-					JScribe.logger.info("Raw transcription ({} samples): {}", numRecordings, text);
-					buffer.append(text);
-					
-					results.add(new Transcription(text, numRecordings));
+					for(int i = 0; i < numSegments; i++)
+					{
+						String text = whisper.fullGetSegmentTextFromState(state, i).trim();
+						// can suppress this in whisper context
+						// if(text.equals("."))
+						// continue;
+						// if(text.equals("[BLANK_AUDIO]"))
+						// continue;
+						
+						JScribe.logger.info("Raw transcription ({} samples): {}", numRecordings, text);
+						buffer.append(text);
+						
+						results.add(new Transcription(text, numRecordings));
+					}
+				}
+				else
+				{
+					JScribe.logger.info("Abandoning sample (size {}, {} recordings)", toProcess.length, numRecordings);
 				}
 				
+				// Run all success runnables
+				runnables.forEach(Runnable::run);
+				
+				// Notify we're caught up
 				lastTimestamp = firstTimestamp;
 			}
 		} catch(IOException e)
@@ -214,20 +218,24 @@ class Transcriber extends Thread implements Runnable {
 	
 	public void clearRecordings()
 	{
+		abandonSample.set(true);
 		recordings.clear();
 	}
 	
 	public void shutdown()
 	{
-		// Stop runner from recording audio
-		interrupt();
 		recordings.clear();
 		running = false;
 	}
 	
+	public int backlog()
+	{
+		return recordings.size();
+	}
+	
 	public long getTimeBehind()
 	{
-		return !processing ? 0 : System.currentTimeMillis() - lastTimestamp;
+		return System.currentTimeMillis() - lastTimestamp;
 	}
 	
 	public List<Transcription> getTranscriptions()
@@ -237,16 +245,21 @@ class Transcriber extends Thread implements Runnable {
 		return result;
 	}
 	
-	public void newRecording(float[] sample) throws InterruptedException
+	public void newRecording(Recording recording) throws InterruptedException
 	{
 		if(!running || Thread.interrupted())
 		{
 			throw new InterruptedException("Transcriber is dead");
 		}
 		
-		recordings.add(new Recording(System.currentTimeMillis(), sample));
+		recordings.add(recording);
 	}
 	
-	private static record Recording(long timestamp, float[] samples) {
+	static record Recording(long timeReceived, float[] samples, Runnable callback) {
+		
+		public Recording(float[] samples)
+		{
+			this(System.currentTimeMillis(), samples, null);
+		}
 	}
 }

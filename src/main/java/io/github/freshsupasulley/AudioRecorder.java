@@ -17,6 +17,7 @@ import javax.sound.sampled.TargetDataLine;
 
 import de.maxhenkel.rnnoise4j.Denoiser;
 import de.maxhenkel.rnnoise4j.UnknownPlatformException;
+import io.github.freshsupasulley.Transcriber.Recording;
 import io.github.givimad.libfvadjni.VoiceActivityDetector;
 
 class AudioRecorder extends Thread implements Runnable {
@@ -33,17 +34,19 @@ class AudioRecorder extends Thread implements Runnable {
 	// Optional things
 	private VoiceActivityDetector vad;
 	private Denoiser denoiser;
+	private boolean padAudio;
 	
 	private volatile boolean running = true, receivingAudio = true, voiceDetected;
 	
 	private Mixer.Info device;
 	private float loudness;
 	
-	public AudioRecorder(Transcriber listener, String micName, long latency, long overlap, boolean vad, boolean denoise) throws IOException, NoMicrophoneException
+	public AudioRecorder(Transcriber listener, String micName, long latency, long overlap, boolean padAudio, boolean vad, boolean denoise) throws IOException, NoMicrophoneException
 	{
 		this.transcription = listener;
 		this.latency = latency;
 		this.overlap = overlap;
+		this.padAudio = padAudio;
 		
 		if(vad)
 		{
@@ -92,6 +95,14 @@ class AudioRecorder extends Thread implements Runnable {
 	public Mixer.Info getMicrophoneInfo()
 	{
 		return device;
+	}
+	
+	/**
+	 * Stops this audio recording for a new one.
+	 */
+	public void clear()
+	{
+		interrupt();
 	}
 	
 	public void shutdown()
@@ -181,8 +192,23 @@ class AudioRecorder extends Thread implements Runnable {
 						window = rawSamples;
 					}
 					
+					if(padAudio)
+					{
+						// Pad to 1000ms (refer to whisper.cpp in whisper in whisper-jni 1.7.1 [whisper btw])
+						final int minLength = (int) (FORMAT.getSampleRate() * (1050f / 1000)); // because x1f somehow got 990
+						
+						if(window.length < minLength)
+						{
+							JScribe.logger.trace("Padding window with {} zeros", (minLength - window.length));
+							
+							float[] paddedWindow = new float[minLength];
+							System.arraycopy(window, 0, paddedWindow, 0, window.length);
+							window = paddedWindow;
+						}
+					}
+					
 					// Send to transcriber
-					transcription.newRecording(window);
+					transcription.newRecording(new Recording(window));
 				} catch(InterruptedException e)
 				{
 					JScribe.logger.debug("Interrupted", e);
@@ -378,12 +404,11 @@ class AudioRecorder extends Thread implements Runnable {
 		while(shortBuffer.hasRemaining())
 		{
 			// Normalize the 16-bit short value to a float between -1 and 1
-			float newVal = Math.max(-1f, Math.min(((float) shortBuffer.get()) / Short.MAX_VALUE, 1f));
+			float newVal = Math.max(-1f, Math.min(((float) shortBuffer.get()) / 32768f, 1f));
 			samples[i++] = newVal;
 		}
 		
 		// Return the normalized float samples
 		return samples;
-		
 	}
 }
