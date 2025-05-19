@@ -27,16 +27,17 @@ class AudioRecorder extends Thread implements Runnable {
 	
 	private final Transcriber transcription;
 	private final long overlap;
+	private final long latency;
 	
-	/** Can change based on transcription speed */
-	private long latency;
+	// Debug
+	private long lastTimestamp = System.currentTimeMillis();
 	
 	// Optional things
 	private VoiceActivityDetector vad;
 	private Denoiser denoiser;
 	private boolean padAudio;
 	
-	private volatile boolean running = true, receivingAudio = true, voiceDetected;
+	private volatile boolean running = true, receivingAudio = true, cleared, voiceDetected;
 	
 	private Mixer.Info device;
 	private float loudness;
@@ -102,6 +103,7 @@ class AudioRecorder extends Thread implements Runnable {
 	 */
 	public void clear()
 	{
+		cleared = true;
 		interrupt();
 	}
 	
@@ -114,6 +116,11 @@ class AudioRecorder extends Thread implements Runnable {
 	public float getAudioLevel()
 	{
 		return loudness;
+	}
+	
+	public long getLastTimestamp()
+	{
+		return lastTimestamp;
 	}
 	
 	@Override
@@ -130,6 +137,7 @@ class AudioRecorder extends Thread implements Runnable {
 				shutdown();
 			}
 			
+			// Don't close the line??
 			line.open();
 			line.start();
 			
@@ -137,6 +145,7 @@ class AudioRecorder extends Thread implements Runnable {
 			{
 				try
 				{
+					lastTimestamp = System.currentTimeMillis();
 					float[] rawSamples = recordSample(stream);
 					
 					if(rawSamples == null)
@@ -207,12 +216,29 @@ class AudioRecorder extends Thread implements Runnable {
 						}
 					}
 					
-					// Send to transcriber
-					transcription.newRecording(new Recording(window));
+					if(!cleared)
+					{
+						// Send to transcriber
+						transcription.newRecording(new Recording(window));
+					}
 				} catch(InterruptedException e)
 				{
-					JScribe.logger.debug("Interrupted", e);
+					// Shutting down should set running to false
+					if(running && !cleared)
+					{
+						JScribe.logger.warn("Interrupted but still running?", e);
+					}
+					
 					continue;
+				} finally
+				{
+					if(cleared)
+					{
+						JScribe.logger.debug("Clearing window");
+						window = null;
+					}
+					
+					cleared = false;
 				}
 				
 				/*
@@ -237,6 +263,7 @@ class AudioRecorder extends Thread implements Runnable {
 		} catch(LineUnavailableException e)
 		{
 			JScribe.logger.error("Line unavailable", e);
+			throw new RuntimeException(e);
 		} catch(IOException e)
 		{
 			JScribe.logger.error("Something went wrong reading audio input", e);

@@ -13,8 +13,10 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.ShortBuffer;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
@@ -49,7 +51,7 @@ public class JScribe implements UncaughtExceptionHandler {
 	private AudioRecorder recorder;
 	private Transcriber transcriber;
 	
-	private State state;
+	private volatile State state;
 	
 	/**
 	 * Gets all available Whisper models in GGML format from Hugging Face. Useful to pass into {@link JScribe#downloadModel}.
@@ -219,6 +221,10 @@ public class JScribe implements UncaughtExceptionHandler {
 	/**
 	 * Starts live audio transcription.
 	 * 
+	 * <p>
+	 * You cannot run multiple instances at a time. Use {@linkplain #isInUse()} before to ensure JScribe is ready to start.
+	 * </p>
+	 * 
 	 * @param modelPath  path to GGML formatted Whisper model
 	 * @param microphone preferred microphone name (can be null). Use {@link JScribe#getMicrophones()} to get microphones that support the required audio format.
 	 * @param latency    audio sample length in milliseconds. Must be at least 30ms. If low, set overlap to be much higher to catch full words.
@@ -227,71 +233,163 @@ public class JScribe implements UncaughtExceptionHandler {
 	 * @param denoise    true to denoise audio samples to help reduce white noise, false for raw audio
 	 * @throws IllegalArgumentException {@code latency < 30} or {@code overlap < 0}
 	 * @throws NoMicrophoneException    if no usable microphones were found
-	 * @throws IOException              if {@link #isAlive()} or something went wrong
+	 * @throws IOException              if {@link #isInUse()} or something went wrong
 	 */
-	public void start(Path modelPath, String microphone, long latency, long overlap, boolean padAudio, boolean vad, boolean denoise) throws IOException, NoMicrophoneException
+	public synchronized void start(Path modelPath, String microphone, long latency, long overlap, boolean vad, boolean denoise) throws IOException, NoMicrophoneException
 	{
-		if(isAlive())
+		// Ensure only one process can use JScribe at a time (otherwise causes JNI crashes). Maybe this crash is on a per-model basis, unsure...
+		// Null state means not started or stopped
+		if(isInUse())
 		{
-			throw new IOException("JScribe is already running");
+			throw new IOException("JScribe already started. Wait for it to die");
 		}
 		
-		if(latency < 30)
+		try
 		{
-			throw new IllegalArgumentException("Latency must be at least 30ms");
-		}
-		
-		if(overlap < 0)
-		{
-			throw new IllegalArgumentException("Overlap must be non-negative");
-		}
-		
-		state = State.INITIALIZING;
-		
-		logger.info("Starting JScribe");
-		
-		recorder = new AudioRecorder(transcriber = new Transcriber(modelPath, useVulkan), microphone, latency, overlap, padAudio, vad, denoise);
-		
-		// Report errors to this thread
-		recorder.setUncaughtExceptionHandler(this);
-		transcriber.setUncaughtExceptionHandler(this);
-		
-		// We need the transcriber to start first
-		transcriber.start();
-		
-		CompletableFuture<Void> future = new CompletableFuture<Void>();
-		
-		// If we enabled warming up the model
-		if(warmUpModel)
-		{
-			try
+			if(latency < 30)
 			{
-				logger.info("Warming up transcriber");
-				transcriber.newRecording(new Recording(System.currentTimeMillis(), readWavToFloatSamples(JScribe.class.getClassLoader().getResourceAsStream("jfk.wav")), () ->
-				{
-					future.complete(null);
-				}));
-			} catch(InterruptedException | IOException | UnsupportedAudioFileException e)
-			{
-				future.completeExceptionally(e);
+				throw new IllegalArgumentException("Latency must be at least 30ms");
 			}
-		}
-		else
+			
+			if(overlap < 0)
+			{
+				throw new IllegalArgumentException("Overlap must be non-negative");
+			}
+			
+			state = State.INITIALIZING;
+			
+			logger.info("Starting JScribe");
+			
+			recorder = new AudioRecorder(transcriber = new Transcriber(modelPath, useVulkan), microphone, latency, overlap, true, vad, denoise);
+			
+			// Report errors to this thread
+			recorder.setUncaughtExceptionHandler(this);
+			transcriber.setUncaughtExceptionHandler(this);
+			
+			// We need the transcriber to start first
+			transcriber.start();
+			
+			CompletableFuture<Void> future = new CompletableFuture<Void>();
+			
+			// If we enabled warming up the model
+			if(warmUpModel)
+			{
+				try
+				{
+					logger.info("Warming up transcriber");
+					transcriber.newRecording(new Recording(System.currentTimeMillis(), readWavToFloatSamples(JScribe.class.getClassLoader().getResourceAsStream("jfk.wav")), () ->
+					{
+						logger.info("Warming up completed");
+						future.complete(null);
+					}));
+				} catch(InterruptedException | IOException | UnsupportedAudioFileException e)
+				{
+					future.completeExceptionally(e);
+				}
+			}
+			else
+			{
+				// No warm-up, skip it
+				future.complete(null);
+			}
+			
+			// Start recording AFTER we're warmed up
+			future.orTimeout(10, TimeUnit.SECONDS).exceptionally(e ->
+			{
+				logger.error("Failed to warm-up transcriber", e);
+				return null;
+			}).thenRun(() ->
+			{
+				synchronized(this)
+				{
+					if(isShuttingDown() || !isInUse())
+					{
+						logger.warn("JScribe was stopped before warm-up completed");
+						return;
+					}
+					
+					// Empty the transcription array if warm-up succeeded
+					getTranscriptions();
+					recorder.start();
+					state = State.RUNNING;
+				}
+			});
+		} catch(Exception e)
 		{
-			// No warm-up, skip it
-			future.complete(null);
+			logger.error("Failed to start JScribe", e);
+			stop();
+			throw e;
+		}
+	}
+	
+	/**
+	 * Stops and waits for JScribe to shutdown completely. It's recommended you use {@linkplain #stop()} instead to wait indefinitely.
+	 * 
+	 * <p>
+	 * If an {@linkplain InterruptedException} is thrown, don't attempt to restart JScribe as it could cause a JVM crash if multiple transcribers are working.
+	 * </p>
+	 * 
+	 * @param wait maximum time to wait before exiting early
+	 * @throws InterruptedException if worker threads failed to end in time
+	 */
+	public synchronized void stop(Duration wait) throws InterruptedException
+	{
+		if(isShuttingDown())
+		{
+			return;
 		}
 		
-		// Start recording AFTER we're warmed up
-		future.orTimeout(10, TimeUnit.SECONDS).exceptionally(e ->
+		try
 		{
-			logger.error("Failed to warm-up transcriber", e);
-			return null;
-		}).thenRun(() ->
+			logger.info("Stopping JScribe");
+			state = State.STOPPING;
+			
+			if(recorder != null && recorder.isAlive())
+				recorder.shutdown();
+			if(transcriber != null && transcriber.isAlive())
+				transcriber.shutdown();
+			
+			// Wait to die
+			logger.info("Waiting for threads to die (max wait: {}s)", wait.toSeconds());
+			
+			if(recorder != null && recorder.isAlive())
+				recorder.join(wait);
+			if(transcriber != null && transcriber.isAlive())
+				transcriber.join(wait);
+			
+			JScribe.logger.info("Stopped JScribe");
+		} catch(InterruptedException e)
 		{
-			recorder.start();
-			state = State.RUNNING;
-		});
+			boolean transcriberAlive = Optional.ofNullable(transcriber).map(Transcriber::isAlive).orElse(false);
+			JScribe.logger.error("Failed to join JScribe threads (recorder alive: {}, transcriber alive: {})", Optional.ofNullable(recorder).map(AudioRecorder::isAlive).orElse(false), transcriberAlive, e);
+			
+			if(transcriberAlive)
+			{
+				JScribe.logger.error("Transcriber still being alive could indicate transcription is still wrapping up");
+			}
+			
+			throw e;
+		} catch(Exception e)
+		{
+			JScribe.logger.info("An error occurred stopping JScribe", e);
+		} finally
+		{
+			state = null;
+		}
+	}
+	
+	/**
+	 * Stops and waits indefinitely for JScribe to shutdown completely.
+	 */
+	public void stop()
+	{
+		try
+		{
+			stop(Duration.ZERO);
+		} catch(InterruptedException e)
+		{
+			logger.error("Received interrupted exception, but passed 0 duration?", e);
+		}
 	}
 	
 	/**
@@ -301,8 +399,13 @@ public class JScribe implements UncaughtExceptionHandler {
 	{
 		if(isRunning())
 		{
+			logger.info("Resetting JScribe");
 			recorder.clear();
 			transcriber.clearRecordings();
+		}
+		else
+		{
+			logger.warn("Can't reset JScribe. Not running");
 		}
 	}
 	
@@ -314,37 +417,6 @@ public class JScribe implements UncaughtExceptionHandler {
 	public int getTranscriptionBacklog()
 	{
 		return transcriber.backlog();
-	}
-	
-	/**
-	 * Stops and waits for live audio transcription to be stopped.
-	 */
-	public void stop()
-	{
-		if(!isRunning())
-		{
-			return;
-		}
-		
-		logger.info("Stopping JScribe");
-		state = State.STOPPING;
-		
-		recorder.shutdown();
-		transcriber.shutdown();
-		
-		// Wait to die
-		try
-		{
-			recorder.join();
-			transcriber.join();
-		} catch(InterruptedException e)
-		{
-			JScribe.logger.error("Failed to join JScribe threads (running: {}, {})", recorder.isAlive(), transcriber.isAlive(), e);
-			e.printStackTrace();
-		}
-		
-		JScribe.logger.info("Stopped JScribe");
-		state = null;
 	}
 	
 	/**
@@ -379,13 +451,13 @@ public class JScribe implements UncaughtExceptionHandler {
 	}
 	
 	/**
-	 * Returns true if JScribe's worker threads are still running. This differs from {@link JScribe#isRunning()} where this will return true while shutting down.
+	 * Returns true if JScribe is alive in any capacity. This means a worker thread may still be running.
 	 * 
 	 * @return true if alive, false otherwise
 	 */
-	public boolean isAlive()
+	public boolean isInUse()
 	{
-		return transcriber != null && recorder != null && (transcriber.isAlive() || recorder.isAlive());
+		return state != null;
 	}
 	
 	/**
@@ -445,6 +517,16 @@ public class JScribe implements UncaughtExceptionHandler {
 	}
 	
 	/**
+	 * Returns the last time an audio recording began.
+	 * 
+	 * @return last time (in epoch millis) an audio recording began
+	 */
+	public long getLastAudioRecordingTimestamp()
+	{
+		return recorder.getLastTimestamp();
+	}
+	
+	/**
 	 * Gets all transcriptions and clears the buffer.
 	 * 
 	 * @return buffer of transcriptions (can be empty)
@@ -459,6 +541,12 @@ public class JScribe implements UncaughtExceptionHandler {
 	{
 		JScribe.logger.error("JScribe ended early due to an unhandled error in thread " + t.getName(), e);
 		stop();
+	}
+	
+	@Override
+	public String toString()
+	{
+		return super.toString() + " - State: " + state;
 	}
 	
 	/**

@@ -8,6 +8,7 @@ import java.nio.file.Path;
 import java.util.concurrent.ExecutionException;
 
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import io.github.freshsupasulley.JScribe;
 
@@ -34,7 +35,7 @@ class AppTest {
 //	void libraryLoads() throws IOException
 //	{
 //		JScribe scribe = new JScribe.Builder().warmUpModel().build();
-//		scribe.start(testModel, "", 1000, 500, true, true, true);
+//		scribe.start(testModel, "", 1000, 500, true, true);
 //		
 //		// Translate for a while
 //		long start = System.currentTimeMillis(), lastMsg = start;
@@ -70,7 +71,7 @@ class AppTest {
 //			}
 //		}
 //		
-//		while(scribe.isAlive())
+//		while(scribe.isInUse())
 //		{
 //			assert !scribe.isRunning() && scribe.isShuttingDown();
 //		}

@@ -48,18 +48,6 @@ class Transcriber extends Thread implements Runnable {
 		// Transcriber.loadWhisperJNI();
 	}
 	
-	private static void loadWhisperJNI() throws IOException
-	{
-		JScribe.logger.info("Loading whisper-jni");
-		// Not dealing with this unless I wanna fork it (hell naww)
-		// System.setProperty("io.github.givimad.whisperjni.libdir", LibraryLoader.extractToTemp().toString());
-		
-		// path needs to be valid on windows, opened a pr :(
-		LibraryUtils.loadLibrary(JScribe.logger::debug);
-		// Then test loading whisper
-		WhisperJNI.setLibraryLogger(JScribe.logger::info);
-	}
-	
 	public Transcriber(Path modelPath, boolean useVulkan)
 	{
 		this.modelPath = modelPath;
@@ -68,26 +56,27 @@ class Transcriber extends Thread implements Runnable {
 		
 		try
 		{
-			if(!useVulkan)
+			if(useVulkan && LibraryLoader.canUseVulkan())
 			{
-				Transcriber.loadWhisperJNI();
-			}
-			else
-			{
-				if(!LibraryLoader.canUseVulkan())
-					throw new IOException("This system can't load Vulkan natives");
-				
-				JScribe.logger.info("Loading Vulkan natives");
+				JScribe.logger.info("Loading Vulkan natives for whisper-jni");
 				
 				Path tempDir = LibraryLoader.extractFolderToTemp("win-amd64-vulkan");
 				System.load(tempDir.resolve("ggml.dll").toAbsolutePath().toString());
 				System.load(tempDir.resolve("whisper.dll").toAbsolutePath().toString());
 				System.load(tempDir.resolve("whisper-jni.dll").toAbsolutePath().toString());
 			}
+			else
+			{
+				JScribe.logger.info("Loading built-in whisper-jni natives");
+				
+				LibraryUtils.loadLibrary(JScribe.logger::debug);
+				// Then test loading whisper
+				WhisperJNI.setLibraryLogger(JScribe.logger::info);
+			}
 		} catch(IOException | UnsatisfiedLinkError e)
 		{
 			JScribe.logger.error("An error occurred loading natives (platform: {}, arch: {})", System.getProperty("os.name"), System.getProperty("os.arch"), e);
-			System.exit(1);
+			throw new RuntimeException(e); // signals to JScribe to stop?
 		}
 	}
 	
@@ -218,13 +207,15 @@ class Transcriber extends Thread implements Runnable {
 	
 	public void clearRecordings()
 	{
-		abandonSample.set(true);
+		JScribe.logger.debug("Clearing recordings and requesting next sample to be abandoned");
 		recordings.clear();
+		abandonSample.set(true);
 	}
 	
 	public void shutdown()
 	{
-		recordings.clear();
+		JScribe.logger.debug("Transcription shutting down");
+		recordings.clear(); // do NOT call clearRecordings instead. Creates endless loop
 		running = false;
 	}
 	
@@ -252,6 +243,7 @@ class Transcriber extends Thread implements Runnable {
 			throw new InterruptedException("Transcriber is dead");
 		}
 		
+		JScribe.logger.debug("Received new recording");
 		recordings.add(recording);
 	}
 	
