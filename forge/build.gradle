@@ -232,7 +232,7 @@ shadowJar {
     exclude "*.md"
     
     // Relocate external jars
-    relocate 'net.lingala.zip4j', 'com.supasulley.zip4j'
+    relocate 'net.lingala.zip4j', 'io.github.freshsupasulley.zip4j'
     // I'm not relocating whisperjni because that would fuck up JNI. We're banking on this decision not breaking anything
     //relocate 'io.github.givimad.whisperjni', 'com.supasulley.whisperjni'
     
