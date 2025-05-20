@@ -1,11 +1,20 @@
 package io.github.freshsupasulley.censorcraft.gui;
 
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.function.BiConsumer;
 
-import io.github.freshsupasulley.JScribe;
 import io.github.freshsupasulley.Model;
 import io.github.freshsupasulley.censorcraft.CensorCraft;
 import io.github.freshsupasulley.censorcraft.ClientCensorCraft;
@@ -20,10 +29,10 @@ import net.minecraft.network.chat.Style;
 
 public class DownloadScreen extends Screen {
 	
-	private CompletableFuture<Void> downloadTask;
+//	private CompletableFuture<Void> downloadTask;
 	private Path downloadPath;
 	
-	private long downloaded;
+//	private long downloaded;
 	
 	private Model model;
 	
@@ -34,11 +43,13 @@ public class DownloadScreen extends Screen {
 		this.model = model;
 		
 		// Update title to include size
-		downloadTask = JScribe.downloadModel(model.name(), downloadPath = ClientCensorCraft.getModelPath(model.name()), (downloaded, total) ->
+		downloadTask = downloadModel(model.name(), downloadPath = ClientCensorCraft.getModelPath(model.name()), (downloaded, total) ->
 		{
 			this.downloaded = downloaded;
 		}).whenComplete((success, error) ->
 		{
+			CensorCraft.LOGGER.info("Downloaded process exited");
+			
 			// On success
 			if(error == null)
 			{
@@ -47,7 +58,24 @@ public class DownloadScreen extends Screen {
 			// On error
 			else
 			{
-				this.onClose(); // delete the incomplete model?
+				System.out.println(error instanceof CancellationException);
+				CensorCraft.LOGGER.info("{} model download cancelled", model.name());
+				
+				try
+				{
+					if(Files.deleteIfExists(downloadPath))
+					{
+						CensorCraft.LOGGER.warn("Deleted incomplete model at {}", downloadPath);
+					}
+					else
+					{
+						CensorCraft.LOGGER.warn("Incomplete model at {} does not exist", downloadPath);
+					}
+				} catch(IOException e)
+				{
+					CensorCraft.LOGGER.error("Failed to delete incomplete model download at {}", downloadPath, e);
+				}
+				
 				minecraft.execute(() -> minecraft.setScreen(ClientCensorCraft.errorScreen("An error occurred downloading the model", error)));
 			}
 		});
@@ -58,24 +86,7 @@ public class DownloadScreen extends Screen {
 	{
 		super.onClose();
 		
-		CensorCraft.LOGGER.info("{} model download cancelled", model.name());
-		
-		try
-		{
-			if(Files.deleteIfExists(downloadPath))
-			{
-				CensorCraft.LOGGER.warn("Deleted incomplete model at {}", downloadPath);
-			}
-			else
-			{
-				CensorCraft.LOGGER.warn("Incomplete model at {} does not exist", downloadPath);
-			}
-		} catch(IOException e)
-		{
-			CensorCraft.LOGGER.error("Failed to delete incomplete model download at {}", downloadPath, e);
-		}
-		
-		downloadTask.cancel(true);
+		CensorCraft.LOGGER.info("Cancelled download: {}", downloadTask.cancel(true));
 	}
 	
 	@Override

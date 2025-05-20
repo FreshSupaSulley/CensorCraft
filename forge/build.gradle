@@ -139,7 +139,7 @@ configurations {
 }
 
 dependencies {
-	shade 'io.github.freshsupasulley:jscribe:0.0.14'
+	shade 'io.github.freshsupasulley:jscribe:0.0.15'
 	
 	minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
 	

@@ -68,29 +68,30 @@ public class ClientCensorCraft {
 	private static String transcription;
 	private static int recordings;
 	
-	static
-	{
-		MinecraftForge.registerConfigScreen((minecraft, screen) -> new ConfigScreen(minecraft, screen));
-		
-		final String tinyModel = "tiny.en";
-		
-		// If we don't have tiny.en in the models directory yet (probably one of the first times booting this mod)
-		if(!hasModel(tinyModel))
-		{
-			try
-			{
-				Path model = getModelPath(tinyModel);
-				CensorCraft.LOGGER.info("Copying built-in model to {}", model);
-				
-				Files.copy(CensorCraft.class.getClassLoader().getResourceAsStream(tinyModel + ".bin"), model, StandardCopyOption.REPLACE_EXISTING);
-				CensorCraft.LOGGER.info("Put built-in model at {}", tinyModel);
-			} catch(IOException e)
-			{
-				CensorCraft.LOGGER.error("Failed to extract fallback model", e);
-				System.exit(1);
-			}
-		}
-	}
+	// Looks like we're not bundling models in. Too big of a jar file
+//	static
+//	{
+//		MinecraftForge.registerConfigScreen((minecraft, screen) -> new ConfigScreen(minecraft, screen));
+//		
+//		final String tinyModel = "tiny.en";
+//		
+//		// If we don't have tiny.en in the models directory yet (probably one of the first times booting this mod)
+//		if(!hasModel(tinyModel))
+//		{
+//			try
+//			{
+//				Path model = getModelPath(tinyModel);
+//				CensorCraft.LOGGER.info("Copying built-in model to {}", model);
+//				
+//				Files.copy(CensorCraft.class.getClassLoader().getResourceAsStream(tinyModel + ".bin"), model, StandardCopyOption.REPLACE_EXISTING);
+//				CensorCraft.LOGGER.info("Put built-in model at {}", tinyModel);
+//			} catch(IOException e)
+//			{
+//				CensorCraft.LOGGER.error("Failed to extract fallback model", e);
+//				System.exit(1);
+//			}
+//		}
+//	}
 	
 	public static Path getModelDir()
 	{
