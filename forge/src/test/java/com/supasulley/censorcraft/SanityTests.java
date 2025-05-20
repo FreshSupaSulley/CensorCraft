@@ -4,7 +4,7 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
-import com.supasulley.censorcraft.network.Trie;
+import io.github.freshsupasulley.censorcraft.network.Trie;
 
 class SanityTests {
 	

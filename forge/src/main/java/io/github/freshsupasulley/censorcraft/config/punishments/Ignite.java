@@ -11,7 +11,7 @@ public class Ignite extends PunishmentOption {
 	@Override
 	public String getDescription()
 	{
-		return "Puts the player on fire";
+		return "Sets the player on fire";
 	}
 	
 	@Override

@@ -30,7 +30,6 @@ import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.client.event.ScreenEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent.LevelTickEvent;
-import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.fml.common.Mod;
@@ -48,7 +47,7 @@ public class ClientCensorCraft {
 	private static Path model;
 	private static long audioContextLength;
 	
-	private static boolean loggedIn, paused;
+	private static boolean loggedIn, paused, startJScribeAttempt;
 	
 	// Packets
 	public static final long HEARTBEAT_TIME = 30000, HEARTBEAT_SAFETY_NET = 5000;
@@ -157,14 +156,16 @@ public class ClientCensorCraft {
 	
 	private static void stopJScribe()
 	{
+		startJScribeAttempt = false;
+		
 		if(controller == null)
 		{
-			//CensorCraft.LOGGER.error("Tried to stop JScribe when controller is not initialized", new Throwable()); // get the stacktrace if this happens
+			// CensorCraft.LOGGER.error("Tried to stop JScribe when controller is not initialized", new Throwable()); // get the stacktrace if this happens
 			return;
 		}
 		
 		controller.stop();
-//		setGUIText(Component.literal("Stopped recording."));
+		// setGUIText(Component.literal("Stopped recording."));
 	}
 	
 	@SubscribeEvent
@@ -210,6 +211,11 @@ public class ClientCensorCraft {
 		return errorScreen(title, t.getLocalizedMessage() == null ? t.getClass().toString() : t.getLocalizedMessage());
 	}
 	
+	/**
+	 * This only has an effect in singleplayer worlds. When connected to a server, pausing on the client side doesn't stop transcription.
+	 * 
+	 * @param event
+	 */
 	@SubscribeEvent
 	public static void onPause(ClientPauseChangeEvent.Post event)
 	{
@@ -247,13 +253,14 @@ public class ClientCensorCraft {
 		stopJScribe();
 	}
 	
-	@SubscribeEvent
-	public static void onRespawn(PlayerEvent.PlayerRespawnEvent event)
-	{
-		CensorCraft.LOGGER.info("Player respawned");
-		startJScribe();
-	}
-	
+	//
+	// @SubscribeEvent
+	// public static void onRespawn(PlayerEvent.PlayerRespawnEvent event)
+	// {
+	// CensorCraft.LOGGER.info("Player respawned");
+	// startJScribe();
+	// }
+	//
 	/**
 	 * Every (client) tick, JScribe should be running. If it's not, we need to signal that to the user.
 	 * 
@@ -265,6 +272,7 @@ public class ClientCensorCraft {
 		if(event.side != LogicalSide.CLIENT)
 			return;
 		
+		// no clue if .player can be null but im compensating for it anyways
 		@SuppressWarnings("resource")
 		boolean playerAlive = Optional.ofNullable(Minecraft.getInstance().player).map(LocalPlayer::isAlive).orElse(false);
 		
@@ -289,14 +297,21 @@ public class ClientCensorCraft {
 			startJScribe();
 		}
 		
-		if(controller.isInitializing())
-		{
-			setGUIText(Component.literal("Initializing..."));
-		}
 		// If we're supposed to be recording
-		else if(loggedIn && !paused && playerAlive) // no clue if .player can be null but im compensating for it anyways
+		if(loggedIn && !paused && playerAlive)
 		{
-			if(!controller.isRunning())
+			// Only try to init one time so we can indicate if there's something wrong
+			if(!startJScribeAttempt)
+			{
+				startJScribeAttempt = true;
+				startJScribe();
+			}
+			
+			if(controller.isInitializing())
+			{
+				setGUIText(Component.literal("Initializing..."));
+			}
+			else if(!controller.isRunning())
 			{
 				setGUIText(Component.literal("CensorCraft not running!\n").withStyle(style -> style.withBold(true).withColor(0xFF0000)).append(Component.literal("Rejoin world or click Restart in the mod config menu. If this persists, check logs.").withStyle(style -> style.withBold(false).withColor(0xAAAAAA))));
 				return;
@@ -351,20 +366,20 @@ public class ClientCensorCraft {
 				{
 					component.append(Component.literal(transcription + "\n").withColor(0xFFFFFF));
 				}
-				
-				if(Config.Client.DEBUG.get())
-				{
-					component.append(Component.literal(String.format("%.1f", controller.getTimeBehind() / 1000f) + "s behind\n").withColor(0xAAAAAA));
-					component.append(Component.literal("Latency: " + Config.Client.LATENCY.get() + "\n"));
-					component.append(Component.literal("Last transcribed " + recordings + " recording" + (recordings != 1 ? "s" : "") + "\n")).withColor(0xAAAAAA);
-					component.append(Component.literal(controller.getTranscriptionBacklog() + " samples queued\n"));
-					component.append(Component.literal("Using " + model.getFileName() + " model\n"));
-				}
 			}
-//			else
-//			{
-//				setGUIText(Component.empty());
-//			}
+			
+			if(Config.Client.DEBUG.get())
+			{
+				component.append(Component.literal(String.format("%.1f", controller.getTimeBehind() / 1000f) + "s behind\n").withColor(0xAAAAAA));
+				component.append(Component.literal("Latency: " + Config.Client.LATENCY.get() + "\n"));
+				component.append(Component.literal("Last transcribed " + recordings + " recording" + (recordings != 1 ? "s" : "") + "\n")).withColor(0xAAAAAA);
+				component.append(Component.literal(controller.getTranscriptionBacklog() + " samples queued\n"));
+				component.append(Component.literal("Using " + model.getFileName() + " model\n"));
+			}
+			// else
+			// {
+			// setGUIText(Component.empty());
+			// }
 			
 			setGUIText(component);
 		}
@@ -402,7 +417,7 @@ public class ClientCensorCraft {
 	 */
 	public static void setup(Path model, long audioContextLength)
 	{
-//		stopJScribe();
+		// stopJScribe();
 		ClientCensorCraft.model = model;
 		ClientCensorCraft.audioContextLength = audioContextLength;
 		startJScribe();

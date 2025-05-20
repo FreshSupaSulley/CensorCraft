@@ -96,7 +96,9 @@ public abstract class Config {
 			RAT_DELAY = builder.comment("Seconds between ratting on players (expose_rats must be true)").defineInRange("rat_delay", 60f, 1, Float.MAX_VALUE);
 			CHAT_TABOOS = builder.comment("When someone is punished, send what the player said to chat").define("chat_taboos", true);
 			
-			builder.push("punishments").comment("List of all punishment options. To enable one, set enabled = true").comment("Each punishment may have their own additional list of taboos that will only trigger that punishment");
+			// Begin punishments section
+			builder.comment("List of all punishment options. To enable one, set enabled = true").comment("Each punishment may have their own additional list of taboos that will only trigger that punishment").push("punishments");
+			
 			PUNISHMENTS = new PunishmentOption[] {new Commands(), new Crash(), new Dimension(), new Entities(), new Explosion(), new Ignite(), new Kill(), new Lightning(), new PotionEffects(), new Sky()};
 			
 			for(PunishmentOption option : PUNISHMENTS)
@@ -117,7 +119,7 @@ public abstract class Config {
 			
 			if(!Stream.of(PUNISHMENTS).anyMatch(PunishmentOption::isEnabled))
 			{
-				CensorCraft.LOGGER.warn("No punishments are enabled. Navigate to {} to enable a punishment", config.getFullPath());
+				CensorCraft.LOGGER.warn("No punishments are enabled. Navigate to {} to enable a punishment", config.getFileName());
 			}
 		}
 		
