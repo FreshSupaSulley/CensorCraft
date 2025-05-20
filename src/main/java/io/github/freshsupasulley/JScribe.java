@@ -1,7 +1,6 @@
 package io.github.freshsupasulley;
 
 import java.io.BufferedInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.Thread.UncaughtExceptionHandler;
@@ -18,9 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
-import java.util.function.BiConsumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -112,68 +109,15 @@ public class JScribe implements UncaughtExceptionHandler {
 	}
 	
 	/**
-	 * Asynchronously downloads a Whisper model in GGML format from Hugging Face.
-	 * 
-	 * @param modelName        name of the model (use {@link JScribe#getModels()})
-	 * @param destination      output path
-	 * @param progressListener download progress listener, where the first long is the bytes downloaded so far and the second is the total amount of bytes
-	 * @return {@linkplain CompletableFuture} object representing the download
-	 */
-	public static CompletableFuture<Void> downloadModel(String modelName, Path destination, BiConsumer<Long, Long> progressListener)
-	{
-		String fileName = "ggml-" + modelName + ".bin";
-		String downloadUrl = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/" + fileName;
-		
-		JScribe.logger.info("Downloading model {} from {} to {}", modelName, downloadUrl, destination.toAbsolutePath());
-		
-		HttpRequest request = HttpRequest.newBuilder().uri(URI.create(downloadUrl)).build();
-		// It sends you to a unique node so follow the redirect
-		HttpClient client = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.ALWAYS).build();
-		
-		return client.sendAsync(request, HttpResponse.BodyHandlers.ofInputStream()).thenAcceptAsync((response) ->
-		{
-			long totalBytes = response.headers().firstValueAsLong("Content-Length").orElse(-1L);
-			
-			if(response.statusCode() != 200)
-			{
-				throw new CompletionException(new IOException("Failed to download model. HTTP status code: " + response.statusCode()));
-			}
-			
-			try(InputStream in = response.body(); FileOutputStream out = new FileOutputStream(destination.toFile()))
-			{
-				byte[] buffer = new byte[8192];
-				long bytesRead = 0;
-				int read;
-				
-				// Wrap the InputStream to track the download progress
-				while((read = in.read(buffer)) != -1)
-				{
-					out.write(buffer, 0, read);
-					bytesRead += read;
-					
-					progressListener.accept(bytesRead, totalBytes);
-				}
-			} catch(IOException e)
-			{
-				throw new CompletionException(e);
-			}
-			
-			JScribe.logger.info("Model saved to {}", destination.toAbsolutePath());
-		});
-	}
-	
-	/**
-	 * Downloads a Whisper model in GGML format from Hugging Face.
+	 * Prepares a {@link ModelDownloader} instance to download the Whisper model in GGML format from Hugging Face.
 	 * 
 	 * @param modelName   name of the model (use {@link JScribe#getModels()})
 	 * @param destination output path
-	 * @throws IOException if something went wrong
+	 * @return {@link ModelDownloader} object to manage the download
 	 */
-	public static void downloadModel(String modelName, Path destination) throws IOException
+	public static ModelDownloader downloadModel(String modelName, Path destination)
 	{
-		downloadModel(modelName, destination, (a, b) ->
-		{
-		});
+		return new ModelDownloader(modelName, destination);
 	}
 	
 	/**

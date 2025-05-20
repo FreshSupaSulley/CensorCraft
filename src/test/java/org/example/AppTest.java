@@ -7,28 +7,39 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.concurrent.ExecutionException;
 
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import io.github.freshsupasulley.JScribe;
+import io.github.freshsupasulley.ModelDownloader;
 
 class AppTest {
 	
 	static Path testModel = Path.of("src/test/resources/tiny.bin");
 	
-	@BeforeAll
-	static void downloadModel() throws IOException, InterruptedException, ExecutionException
+	@Test
+	void downloadModel() throws IOException, InterruptedException, ExecutionException
 	{
 		assert JScribe.getModels().length != 0;
 		
 		// Don't download the model file if we already have it
 		if(testModel.toFile().exists())
-			return;
-		
-		JScribe.downloadModel("tiny", testModel, (a, b) ->
 		{
-			System.out.println("Progress: " + (a * 100f / b) + "%");
-		}).get();
+			System.out.println("Not downloading, already exists");
+			return;
+		}
+		
+		ModelDownloader downloader = JScribe.downloadModel("tiny", testModel);
+		
+		while(!downloader.isDone())
+		{
+			System.out.println(downloader.getBytesRead());
+			
+			if(downloader.getBytesRead() > 46444236L)
+			{
+				downloader.cancel();
+			}
+			Thread.sleep(500);
+		}
 	}
 	
 //	@Test
