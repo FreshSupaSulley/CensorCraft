@@ -5,7 +5,7 @@ import java.util.stream.Collectors;
 import io.github.freshsupasulley.JScribe;
 import io.github.freshsupasulley.LibraryLoader;
 import io.github.freshsupasulley.censorcraft.ClientCensorCraft;
-import io.github.freshsupasulley.censorcraft.config.Config;
+import io.github.freshsupasulley.censorcraft.config.ClientConfig;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.OptionInstance;
@@ -61,31 +61,31 @@ public class ConfigScreen extends Screen {
 		// layout.addChild(new SpacerElement(optionsWidth, 1));
 		
 		// Everything else is aligned to the left
-		layout.addChild(Checkbox.builder(Component.literal("Show speech"), font).tooltip(Tooltip.create(Component.literal("Displays live audio transcriptions"))).selected(Config.Client.SHOW_TRANSCRIPTION.get()).onValueChange((button, value) ->
+		layout.addChild(Checkbox.builder(Component.literal("Show speech"), font).tooltip(Tooltip.create(Component.literal("Displays live audio transcriptions"))).selected(ClientConfig.SHOW_TRANSCRIPTION.get()).onValueChange((button, value) ->
 		{
-			Config.Client.SHOW_TRANSCRIPTION.set(value);
+			ClientConfig.SHOW_TRANSCRIPTION.set(value);
 		}).build());
 		
-		layout.addChild(Checkbox.builder(Component.literal("Show microphone volume"), font).selected(Config.Client.SHOW_VOLUME_BAR.get()).onValueChange((button, value) ->
+		layout.addChild(Checkbox.builder(Component.literal("Show microphone volume"), font).selected(ClientConfig.SHOW_VOLUME_BAR.get()).onValueChange((button, value) ->
 		{
-			Config.Client.SHOW_VOLUME_BAR.set(value);
+			ClientConfig.SHOW_VOLUME_BAR.set(value);
 		}).build());
 		
-		layout.addChild(Checkbox.builder(Component.literal("Indicate when speaking"), font).tooltip(Tooltip.create(Component.literal("Text appears when voice is detected"))).selected(Config.Client.SHOW_VAD.get()).onValueChange((button, value) ->
+		layout.addChild(Checkbox.builder(Component.literal("Indicate when speaking"), font).tooltip(Tooltip.create(Component.literal("Text appears when voice is detected"))).selected(ClientConfig.SHOW_VAD.get()).onValueChange((button, value) ->
 		{
-			Config.Client.SHOW_VAD.set(value);
-		}).build()).active = Config.Client.VAD.get();
+			ClientConfig.SHOW_VAD.set(value);
+		}).build()).active = ClientConfig.VAD.get();
 		
 		// layout.addChild(new ForgeSlider(0, 0, optionsWidth, java.awt.Button.HEIGHT, Component.literal("prefix"), Component.literal("suffix"), 30, 1500,
 		AbstractWidget slider = new OptionInstance<>(null, OptionInstance.cachedConstantTooltip(Component.literal("Latency")), (component, value) ->
 		{
 			return switch(value)
 			{
-				case Config.Client.MIN_LATENCY -> Component.literal("Fast");
-				case Config.Client.MAX_LATENCY -> Component.literal("Slow");
+				case ClientConfig.MIN_LATENCY -> Component.literal("Fast");
+				case ClientConfig.MAX_LATENCY -> Component.literal("Slow");
 				default -> Component.literal(value + "ms");
 			};
-		}, new OptionInstance.IntRange(Config.Client.MIN_LATENCY, Config.Client.MAX_LATENCY), Config.Client.LATENCY.get(), Config.Client.LATENCY::set).createButton(minecraft.options); // no clue what minecraft.options is
+		}, new OptionInstance.IntRange(ClientConfig.MIN_LATENCY, ClientConfig.MAX_LATENCY), ClientConfig.LATENCY.get(), ClientConfig.LATENCY::set).createButton(minecraft.options); // no clue what minecraft.options is
 		
 		slider.setWidth(optionsWidth);
 		layout.addChild(slider);
@@ -101,9 +101,9 @@ public class ConfigScreen extends Screen {
 		// Experimental
 		layout.addChild(new SpacerElement(optionsWidth, 6));
 		layout.addChild(new StringWidget(Component.literal("Experimental"), font));
-		layout.addChild(Checkbox.builder(Component.literal("Use GPU (Windows x64 only)"), font).tooltip(Tooltip.create(Component.literal("Use Vulkan for GPU acceleration. GPU driver must support Vulkan"))).selected(Config.Client.USE_VULKAN.get() && LibraryLoader.canUseVulkan()).onValueChange((button, value) ->
+		layout.addChild(Checkbox.builder(Component.literal("Use GPU (Windows x64 only)"), font).tooltip(Tooltip.create(Component.literal("Use Vulkan for GPU acceleration. GPU driver must support Vulkan"))).selected(ClientConfig.USE_VULKAN.get() && LibraryLoader.canUseVulkan()).onValueChange((button, value) ->
 		{
-			Config.Client.USE_VULKAN.set(value);
+			ClientConfig.USE_VULKAN.set(value);
 			
 			if(ClientCensorCraft.librariesLoaded)
 			{
@@ -111,9 +111,9 @@ public class ConfigScreen extends Screen {
 			}
 		}).build()).active = LibraryLoader.canUseVulkan();
 		
-		layout.addChild(Checkbox.builder(Component.literal("Debug"), font).tooltip(Tooltip.create(Component.literal("Displays useful debugging information"))).selected(Config.Client.DEBUG.get()).onValueChange((button, value) ->
+		layout.addChild(Checkbox.builder(Component.literal("Debug"), font).tooltip(Tooltip.create(Component.literal("Displays useful debugging information"))).selected(ClientConfig.DEBUG.get()).onValueChange((button, value) ->
 		{
-			Config.Client.DEBUG.set(value);
+			ClientConfig.DEBUG.set(value);
 		}).build());
 		
 		LinearLayout buttonLayout = LinearLayout.horizontal().spacing(ClientCensorCraft.PADDING);

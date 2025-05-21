@@ -11,6 +11,7 @@ import io.github.freshsupasulley.censorcraft.network.SetupPacket;
 import io.github.freshsupasulley.censorcraft.network.WordPacket;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.network.ChannelBuilder;
@@ -33,9 +34,16 @@ public class CensorCraft {
 		Config.register(context);
 		
 		// Register ourselves for server and other game events we are interested in
-//		MinecraftForge.registerConfigScreen(null);.EVENT_BUS.register(this);
+		// MinecraftForge.registerConfigScreen(null);.EVENT_BUS.register(this);
 		context.getModEventBus().addListener(this::commonSetup);
-//		context.getModEventBus().addListener(this::clientSetup);
+		context.getModEventBus().addListener(this::clientSetup);
+		// I cannot FUCKING believe this gets invoked on a dedicated server but this::clientSetup doesn't
+//		context.getModEventBus().addListener(ClientCensorCraft::clientSetup);
+	}
+	
+	public void clientSetup(FMLClientSetupEvent event)
+	{
+		ClientCensorCraft.clientSetup(event);
 	}
 	
 	// Mod Event Bus events
@@ -49,8 +57,10 @@ public class CensorCraft {
 			// https://github.com/nexusnode/crafting-dead/blob/1a0bb37eed5384735b75e5c961b72af436da709e/crafting-dead-immerse/src/main/java/com/craftingdead/immerse/network/NetworkChannel.java#L55
 			// channel.messageBuilder(SetupPacket.class,
 			// NetworkDirection.LOGIN_TO_CLIENT).encoder(SetupPacket::encode).decoder(SetupPacket::new).consumerMainThread(SetupPacket::consume).add();
-//			channel.messageBuilder(SetupPacket.class, NetworkDirection.LOGIN_TO_CLIENT).encoder((packet, buffer) -> packet.encode(buffer)).decoder(buffer -> new SetupPacket(buffer)).consumerMainThread((packet, context) -> packet.consume(context)).add();
-//			channel.messageBuilder(WordPacket.class, NetworkDirection.PLAY_TO_SERVER).encoder(WordPacket::encode).decoder(WordPacket::new).consumerMainThread(WordPacket::consume).add();
+			// channel.messageBuilder(SetupPacket.class, NetworkDirection.LOGIN_TO_CLIENT).encoder((packet, buffer) -> packet.encode(buffer)).decoder(buffer -> new
+			// SetupPacket(buffer)).consumerMainThread((packet, context) -> packet.consume(context)).add();
+			// channel.messageBuilder(WordPacket.class,
+			// NetworkDirection.PLAY_TO_SERVER).encoder(WordPacket::encode).decoder(WordPacket::new).consumerMainThread(WordPacket::consume).add();
 			
 			register(channel, NetworkDirection.CONFIGURATION_TO_CLIENT, SetupPacket.class);
 			register(channel, NetworkDirection.PLAY_TO_SERVER, WordPacket.class);

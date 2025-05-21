@@ -8,7 +8,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import io.github.freshsupasulley.censorcraft.ClientCensorCraft;
-import io.github.freshsupasulley.censorcraft.config.Config;
+import io.github.freshsupasulley.censorcraft.config.ClientConfig;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
@@ -37,7 +37,7 @@ public abstract class GUIMixin {
 	{
 		MutableComponent component = Component.empty();
 		
-		if(Config.Client.SHOW_VAD.get() && ClientCensorCraft.SPEAKING)
+		if(ClientConfig.SHOW_VAD.get() && ClientCensorCraft.SPEAKING)
 		{
 			component.append(Component.literal("Speaking\n").withColor(0xAAAAAA));
 		}
@@ -64,7 +64,7 @@ public abstract class GUIMixin {
 		final int barWidth = 5, barHeight = minecraft.font.lineHeight * 2;
 		int x = ClientCensorCraft.PADDING;
 		
-		if(Config.Client.SHOW_VOLUME_BAR.get())
+		if(ClientConfig.SHOW_VOLUME_BAR.get())
 		{
 			x += barWidth + ClientCensorCraft.PADDING;
 			graphics.fill(RenderType.guiOverlay(), ClientCensorCraft.PADDING, ClientCensorCraft.PADDING + barHeight, ClientCensorCraft.PADDING + barWidth, ClientCensorCraft.PADDING + barHeight - Math.clamp((int) (ClientCensorCraft.JSCRIBE_VOLUME * barHeight), 1, barHeight), 0xAAFFFFFF);

@@ -12,6 +12,12 @@ public class Explosion extends PunishmentOption {
 	private static ConfigValue<Float> EXPLOSION_RADIUS;
 	private static ConfigValue<Boolean> EXPLOSION_FIRE, EXPLOSION_GRIEFING;
 	
+	// Enabled by default
+	public Explosion(boolean enabled)
+	{
+		super(enabled);
+	}
+	
 	@Override
 	public void build(Builder builder)
 	{

@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Optional;
 
 import io.github.freshsupasulley.censorcraft.CensorCraft;
-import io.github.freshsupasulley.censorcraft.config.Config;
+import io.github.freshsupasulley.censorcraft.config.ClientConfig;
 import io.github.freshsupasulley.censorcraft.gui.MicrophoneList.MicrophoneEntry;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -29,7 +29,7 @@ public class MicrophoneList extends ObjectSelectionList<MicrophoneEntry> {
 		
 		microphones.forEach(name -> addEntry(new MicrophoneEntry(name)));
 		// Select the desired, otherwise just the first one
-		setSelected(this.children().stream().filter(mic -> mic.component.getString().equals(Config.Client.PREFERRED_MIC.get())).findFirst().orElse(this.getFirstElement()));
+		setSelected(this.children().stream().filter(mic -> mic.component.getString().equals(ClientConfig.PREFERRED_MIC.get())).findFirst().orElse(this.getFirstElement()));
 		setX(x);
 	}
 	
@@ -39,10 +39,10 @@ public class MicrophoneList extends ObjectSelectionList<MicrophoneEntry> {
 		super.setSelected(element);
 		String newMic = Optional.ofNullable(element).map(entry -> entry.getMicrophoneName()).orElse("");
 		
-		if(!newMic.equals(Config.Client.PREFERRED_MIC.get()))
+		if(!newMic.equals(ClientConfig.PREFERRED_MIC.get()))
 		{
 			CensorCraft.LOGGER.info("Client changed preferred audio source to \"{}\"", newMic);
-			Config.Client.PREFERRED_MIC.set(newMic);
+			ClientConfig.PREFERRED_MIC.set(newMic);
 			refreshButton.onPress();
 		}
 	}

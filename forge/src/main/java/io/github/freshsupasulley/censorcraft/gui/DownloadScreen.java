@@ -1,21 +1,10 @@
 package io.github.freshsupasulley.censorcraft.gui;
 
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.concurrent.CancellationException;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.function.BiConsumer;
 
+import io.github.freshsupasulley.JScribe;
 import io.github.freshsupasulley.Model;
+import io.github.freshsupasulley.ModelDownloader;
 import io.github.freshsupasulley.censorcraft.CensorCraft;
 import io.github.freshsupasulley.censorcraft.ClientCensorCraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -29,54 +18,31 @@ import net.minecraft.network.chat.Style;
 
 public class DownloadScreen extends Screen {
 	
-//	private CompletableFuture<Void> downloadTask;
-	private Path downloadPath;
-	
-//	private long downloaded;
-	
-	private Model model;
+	private ModelDownloader downloader;
 	
 	public DownloadScreen(Model model)
 	{
 		super(Component.literal("Downloading ").append(Component.literal(model.name()).withStyle(Style.EMPTY.withBold(true))));
 		
-		this.model = model;
-		
 		// Update title to include size
-		downloadTask = downloadModel(model.name(), downloadPath = ClientCensorCraft.getModelPath(model.name()), (downloaded, total) ->
-		{
-			this.downloaded = downloaded;
-		}).whenComplete((success, error) ->
+		downloader = JScribe.downloadModel(model.name(), ClientCensorCraft.getModelPath(model.name()), (success, exception) ->
 		{
 			CensorCraft.LOGGER.info("Downloaded process exited");
 			
 			// On success
-			if(error == null)
+			if(success)
 			{
 				minecraft.execute(() -> minecraft.setScreen(new PopupScreen.Builder(new TitleScreen(), Component.literal("Downloaded model")).setMessage(Component.literal("Reconnect to join. You can manage downloaded models in the mod config menu.")).addButton(CommonComponents.GUI_OK, PopupScreen::onClose).build()));
+			}
+			// On cancelled
+			else if(exception instanceof CancellationException)
+			{
+				minecraft.execute(() -> minecraft.setScreen(new PopupScreen.Builder(new TitleScreen(), Component.literal("Downloaded cancelled")).addButton(CommonComponents.GUI_OK, PopupScreen::onClose).build()));
 			}
 			// On error
 			else
 			{
-				System.out.println(error instanceof CancellationException);
-				CensorCraft.LOGGER.info("{} model download cancelled", model.name());
-				
-				try
-				{
-					if(Files.deleteIfExists(downloadPath))
-					{
-						CensorCraft.LOGGER.warn("Deleted incomplete model at {}", downloadPath);
-					}
-					else
-					{
-						CensorCraft.LOGGER.warn("Incomplete model at {} does not exist", downloadPath);
-					}
-				} catch(IOException e)
-				{
-					CensorCraft.LOGGER.error("Failed to delete incomplete model download at {}", downloadPath, e);
-				}
-				
-				minecraft.execute(() -> minecraft.setScreen(ClientCensorCraft.errorScreen("An error occurred downloading the model", error)));
+				minecraft.execute(() -> minecraft.setScreen(ClientCensorCraft.errorScreen("An error occurred downloading the model", exception)));
 			}
 		});
 	}
@@ -86,7 +52,8 @@ public class DownloadScreen extends Screen {
 	{
 		super.onClose();
 		
-		CensorCraft.LOGGER.info("Cancelled download: {}", downloadTask.cancel(true));
+		downloader.cancel();
+		CensorCraft.LOGGER.info("Cancelled download");
 	}
 	
 	@Override
@@ -100,12 +67,16 @@ public class DownloadScreen extends Screen {
 	{
 		super.render(graphics, pMouseX, pMouseY, pPartialTick);
 		
+		if(downloader.getDownloadSize() == 0)
+		{
+			graphics.drawCenteredString(font, Component.literal("Starting..."), this.width / 2, this.height / 3, 0xFFFFFFFF);
+		}
 		// Don't draw the progress bar when done (it shows underneath the popup and looks ugly asf)
-		if(!downloadTask.isDone())
+		else if(!downloader.isDone())
 		{
 			// Cutoff the byte suffix
 			graphics.drawCenteredString(font, title, this.width / 2, this.height / 4, 0xFFFFFFFF);
-			graphics.drawCenteredString(font, Component.literal(Model.getBytesFancy(downloaded) + " / " + model.getSizeFancy()), this.width / 2, this.height / 4 + font.lineHeight * 2, 0xFFFFFFFF);
+			graphics.drawCenteredString(font, Component.literal(ModelDownloader.getBytesFancy(downloader.getBytesRead()) + " / " + ModelDownloader.getBytesFancy(downloader.getDownloadSize())), this.width / 2, this.height / 4 + font.lineHeight * 2, 0xFFFFFFFF);
 			
 			final int barWidth = 200;
 			final int barHeight = 10;
@@ -113,7 +84,7 @@ public class DownloadScreen extends Screen {
 			int x = (this.width - barWidth) / 2;
 			int y = this.height / 2;
 			
-			final float progress = downloaded * 1f / model.bytes();
+			final float progress = downloader.getBytesRead() * 1f / downloader.getDownloadSize();
 			
 			int filled = (int) (barWidth * progress);
 			

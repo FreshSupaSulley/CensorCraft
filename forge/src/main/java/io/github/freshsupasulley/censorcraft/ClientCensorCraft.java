@@ -3,14 +3,13 @@ package io.github.freshsupasulley.censorcraft;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.Optional;
 
 import io.github.freshsupasulley.JScribe;
 import io.github.freshsupasulley.Model;
 import io.github.freshsupasulley.NoMicrophoneException;
 import io.github.freshsupasulley.Transcriptions;
-import io.github.freshsupasulley.censorcraft.config.Config;
+import io.github.freshsupasulley.censorcraft.config.ClientConfig;
 import io.github.freshsupasulley.censorcraft.gui.ConfigScreen;
 import io.github.freshsupasulley.censorcraft.gui.DownloadScreen;
 import io.github.freshsupasulley.censorcraft.network.WordPacket;
@@ -33,6 +32,7 @@ import net.minecraftforge.event.TickEvent.LevelTickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.loading.FMLPaths;
 import net.minecraftforge.network.PacketDistributor;
 
@@ -68,30 +68,35 @@ public class ClientCensorCraft {
 	private static String transcription;
 	private static int recordings;
 	
+	public static void clientSetup(FMLClientSetupEvent event)
+	{
+		MinecraftForge.registerConfigScreen((minecraft, screen) -> new ConfigScreen(minecraft, screen));
+	}
+	
 	// Looks like we're not bundling models in. Too big of a jar file
-//	static
-//	{
-//		MinecraftForge.registerConfigScreen((minecraft, screen) -> new ConfigScreen(minecraft, screen));
-//		
-//		final String tinyModel = "tiny.en";
-//		
-//		// If we don't have tiny.en in the models directory yet (probably one of the first times booting this mod)
-//		if(!hasModel(tinyModel))
-//		{
-//			try
-//			{
-//				Path model = getModelPath(tinyModel);
-//				CensorCraft.LOGGER.info("Copying built-in model to {}", model);
-//				
-//				Files.copy(CensorCraft.class.getClassLoader().getResourceAsStream(tinyModel + ".bin"), model, StandardCopyOption.REPLACE_EXISTING);
-//				CensorCraft.LOGGER.info("Put built-in model at {}", tinyModel);
-//			} catch(IOException e)
-//			{
-//				CensorCraft.LOGGER.error("Failed to extract fallback model", e);
-//				System.exit(1);
-//			}
-//		}
-//	}
+	// static
+	// {
+	// MinecraftForge.registerConfigScreen((minecraft, screen) -> new ConfigScreen(minecraft, screen));
+	//
+	// final String tinyModel = "tiny.en";
+	//
+	// // If we don't have tiny.en in the models directory yet (probably one of the first times booting this mod)
+	// if(!hasModel(tinyModel))
+	// {
+	// try
+	// {
+	// Path model = getModelPath(tinyModel);
+	// CensorCraft.LOGGER.info("Copying built-in model to {}", model);
+	//
+	// Files.copy(CensorCraft.class.getClassLoader().getResourceAsStream(tinyModel + ".bin"), model, StandardCopyOption.REPLACE_EXISTING);
+	// CensorCraft.LOGGER.info("Put built-in model at {}", tinyModel);
+	// } catch(IOException e)
+	// {
+	// CensorCraft.LOGGER.error("Failed to extract fallback model", e);
+	// System.exit(1);
+	// }
+	// }
+	// }
 	
 	public static Path getModelDir()
 	{
@@ -129,7 +134,7 @@ public class ClientCensorCraft {
 		
 		JScribe.Builder builder = new JScribe.Builder().setLogger(CensorCraft.LOGGER).warmUpModel();
 		
-		if(Config.Client.USE_VULKAN.get())
+		if(ClientConfig.USE_VULKAN.get())
 		{
 			CensorCraft.LOGGER.warn("Enabling Vulkan");
 			builder.useVulkan();
@@ -145,7 +150,7 @@ public class ClientCensorCraft {
 		try
 		{
 			librariesLoaded = true;
-			controller.start(model, Config.Client.PREFERRED_MIC.get(), Config.Client.LATENCY.get(), Math.max(0, audioContextLength - Config.Client.LATENCY.get()) + OVERLAP_LENGTH, Config.Client.VAD.get(), Config.Client.DENOISE.get());
+			controller.start(model, ClientConfig.PREFERRED_MIC.get(), ClientConfig.LATENCY.get(), Math.max(0, audioContextLength - ClientConfig.LATENCY.get()) + OVERLAP_LENGTH, ClientConfig.VAD.get(), ClientConfig.DENOISE.get());
 		} catch(NoMicrophoneException e)
 		{
 			CensorCraft.LOGGER.error("No microphones found", e);
@@ -299,7 +304,7 @@ public class ClientCensorCraft {
 		}
 		
 		// If we're supposed to be recording
-		if(loggedIn && !paused && playerAlive)
+		if(loggedIn && !paused && playerAlive && !controller.isInitializing())
 		{
 			// Only try to init one time so we can indicate if there's something wrong
 			if(!startJScribeAttempt)
@@ -308,11 +313,7 @@ public class ClientCensorCraft {
 				startJScribe();
 			}
 			
-			if(controller.isInitializing())
-			{
-				setGUIText(Component.literal("Initializing..."));
-			}
-			else if(!controller.isRunning())
+			if(!controller.isRunning())
 			{
 				setGUIText(Component.literal("CensorCraft not running!\n").withStyle(style -> style.withBold(true).withColor(0xFF0000)).append(Component.literal("Rejoin world or click Restart in the mod config menu. If this persists, check logs.").withStyle(style -> style.withBold(false).withColor(0xAAAAAA))));
 				return;
@@ -361,7 +362,7 @@ public class ClientCensorCraft {
 			}
 			
 			// Show transcriptions only if necessary
-			if(Config.Client.SHOW_TRANSCRIPTION.get())
+			if(ClientConfig.SHOW_TRANSCRIPTION.get())
 			{
 				if(transcription != null && !transcription.isBlank())
 				{
@@ -369,10 +370,10 @@ public class ClientCensorCraft {
 				}
 			}
 			
-			if(Config.Client.DEBUG.get())
+			if(ClientConfig.DEBUG.get())
 			{
 				component.append(Component.literal(String.format("%.1f", controller.getTimeBehind() / 1000f) + "s behind\n").withColor(0xAAAAAA));
-				component.append(Component.literal("Latency: " + Config.Client.LATENCY.get() + "\n"));
+				component.append(Component.literal("Latency: " + ClientConfig.LATENCY.get() + "\n"));
 				component.append(Component.literal("Last transcribed " + recordings + " recording" + (recordings != 1 ? "s" : "") + "\n")).withColor(0xAAAAAA);
 				component.append(Component.literal(controller.getTranscriptionBacklog() + " samples queued\n"));
 				component.append(Component.literal("Using " + model.getFileName() + " model\n"));
@@ -387,7 +388,11 @@ public class ClientCensorCraft {
 		// If we're NOT supposed to be running
 		else
 		{
-			if(controller.isShuttingDown())
+			if(controller.isInitializing())
+			{
+				setGUIText(Component.literal("Initializing..."));
+			}
+			else if(controller.isShuttingDown())
 			{
 				setGUIText(Component.literal("Stopping..."));
 			}
