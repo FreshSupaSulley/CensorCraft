@@ -219,6 +219,11 @@ class Transcriber extends Thread implements Runnable {
 		running = false;
 	}
 	
+	public boolean isRunning()
+	{
+		return running;
+	}
+	
 	public int backlog()
 	{
 		return recordings.size();
@@ -236,11 +241,11 @@ class Transcriber extends Thread implements Runnable {
 		return result;
 	}
 	
-	public void newRecording(Recording recording) throws InterruptedException
+	public void newRecording(Recording recording)
 	{
 		if(!running || Thread.interrupted())
 		{
-			throw new InterruptedException("Transcriber is dead");
+			throw new IllegalStateException("Transcriber is dead");
 		}
 		
 		JScribe.logger.debug("Received new recording");

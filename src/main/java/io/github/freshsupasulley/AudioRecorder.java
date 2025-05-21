@@ -25,7 +25,7 @@ class AudioRecorder extends Thread implements Runnable {
 	/** Format Whisper wants (also means wave file) */
 	public static final AudioFormat FORMAT = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 16000, 16, 1, 2, 16000, false);
 	
-	private final Transcriber transcription;
+	private final Transcriber transcriber;
 	private final long overlap;
 	private final long latency;
 	
@@ -44,7 +44,7 @@ class AudioRecorder extends Thread implements Runnable {
 	
 	public AudioRecorder(Transcriber listener, String micName, long latency, long overlap, boolean padAudio, boolean vad, boolean denoise) throws IOException, NoMicrophoneException
 	{
-		this.transcription = listener;
+		this.transcriber = listener;
 		this.latency = latency;
 		this.overlap = overlap;
 		this.padAudio = padAudio;
@@ -219,7 +219,10 @@ class AudioRecorder extends Thread implements Runnable {
 					if(!cleared)
 					{
 						// Send to transcriber
-						transcription.newRecording(new Recording(window));
+						if(transcriber.isAlive())
+						{
+							transcriber.newRecording(new Recording(window));
+						}
 					}
 				} catch(InterruptedException e)
 				{

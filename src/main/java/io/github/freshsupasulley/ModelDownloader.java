@@ -11,14 +11,33 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletionException;
+import java.util.function.BiConsumer;
 
+/**
+ * Handles downloading a {@link Model}.
+ */
 public class ModelDownloader {
 	
 	private volatile boolean cancelled, done;
-	
 	private long bytesRead, downloadSize;
 	
-	ModelDownloader(String modelName, Path destination)
+	/**
+	 * Converts number of bytes to a human-readable string, such as "10 GB".
+	 * 
+	 * @param bytes
+	 * @return human-readable size of model as a string
+	 */
+	public static String getBytesFancy(long bytes)
+	{
+		// https://gist.github.com/markuswustenberg/1370480 (goated)
+		int unit = 1024;
+		if(bytes < unit)
+			return bytes + " B";
+		int exp = (int) (Math.log(bytes) / Math.log(unit));
+		return String.format("%.1f %sB", bytes / Math.pow(unit, exp), "KMGTPE".charAt(exp - 1));
+	}
+	
+	ModelDownloader(String modelName, Path destination, BiConsumer<Boolean, Throwable> onComplete)
 	{
 		String fileName = "ggml-" + modelName + ".bin";
 		String downloadUrl = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/" + fileName;
@@ -84,6 +103,9 @@ public class ModelDownloader {
 					JScribe.logger.error("Failed to delete incomplete model download at {}", destination, e);
 				}
 			}
+			
+			// Get the cause for better error analysis
+			onComplete.accept(exception == null, (exception instanceof CompletionException && exception.getCause() != null) ? exception.getCause() : exception);
 		});
 	}
 	

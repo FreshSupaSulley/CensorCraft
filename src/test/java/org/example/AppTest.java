@@ -28,7 +28,7 @@ class AppTest {
 			return;
 		}
 		
-		ModelDownloader downloader = JScribe.downloadModel("tiny", testModel);
+		ModelDownloader downloader = JScribe.downloadModel("tiny", testModel, (hi, exception) -> {});
 		
 		while(!downloader.isDone())
 		{

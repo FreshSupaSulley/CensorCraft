@@ -16,8 +16,10 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -113,11 +115,13 @@ public class JScribe implements UncaughtExceptionHandler {
 	 * 
 	 * @param modelName   name of the model (use {@link JScribe#getModels()})
 	 * @param destination output path
+	 * @param onComplete  biconsumer that runs when complete. First param indicates true if successful or false otherwise (failed or cancelled), second param is the
+	 *                    exception that caused the error, if any. A {@link CancellationException} indicates it was cancelled.
 	 * @return {@link ModelDownloader} object to manage the download
 	 */
-	public static ModelDownloader downloadModel(String modelName, Path destination)
+	public static ModelDownloader downloadModel(String modelName, Path destination, BiConsumer<Boolean, Throwable> onComplete)
 	{
-		return new ModelDownloader(modelName, destination);
+		return new ModelDownloader(modelName, destination, onComplete);
 	}
 	
 	/**
@@ -226,7 +230,7 @@ public class JScribe implements UncaughtExceptionHandler {
 						logger.info("Warming up completed");
 						future.complete(null);
 					}));
-				} catch(InterruptedException | IOException | UnsupportedAudioFileException e)
+				} catch(IOException | UnsupportedAudioFileException e)
 				{
 					future.completeExceptionally(e);
 				}
@@ -246,7 +250,8 @@ public class JScribe implements UncaughtExceptionHandler {
 			{
 				synchronized(this)
 				{
-					if(isShuttingDown() || !isInUse())
+					// If the transcriber somehow died
+					if(!transcriber.isRunning())
 					{
 						logger.warn("JScribe was stopped before warm-up completed");
 						return;
