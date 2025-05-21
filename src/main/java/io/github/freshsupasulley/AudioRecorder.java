@@ -110,7 +110,7 @@ class AudioRecorder extends Thread implements Runnable {
 	public void shutdown()
 	{
 		running = false;
-		interrupt();
+		clear(); // clear so we don't send anything to the transcriber
 	}
 	
 	public float getAudioLevel()
@@ -219,7 +219,7 @@ class AudioRecorder extends Thread implements Runnable {
 					if(!cleared)
 					{
 						// Send to transcriber
-						if(transcriber.isAlive())
+						if(transcriber.isRunning())
 						{
 							transcriber.newRecording(new Recording(window));
 						}
