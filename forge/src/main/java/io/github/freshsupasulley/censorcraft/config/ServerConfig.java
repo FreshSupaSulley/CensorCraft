@@ -41,7 +41,7 @@ public class ServerConfig extends Config {
 		ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
 		
 		GLOBAL_TABOO = builder.comment("List of forbidden words and phrases (case-insensitive)").comment("All enabled punishments will fire when they are spoken").defineListAllowEmpty("taboo", List.of("boom"), element -> true);
-		PREFERRED_MODEL = builder.comment("Name of the transcription model players need to use (determines the language and accuracy)").comment("Better models have larger file sizes. Clients have tiny.en built-in. See https://github.com/ggml-org/whisper.cpp/blob/master/models/README.md#available-models for available models").define("preferred_model", "tiny.en");
+		PREFERRED_MODEL = builder.comment("Name of the transcription model players need to use (determines the language and accuracy)").comment("Better models have larger file sizes. Clients have tiny.en built-in. See https://github.com/ggml-org/whisper.cpp/blob/master/models/README.md#available-models for available models").define("preferred_model", "base.en");
 		CONTEXT_LENGTH = builder.comment("Minimum amount of time (in seconds) it takes to say a forbidden word or phrase. The higher the value, the more intensive on players PCs").defineInRange("context_length", 3f, 0.5f, 60);
 		// ENFORCE_MODEL = builder.comment("Requires players download the preferred model").define("enforce_model", false);
 		
