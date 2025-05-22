@@ -58,12 +58,7 @@ class Transcriber extends Thread implements Runnable {
 		{
 			if(useVulkan && LibraryLoader.canUseVulkan())
 			{
-				JScribe.logger.info("Loading Vulkan natives for whisper-jni");
-				
-				Path tempDir = LibraryLoader.extractFolderToTemp("win-amd64-vulkan");
-				System.load(tempDir.resolve("ggml.dll").toAbsolutePath().toString());
-				System.load(tempDir.resolve("whisper.dll").toAbsolutePath().toString());
-				System.load(tempDir.resolve("whisper-jni.dll").toAbsolutePath().toString());
+				LibraryLoader.loadVulkan();
 			}
 			else
 			{

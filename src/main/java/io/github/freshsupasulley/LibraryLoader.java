@@ -10,6 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.Enumeration;
+import java.util.List;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
@@ -81,13 +82,53 @@ public class LibraryLoader {
 	}
 	
 	/**
-	 * Use to determine if this system can custom-built Vulkan libs. Must be on Windows with AMD 64-bit processor.
+	 * Use to determine if this system can custom-built Vulkan libs. Must be on Windows with AMD 64-bit processor with <code>vulkan-1.dll</code> installed.
 	 * 
 	 * @return true if this system can use Vulkan, false otherwise
 	 */
 	public static boolean canUseVulkan()
 	{
-		return LibraryLoader.isWindows() && LibraryLoader.getArchitecture().equals("x64");
+		return LibraryLoader.isWindows() && LibraryLoader.getArchitecture().equals("x64") && findVulkanDLL() != null;
+	}
+	
+	private static Path findVulkanDLL()
+	{
+		// do I bother checking SysWOW64?? I thought this was x64 only
+		List<Path> commonPaths = List.of(Path.of(System.getenv("SystemRoot"), "System32", "vulkan-1.dll"), Path.of(System.getenv("SystemRoot"), "SysWOW64", "vulkan-1.dll"));
+		
+		for(Path path : commonPaths)
+		{
+			if(Files.exists(path))
+			{
+				return path;
+			}
+		}
+		
+		return null;
+	}
+	
+	/**
+	 * Loads Vulkan natives. Use {@link #canUseVulkan()} before calling this method.
+	 */
+	public static void loadVulkan()
+	{
+		if(!canUseVulkan()) throw new IllegalStateException("This system can't use JScribe Vulkan natives");
+		
+		JScribe.logger.info("Loading Vulkan natives for whisper-jni");
+		
+		try
+		{
+			// First load vulkan-1.dll
+			System.load(findVulkanDLL().toAbsolutePath().toString());
+			
+			Path tempDir = LibraryLoader.extractFolderToTemp("win-amd64-vulkan");
+			System.load(tempDir.resolve("ggml.dll").toAbsolutePath().toString());
+			System.load(tempDir.resolve("whisper.dll").toAbsolutePath().toString());
+			System.load(tempDir.resolve("whisper-jni.dll").toAbsolutePath().toString());
+		} catch(Exception e)
+		{
+			JScribe.logger.error("Failed to load Vulkan natives", e);
+		}
 	}
 	
 	// private static String getNativeFolderName() throws IOException
