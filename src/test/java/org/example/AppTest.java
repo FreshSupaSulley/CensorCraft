@@ -7,6 +7,8 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.concurrent.ExecutionException;
 
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import io.github.freshsupasulley.JScribe;
@@ -16,9 +18,12 @@ class AppTest {
 	
 	static Path testModel = Path.of("src/test/resources/tiny.bin");
 	
+//	@Disabled
+	@BeforeAll
 	@Test
-	void downloadModel() throws IOException, InterruptedException, ExecutionException
+	static void downloadModel() throws IOException, InterruptedException, ExecutionException
 	{
+		System.out.println("Test");
 		assert JScribe.getModels().length != 0;
 		
 		// Don't download the model file if we already have it
@@ -28,65 +33,65 @@ class AppTest {
 			return;
 		}
 		
-		ModelDownloader downloader = JScribe.downloadModel("tiny", testModel, (hi, exception) -> {});
+		ModelDownloader downloader = JScribe.downloadModel("tiny", testModel, (hi, exception) ->
+		{
+		});
 		
 		while(!downloader.isDone())
 		{
 			System.out.println(downloader.getBytesRead());
 			
-			if(downloader.getBytesRead() > 46444236L)
-			{
-				downloader.cancel();
-			}
 			Thread.sleep(500);
 		}
 	}
 	
-//	@Test
-//	void libraryLoads() throws IOException
-//	{
-//		JScribe scribe = new JScribe.Builder().warmUpModel().build();
-//		scribe.start(testModel, "", 1000, 500, true, true);
-//		
-//		// Translate for a while
-//		long start = System.currentTimeMillis(), lastMsg = start;
-//		String killWord = "subscribe";
-//		
-//		// 1 mins max
-//		outer: while(System.currentTimeMillis() - start < 60000)
-//		{
-//			if(System.currentTimeMillis() - lastMsg <= 200) continue;
-//			lastMsg = System.currentTimeMillis();
-//			
-//			if(scribe.isInitializing())
-//			{
-//				System.out.println("Initializing");
-//				continue;
-//			}
-//			
+	@Test
+	void libraryLoads() throws IOException
+	{
+		JScribe scribe = new JScribe.Builder().useVulkan().warmUpModel().build();
+		scribe.start(testModel, "", 1000, 500, true, true);
+		
+		// Translate for a while
+		long start = System.currentTimeMillis(), lastMsg = start;
+		String killWord = "subscribe";
+		
+		// 1 mins max
+		outer:
+		while(System.currentTimeMillis() - start < 60000)
+		{
+			if(System.currentTimeMillis() - lastMsg <= 200)
+				continue;
+			lastMsg = System.currentTimeMillis();
+			
+			if(scribe.isInitializing())
+			{
+				System.out.println("Initializing");
+				continue;
+			}
+			
 //			if(scribe.noAudio())
 //			{
 //				System.out.println("No audio, exiting");
 //				break;
 //			}
-//			
-//			System.out.println("Audio level: " + scribe.getAudioLevel() + " - " + scribe.noAudio());
-//			
-//			for(String buffer = null; !(buffer = scribe.getTranscriptions().getRawString()).isBlank(); System.out.println(buffer))
-//			{
-//				if(buffer.toLowerCase().contains(killWord))
-//				{
-//					scribe.stop();
-//					break outer;
-//				}
-//			}
-//		}
-//		
-//		while(scribe.isInUse())
-//		{
-//			assert !scribe.isRunning() && scribe.isShuttingDown();
-//		}
-//	}
+			
+			System.out.println("Audio level: " + scribe.getAudioLevel() + " - " + scribe.noAudio());
+			
+			for(String buffer = null; !(buffer = scribe.getTranscriptions().getRawString()).isBlank(); System.out.println(buffer))
+			{
+				if(buffer.toLowerCase().contains(killWord))
+				{
+					scribe.stop();
+					break outer;
+				}
+			}
+		}
+		
+		while(scribe.isInUse())
+		{
+			assert !scribe.isRunning() && scribe.isShuttingDown();
+		}
+	}
 	
 	// private Path samplePath = Path.of("/Users/boschert.12/Desktop/shit/jscribe/src/test/resources/jfk.wav");
 	//

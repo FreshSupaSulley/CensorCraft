@@ -88,10 +88,10 @@ public class LibraryLoader {
 	 */
 	public static boolean canUseVulkan()
 	{
-		return LibraryLoader.isWindows() && LibraryLoader.getArchitecture().equals("x64") && findVulkanDLL() != null;
+		return LibraryLoader.isWindows() && LibraryLoader.getArchitecture().equals("x64") && getVulkanDLL() != null;
 	}
 	
-	private static Path findVulkanDLL()
+	private static Path getVulkanDLL()
 	{
 		// do I bother checking SysWOW64?? I thought this was x64 only
 		List<Path> commonPaths = List.of(Path.of(System.getenv("SystemRoot"), "System32", "vulkan-1.dll"), Path.of(System.getenv("SystemRoot"), "SysWOW64", "vulkan-1.dll"));
@@ -119,7 +119,9 @@ public class LibraryLoader {
 		try
 		{
 			// First load vulkan-1.dll
-			System.load(findVulkanDLL().toAbsolutePath().toString());
+			String vulkanPath = getVulkanDLL().toAbsolutePath().toString();
+			JScribe.logger.info("Loading Vulkan DLL at {}", vulkanPath);
+			System.load(vulkanPath);
 			
 			Path tempDir = LibraryLoader.extractFolderToTemp("win-amd64-vulkan");
 			System.load(tempDir.resolve("ggml.dll").toAbsolutePath().toString());
