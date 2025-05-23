@@ -136,7 +136,7 @@ public class ClientCensorCraft {
 		
 		if(ClientConfig.USE_VULKAN.get())
 		{
-			CensorCraft.LOGGER.warn("Enabling Vulkan");
+			CensorCraft.LOGGER.warn("Vulkan enabled in client config");
 			builder.useVulkan();
 		}
 		
