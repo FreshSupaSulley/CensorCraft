@@ -18,7 +18,7 @@ import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.network.chat.CommonComponents;
 
 /**
- * Stolen from net.minecraft.client.gui.screens.worldselection.ExperimentsScreen.ScrollArea
+ * Adapted from net.minecraft.client.gui.screens.worldselection.ExperimentsScreen.ScrollArea
  */
 public class ScrollArea extends AbstractContainerWidget {
 	
@@ -35,6 +35,27 @@ public class ScrollArea extends AbstractContainerWidget {
 	}
 	
 	@Override
+	public boolean mouseClicked(double mouseX, double mouseY, int button)
+	{
+		double adjustedY = mouseY + scrollAmount();
+		return super.mouseClicked(mouseX, adjustedY, button);
+	}
+	
+	@Override
+	public boolean mouseReleased(double mouseX, double mouseY, int button)
+	{
+		double adjustedY = mouseY + scrollAmount();
+		return super.mouseReleased(mouseX, adjustedY, button);
+	}
+	
+	@Override
+	public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY)
+	{
+		double adjustedY = mouseY + scrollAmount();
+		return super.mouseDragged(mouseX, adjustedY, button, dragX, dragY);
+	}
+	
+	@Override
 	protected int contentHeight()
 	{
 		return this.layout.getHeight();
@@ -47,20 +68,24 @@ public class ScrollArea extends AbstractContainerWidget {
 	}
 	
 	@Override
-	protected void renderWidget(GuiGraphics p_376202_, int p_375703_, int p_376669_, float p_377299_)
+	protected void renderWidget(GuiGraphics pGuiGraphics, int pMouseX, int pMouseY, float pPartialTick)
 	{
-		p_376202_.enableScissor(this.getX(), this.getY(), this.getX() + this.width, this.getY() + this.height);
-		p_376202_.pose().pushPose();
-		p_376202_.pose().translate(0.0, -this.scrollAmount(), 0.0);
+		pGuiGraphics.enableScissor(this.getX(), this.getY(), this.getX() + this.width, this.getY() + this.height);
+		pGuiGraphics.pose().pushPose();
 		
-		for(AbstractWidget abstractwidget : this.children)
+		for(AbstractWidget widget : this.children)
 		{
-			abstractwidget.render(p_376202_, p_375703_, p_376669_, p_377299_);
+			int originalY = widget.getY(); // Save the real Y position
+			widget.setY(originalY - (int) this.scrollAmount());
+			
+			widget.render(pGuiGraphics, pMouseX, pMouseY, pPartialTick);
+			
+			widget.setY(originalY);
 		}
 		
-		p_376202_.pose().popPose();
-		p_376202_.disableScissor();
-		this.renderScrollbar(p_376202_);
+		pGuiGraphics.pose().popPose();
+		pGuiGraphics.disableScissor();
+		this.renderScrollbar(pGuiGraphics);
 	}
 	
 	@Override

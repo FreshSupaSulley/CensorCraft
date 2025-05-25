@@ -42,9 +42,11 @@ public class ClientCensorCraft {
 	private static final long OVERLAP_LENGTH = 200;
 	
 	// JScribe
-	public static boolean librariesLoaded;
+	public static boolean librariesLoaded; // used for telling the player if we already loaded JScribe natives and they need to restart mc
+	
 	private static JScribe controller;
 	private static Path model;
+	private static boolean monitorVoice;
 	private static long audioContextLength;
 	
 	private static boolean loggedIn, paused, startJScribeAttempt;
@@ -62,10 +64,11 @@ public class ClientCensorCraft {
 	private static final int MAX_TRANSCRIPTION_LENGTH = 60;
 	
 	public static MutableComponent GUI_TEXT;
+	public static boolean FORCE_GUI_REFRESH;
 	public static float JSCRIBE_VOLUME;
-	public static boolean SPEAKING;
+	public static boolean TRANSCRIBING;
 	
-	private static String transcription;
+	private static StringBuilder transcription = new StringBuilder(MAX_TRANSCRIPTION_LENGTH);
 	private static int recordings;
 	
 	public static void clientSetup(FMLClientSetupEvent event)
@@ -126,13 +129,28 @@ public class ClientCensorCraft {
 	
 	private static void startJScribe()
 	{
+		if(!monitorVoice)
+		{
+			CensorCraft.LOGGER.debug("Not starting JScribe, monitorVoice is disabled");
+			return;
+		}
+		
 		if(controller != null && controller.isInUse())
 		{
 			CensorCraft.LOGGER.debug("Ignoring start request, JScribe is already running");
 			return;
 		}
 		
-		JScribe.Builder builder = new JScribe.Builder().setLogger(CensorCraft.LOGGER).warmUpModel();
+		// This lets error messages (if any) appear again
+		setGUIText(Component.empty());
+		
+		JScribe.Builder builder = new JScribe.Builder(model, ClientConfig.LATENCY.get(), Math.max(0, audioContextLength - ClientConfig.LATENCY.get()) + OVERLAP_LENGTH);
+		builder.setLogger(CensorCraft.LOGGER);
+		builder.denoise(ClientConfig.DENOISE.get());
+		builder.enableVAD(ClientConfig.VAD_MODE.get());
+		builder.setInputSensitivity(ClientConfig.INPUT_SENSITIVITY.get());
+		builder.setPreferredMicrophone(ClientConfig.PREFERRED_MIC.get());
+		builder.warmUpModel();
 		
 		if(ClientConfig.USE_VULKAN.get())
 		{
@@ -144,13 +162,15 @@ public class ClientCensorCraft {
 		
 		// Reset debug params
 		recordings = 0;
-		transcription = null;
+		transcription.setLength(0);
+		
+		appendResult("");
 		
 		// Model might have changed, might as well reinstantiate
 		try
 		{
 			librariesLoaded = true;
-			controller.start(model, ClientConfig.PREFERRED_MIC.get(), ClientConfig.LATENCY.get(), Math.max(0, audioContextLength - ClientConfig.LATENCY.get()) + OVERLAP_LENGTH, ClientConfig.VAD.get(), ClientConfig.DENOISE.get());
+			controller.start();
 		} catch(NoMicrophoneException e)
 		{
 			CensorCraft.LOGGER.error("No microphones found", e);
@@ -162,12 +182,27 @@ public class ClientCensorCraft {
 	
 	private static void stopJScribe()
 	{
+		// Reset GUI elements
+		JSCRIBE_VOLUME = 0;
+		TRANSCRIBING = false;
+		
+		if(!monitorVoice)
+		{
+			CensorCraft.LOGGER.debug("Not stopping JScribe, monitorVoice is disabled");
+			return;
+		}
+		
 		startJScribeAttempt = false;
 		
 		if(controller == null)
 		{
 			// CensorCraft.LOGGER.error("Tried to stop JScribe when controller is not initialized", new Throwable()); // get the stacktrace if this happens
 			return;
+		}
+		
+		if(controller.isInUse() && !controller.isShuttingDown())
+		{
+			setGUIText(Component.literal("Stopping transcription..."));
 		}
 		
 		controller.stop();
@@ -278,6 +313,17 @@ public class ClientCensorCraft {
 		if(event.side != LogicalSide.CLIENT)
 			return;
 		
+		// There is nothing to do if monitorVoice is disabled
+		if(!monitorVoice)
+		{
+			if(ClientConfig.DEBUG.get())
+			{
+				setGUIText(Component.literal("Transcription is off\n"), true);
+			}
+			
+			return;
+		}
+		
 		// no clue if .player can be null but im compensating for it anyways
 		@SuppressWarnings("resource")
 		boolean playerAlive = Optional.ofNullable(Minecraft.getInstance().player).map(LocalPlayer::isAlive).orElse(false);
@@ -289,11 +335,10 @@ public class ClientCensorCraft {
 		}
 		
 		// Update bar height, "smoothly"
-		// Also give the volume a lil boost
 		// Use mth.lerp
 		// JSCRIBE_VOLUME = lerp(Math.clamp(controller.getAudioLevel() * 1.5f, 0, 1), controller.getAudioLevel(), 0.1f);
-		JSCRIBE_VOLUME = Math.clamp(controller.getAudioLevel() * 1.5f, 0, 1);
-		SPEAKING = controller.voiceDetected();
+		JSCRIBE_VOLUME = controller.getAudioLevel();
+		TRANSCRIBING = controller.audioMeetsCriteria();
 		
 		// If the mic source changed, user restarted it, etc.
 		if(ConfigScreen.restart())
@@ -315,14 +360,15 @@ public class ClientCensorCraft {
 			
 			if(!controller.isRunning())
 			{
-				setGUIText(Component.literal("CensorCraft not running!\n").withStyle(style -> style.withBold(true).withColor(0xFF0000)).append(Component.literal("Rejoin world or click Restart in the mod config menu. If this persists, check logs.").withStyle(style -> style.withBold(false).withColor(0xAAAAAA))));
+				setGUIText(Component.literal("CensorCraft not running!\n").withStyle(style -> style.withBold(true).withColor(0xFF0000)).append(Component.literal("Rejoin world or click Restart in the mod config menu. If this persists, check logs.").withStyle(style -> style.withBold(false).withColor(0xAAAAAA))), true);
 				return;
 			}
-			else if(controller.noAudio())
-			{
-				setGUIText(Component.literal("Not receiving audio!\n").withStyle(style -> style.withBold(true).withColor(0xFF0000)).append(Component.literal("Try changing the microphone in the mod config menu.").withStyle(style -> style.withBold(false).withColor(0xAAAAAA))));
-				return;
-			}
+			// else if(controller.noAudio())
+			// {
+			// setGUIText(Component.literal("Not receiving audio!\n").withStyle(style -> style.withBold(true).withColor(0xFF0000)).append(Component.literal("Try changing
+			// the microphone in the mod config menu.").withStyle(style -> style.withBold(false).withColor(0xAAAAAA))));
+			// return;
+			// }
 			
 			// Beyond this point, we need it to be running and actively transcribing
 			// If it's not blank, send it
@@ -331,25 +377,13 @@ public class ClientCensorCraft {
 			
 			if(!results.isEmpty())
 			{
-				String raw = results.getRawString();
-				
-				// Show end instead of front
-				final int newLength = Math.min(raw.length(), MAX_TRANSCRIPTION_LENGTH);
-				String text = "";
-				
-				// If we had to splice it, add an ellipsis
-				if(raw.length() > MAX_TRANSCRIPTION_LENGTH)
-				{
-					text += "... ";
-				}
-				
-				text += raw.substring(raw.length() - newLength);
+				String text = results.getRawString();
+				appendResult(text);
 				
 				CensorCraft.LOGGER.info("Sending \"{}\"", text);
 				lastWordPacket = System.currentTimeMillis();
 				CensorCraft.channel.send(new WordPacket(text), PacketDistributor.SERVER.noArg());
 				
-				transcription = text;
 				recordings = results.getTotalRecordings();
 			}
 			
@@ -364,9 +398,9 @@ public class ClientCensorCraft {
 			// Show transcriptions only if necessary
 			if(ClientConfig.SHOW_TRANSCRIPTION.get())
 			{
-				if(transcription != null && !transcription.isBlank())
+				if(transcription != null && !transcription.toString().isBlank())
 				{
-					component.append(Component.literal(transcription + "\n").withColor(0xFFFFFF));
+					component.append(Component.literal(transcription.toString() + "\n").withColor(0xFFFFFF));
 				}
 			}
 			
@@ -383,7 +417,7 @@ public class ClientCensorCraft {
 			// setGUIText(Component.empty());
 			// }
 			
-			setGUIText(component);
+			setGUIText(component, ClientConfig.DEBUG.get());
 		}
 		// If we're NOT supposed to be running
 		else
@@ -392,6 +426,7 @@ public class ClientCensorCraft {
 			{
 				setGUIText(Component.literal("Initializing..."));
 			}
+			// This is currently useless
 			else if(controller.isShuttingDown())
 			{
 				setGUIText(Component.literal("Stopping..."));
@@ -411,9 +446,40 @@ public class ClientCensorCraft {
 		}
 	}
 	
-	private static void setGUIText(MutableComponent component)
+	private static String appendResult(String word)
+	{
+		// Separate words with spaces
+		String string = word + " ";
+		
+		if(string.length() >= transcription.capacity())
+		{
+			transcription.setLength(0);
+			transcription.append(string.substring(string.length() - transcription.capacity()));
+		}
+		else
+		{
+			int overflow = transcription.length() + string.length() - transcription.capacity();
+			
+			if(overflow > 0)
+			{
+				transcription.delete(0, overflow);
+			}
+			
+			transcription.append(string);
+		}
+		
+		return transcription.toString();
+	}
+	
+	private static void setGUIText(MutableComponent component, boolean forceRefresh)
 	{
 		GUI_TEXT = component;
+		FORCE_GUI_REFRESH = forceRefresh;
+	}
+	
+	private static void setGUIText(MutableComponent component)
+	{
+		setGUIText(component, false);
 	}
 	
 	/**
@@ -421,10 +487,11 @@ public class ClientCensorCraft {
 	 * 
 	 * @param model name of model in model dir
 	 */
-	public static void setup(Path model, long audioContextLength)
+	public static void setup(Path model, boolean monitorVoice, long audioContextLength)
 	{
 		// stopJScribe();
 		ClientCensorCraft.model = model;
+		ClientCensorCraft.monitorVoice = monitorVoice;
 		ClientCensorCraft.audioContextLength = audioContextLength;
 		startJScribe();
 	}

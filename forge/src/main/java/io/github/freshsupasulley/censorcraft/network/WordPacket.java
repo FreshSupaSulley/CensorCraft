@@ -3,11 +3,8 @@ package io.github.freshsupasulley.censorcraft.network;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Optional;
 import java.util.UUID;
 
 import io.github.freshsupasulley.censorcraft.CensorCraft;
@@ -17,13 +14,11 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.event.ServerChatEvent;
-import net.minecraftforge.event.TickEvent.LevelTickEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent;
 import net.minecraftforge.event.network.CustomPayloadEvent;
 import net.minecraftforge.event.server.ServerStartingEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.fml.common.Mod;
 
 @Mod.EventBusSubscriber(modid = CensorCraft.MODID)
@@ -32,7 +27,7 @@ public class WordPacket implements IPacket {
 	/** Only used server side! */
 	private static Trie globalTrie;
 	private static Map<UUID, Participant> participants;
-	private static long lastSystemRat;
+//	private static long lastSystemRat;
 	
 	private String payload;
 	
@@ -169,7 +164,7 @@ public class WordPacket implements IPacket {
 		CensorCraft.LOGGER.info("Initializing CensorCraft server");
 		globalTrie = new Trie(ServerConfig.GLOBAL_TABOO.get());
 		participants = new HashMap<UUID, Participant>();
-		lastSystemRat = System.currentTimeMillis();
+//		lastSystemRat = System.currentTimeMillis();
 	}
 	
 	// Server side only apparently
@@ -194,41 +189,42 @@ public class WordPacket implements IPacket {
 		}
 	}
 	
-	@SubscribeEvent
-	public static void serverTick(LevelTickEvent event)
-	{
-		// This is a server-side tick only
-		// Don't rat on players if setting is disabled
-		if(event.side == LogicalSide.CLIENT || !ServerConfig.EXPOSE_RATS.get() || Optional.ofNullable(event.level.getServer()).map(level -> level.isSingleplayer()).orElse(false))
-			return;
-		
-		// Only rat on players at regular intervals
-		if(System.currentTimeMillis() - lastSystemRat >= ServerConfig.RAT_DELAY.get() * 1000) // Convert to ms
-		{
-			lastSystemRat = System.currentTimeMillis();
-			Iterator<Entry<UUID, Participant>> iterator = participants.entrySet().iterator();
-			
-			while(iterator.hasNext())
-			{
-				Entry<UUID, Participant> entry = iterator.next();
-				
-				// First, check if participant is still in the server
-				if(event.level.getServer().getPlayerList().getPlayer(entry.getKey()) == null)
-				{
-					// This should never happen btw
-					CensorCraft.LOGGER.info("{} is not in the server anymore", entry.getValue().getName());
-					iterator.remove();
-					continue;
-				}
-				
-				// If it's been longer than the allowed heartbeat
-				if(System.currentTimeMillis() - entry.getValue().getLastHeartbeat() >= CensorCraft.HEARTBEAT_TIME)
-				{
-					event.level.getServer().getPlayerList().broadcastSystemMessage(Component.literal(entry.getValue().getName()).withStyle(style -> style.withBold(true)).append(Component.literal(" doesn't have their mic on").withStyle(style -> style.withBold(false))), false);
-				}
-			}
-		}
-	}
+	// Ratting functionality not being included anymore
+//	@SubscribeEvent
+//	public static void serverTick(LevelTickEvent event)
+//	{
+//		// This is a server-side tick only
+//		// Don't rat on players if setting is disabled
+//		if(event.side == LogicalSide.CLIENT || !ServerConfig.EXPOSE_RATS.get() || Optional.ofNullable(event.level.getServer()).map(level -> level.isSingleplayer()).orElse(false))
+//			return;
+//		
+//		// Only rat on players at regular intervals
+//		if(System.currentTimeMillis() - lastSystemRat >= ServerConfig.RAT_DELAY.get() * 1000) // Convert to ms
+//		{
+//			lastSystemRat = System.currentTimeMillis();
+//			Iterator<Entry<UUID, Participant>> iterator = participants.entrySet().iterator();
+//			
+//			while(iterator.hasNext())
+//			{
+//				Entry<UUID, Participant> entry = iterator.next();
+//				
+//				// First, check if participant is still in the server
+//				if(event.level.getServer().getPlayerList().getPlayer(entry.getKey()) == null)
+//				{
+//					// This should never happen btw
+//					CensorCraft.LOGGER.info("{} is not in the server anymore", entry.getValue().getName());
+//					iterator.remove();
+//					continue;
+//				}
+//				
+//				// If it's been longer than the allowed heartbeat
+//				if(System.currentTimeMillis() - entry.getValue().getLastHeartbeat() >= CensorCraft.HEARTBEAT_TIME)
+//				{
+//					event.level.getServer().getPlayerList().broadcastSystemMessage(Component.literal(entry.getValue().getName()).withStyle(style -> style.withBold(true)).append(Component.literal(" doesn't have their mic on").withStyle(style -> style.withBold(false))), false);
+//				}
+//			}
+//		}
+//	}
 	
 	@SubscribeEvent
 	public static void chatEvent(ServerChatEvent event)

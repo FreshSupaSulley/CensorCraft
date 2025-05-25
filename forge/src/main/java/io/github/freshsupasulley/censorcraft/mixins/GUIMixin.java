@@ -37,17 +37,18 @@ public abstract class GUIMixin {
 	{
 		MutableComponent component = Component.empty();
 		
-		if(ClientConfig.SHOW_VAD.get() && ClientCensorCraft.SPEAKING)
+		if(ClientConfig.INDICATE_TRANSCRIBING.get() && ClientCensorCraft.TRANSCRIBING)
 		{
-			component.append(Component.literal("Speaking\n").withColor(0xAAAAAA));
+			component.append(Component.literal("Transcribing\n").withColor(0xAAAAAA));
 		}
 		
 		// If there's text to display and we're not timed out for repetitive messages
 		if(ClientCensorCraft.GUI_TEXT != null)
 		{
 			// If it's a new component
-			if(!Optional.ofNullable(lastGuiComponent).orElse(Component.empty()).equals(ClientCensorCraft.GUI_TEXT))
+			if(ClientCensorCraft.FORCE_GUI_REFRESH || !Optional.ofNullable(lastGuiComponent).orElse(Component.empty()).equals(ClientCensorCraft.GUI_TEXT))
 			{
+				ClientCensorCraft.FORCE_GUI_REFRESH = false;
 				lastGuiUpdate = System.currentTimeMillis();
 			}
 			

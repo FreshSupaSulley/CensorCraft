@@ -9,7 +9,6 @@ import io.github.freshsupasulley.censorcraft.config.ClientConfig;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.OptionInstance;
-import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Checkbox;
 import net.minecraft.client.gui.components.MultiLineTextWidget;
@@ -26,7 +25,9 @@ public class ConfigScreen extends Screen {
 	
 	private Minecraft minecraft;
 	private MicrophoneList list;
-	private static boolean restartJScribe;
+	private static boolean queuedRestart, restartJScribe;
+	
+	private LinearLayout layout;
 	
 	public ConfigScreen(Minecraft minecraft, Screen screen)
 	{
@@ -45,6 +46,16 @@ public class ConfigScreen extends Screen {
 		return result;
 	}
 	
+	@Override
+	public void onClose()
+	{
+		restartJScribe = queuedRestart;
+		queuedRestart = false;
+		// Changes should update immediately
+		ClientCensorCraft.GUI_TEXT = Component.empty();
+		super.onClose();
+	}
+	
 	/**
 	 * Runs everytime the mod config menu is opened.
 	 */
@@ -57,7 +68,13 @@ public class ConfigScreen extends Screen {
 		final int micListWidth = this.width / 3;
 		final int optionsWidth = this.width - micListWidth - listSpacing - ClientCensorCraft.PADDING;
 		
-		LinearLayout layout = LinearLayout.vertical().spacing(ClientCensorCraft.PADDING / 2);
+		Button restartButton = Button.builder(Component.literal("Restart"), button ->
+		{
+			button.active = false;
+			queuedRestart = true;
+		}).size(Button.SMALL_WIDTH, Button.DEFAULT_HEIGHT).build();
+		
+		this.layout = LinearLayout.vertical().spacing(ClientCensorCraft.PADDING / 2);
 		// layout.addChild(new SpacerElement(optionsWidth, 1));
 		
 		// Everything else is aligned to the left
@@ -71,13 +88,14 @@ public class ConfigScreen extends Screen {
 			ClientConfig.SHOW_VOLUME_BAR.set(value);
 		}).build());
 		
-		layout.addChild(Checkbox.builder(Component.literal("Indicate when speaking"), font).tooltip(Tooltip.create(Component.literal("Text appears when voice is detected"))).selected(ClientConfig.SHOW_VAD.get()).onValueChange((button, value) ->
+		layout.addChild(Checkbox.builder(Component.literal("Indicate when transcribing"), font).tooltip(Tooltip.create(Component.literal("Text appears when voice is detected and audio meets input sensitivity"))).selected(ClientConfig.INDICATE_TRANSCRIBING.get()).onValueChange((button, value) ->
 		{
-			ClientConfig.SHOW_VAD.set(value);
+			ClientConfig.INDICATE_TRANSCRIBING.set(value);
 		}).build()).active = ClientConfig.VAD.get();
 		
-		// layout.addChild(new ForgeSlider(0, 0, optionsWidth, java.awt.Button.HEIGHT, Component.literal("prefix"), Component.literal("suffix"), 30, 1500,
-		AbstractWidget slider = new OptionInstance<>(null, OptionInstance.cachedConstantTooltip(Component.literal("Latency")), (component, value) ->
+		layout.addChild(new InputSensitivity(minecraft.options, restartButton));
+		
+		layout.addChild(new OptionInstance<Integer>(null, OptionInstance.cachedConstantTooltip(Component.literal("Latency")), (component, value) ->
 		{
 			return switch(value)
 			{
@@ -85,10 +103,10 @@ public class ConfigScreen extends Screen {
 				case ClientConfig.MAX_LATENCY -> Component.literal("Slow");
 				default -> Component.literal(value + "ms");
 			};
-		}, new OptionInstance.IntRange(ClientConfig.MIN_LATENCY, ClientConfig.MAX_LATENCY), ClientConfig.LATENCY.get(), ClientConfig.LATENCY::set).createButton(minecraft.options); // no clue what minecraft.options is
+		}, new OptionInstance.IntRange(ClientConfig.MIN_LATENCY, ClientConfig.MAX_LATENCY), ClientConfig.LATENCY.get(), ClientConfig.LATENCY::set).createButton(minecraft.options)); // no clue what minecraft.options is
 		
-		slider.setWidth(optionsWidth);
-		layout.addChild(slider);
+		// I actually prefer the default width more
+		// slider.setWidth(optionsWidth - 10); // remove a bit so it doesnt intersect the slider
 		
 		// Add warning about latency
 		Component component = Component.literal("Lower latency = faster transcriptions, but more intensive on hardware");
@@ -116,14 +134,12 @@ public class ConfigScreen extends Screen {
 			ClientConfig.DEBUG.set(value);
 		}).build());
 		
+		layout.addChild(Button.builder(Component.literal("Open config file"), pButton -> Util.getPlatform().openPath(ClientConfig.filePath)).build()).active = ClientConfig.filePath != null;
+		
 		LinearLayout buttonLayout = LinearLayout.horizontal().spacing(ClientCensorCraft.PADDING);
 		
 		// Put it together
-		Button restartButton = buttonLayout.addChild(Button.builder(Component.literal("Restart"), button ->
-		{
-			button.active = false;
-			restartJScribe = true;
-		}).size(Button.SMALL_WIDTH, Button.DEFAULT_HEIGHT).build());// .bounds(PADDING, this.height - Button.DEFAULT_HEIGHT - PADDING, Button.SMALL_WIDTH, Button.DEFAULT_HEIGHT).build();
+		buttonLayout.addChild(restartButton);
 		
 		// Close button
 		buttonLayout.addChild(Button.builder(Component.literal("Close"), button -> this.onClose()).size(Button.BIG_WIDTH, Button.DEFAULT_HEIGHT).build()).getY();
@@ -141,7 +157,8 @@ public class ConfigScreen extends Screen {
 		addRenderableWidget(list);
 		
 		// List of options on right
-		int optionsX = addRenderableWidget(new ScrollArea(layout, list.getRight() + listSpacing + ClientCensorCraft.PADDING, listY, optionsWidth, layoutY - listY - ClientCensorCraft.PADDING * 2)).getX();
+		int optionsX = list.getRight() + listSpacing + ClientCensorCraft.PADDING;
+		addRenderableWidget(new ScrollArea(layout, optionsX, listY, optionsWidth, layoutY - listY - ClientCensorCraft.PADDING * 2));
 		
 		// Add text
 		addRenderableWidget(new StringWidget(ClientCensorCraft.PADDING, ClientCensorCraft.PADDING, micListWidth, font.lineHeight, Component.literal("Select Microphone"), font));
