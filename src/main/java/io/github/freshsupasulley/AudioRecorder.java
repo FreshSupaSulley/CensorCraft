@@ -7,6 +7,7 @@ import java.nio.ShortBuffer;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioInputStream;
@@ -28,6 +29,9 @@ class AudioRecorder extends Thread implements Runnable {
 	private final Transcriber transcriber;
 	private final long overlap;
 	private final long latency;
+	private final float inputSensitivity;
+	
+	private long quietSamplesLength;
 	
 	// Debug
 	private long lastTimestamp = System.currentTimeMillis();
@@ -37,23 +41,24 @@ class AudioRecorder extends Thread implements Runnable {
 	private Denoiser denoiser;
 	private boolean padAudio;
 	
-	private volatile boolean running = true, receivingAudio = true, cleared, voiceDetected;
+	private volatile boolean running = true, cleared, meetsCriteria;
+	private volatile float loudness;
 	
 	private Mixer.Info device;
-	private float loudness;
 	
-	public AudioRecorder(Transcriber listener, String micName, long latency, long overlap, boolean padAudio, boolean vad, boolean denoise) throws IOException, NoMicrophoneException
+	public AudioRecorder(Transcriber listener, String micName, long latency, long overlap, boolean padAudio, float inputSensitivity, boolean vad, VoiceActivityDetector.Mode vadMode, boolean denoise) throws IOException, NoMicrophoneException
 	{
 		this.transcriber = listener;
 		this.latency = latency;
 		this.overlap = overlap;
 		this.padAudio = padAudio;
+		this.inputSensitivity = inputSensitivity;
 		
 		if(vad)
 		{
 			VoiceActivityDetector.loadLibrary();
 			this.vad = VoiceActivityDetector.newInstance();
-			this.vad.setMode(VoiceActivityDetector.Mode.QUALITY);
+			this.vad.setMode(vadMode);
 			this.vad.setSampleRate(VoiceActivityDetector.SampleRate.fromValue((int) FORMAT.getSampleRate()));
 		}
 		
@@ -76,21 +81,21 @@ class AudioRecorder extends Thread implements Runnable {
 		}
 		
 		// Objects.equals allows micName to be null
-		this.device = microphones.stream().filter(mic -> Objects.equals(mic.getName(), micName)).findFirst().orElse(microphones.getFirst());
-		JScribe.logger.info("Using microphone " + device.getName());
+		this.device = microphones.stream().filter(mic -> Objects.equals(mic.getName(), micName)).findFirst().orElseGet(() ->
+		{
+			JScribe.logger.warn("Failed to find microphone with exact name {} (found {})", micName, microphones.stream().map(mic -> mic.getName()).collect(Collectors.toList()).toString());
+			return microphones.getFirst();
+		});
+		
+		JScribe.logger.info("Using microphone named " + device.getName());
 		
 		setName("Audio Recorder");
 		setDaemon(true);
 	}
 	
-	public boolean receivingAudio()
+	public boolean audioMeetsCriteria()
 	{
-		return receivingAudio;
-	}
-	
-	public boolean voiceDetected()
-	{
-		return voiceDetected;
+		return meetsCriteria;
 	}
 	
 	public Mixer.Info getMicrophoneInfo()
@@ -145,19 +150,49 @@ class AudioRecorder extends Thread implements Runnable {
 			{
 				try
 				{
-					lastTimestamp = System.currentTimeMillis();
-					float[] rawSamples = recordSample(stream);
+					if(latency < 30)
+						throw new IllegalStateException("Latency is < 30ms?");
 					
-					if(rawSamples == null)
+					lastTimestamp = System.currentTimeMillis();
+					AudioSample sample = recordSample(stream);
+					
+					float[] rawSamples = sample.samples();
+					
+					if(!sample.voiceDetected || !sample.metMinVolume)
 					{
+						// wipe sample
+						JScribe.logger.info("Clearing window (voice detected: {}, met min volume: {})", sample.voiceDetected, sample.metMinVolume);
 						window = null;
 						continue;
 					}
-					else if(rawSamples.length == 0)
-					{
-						window = null;
-						continue;
-					}
+					
+					// Either if we detected nothing (including if VAD said nothings here)
+					// If voice wasn't detected, wipe the sample immediately
+//					if(!sample.metMinVolume)
+//					{
+//						final long windowLengthMs = latency + overlap;
+//						
+//						// ONLY reset the window and abandon the sample if it's been over the window length
+//						quietSamplesLength = Math.clamp(quietSamplesLength + latency, 0, windowLengthMs); // just to bounds cap it
+//						
+//						// If we don't have a window yet OR it's been a full window cycle before we received valid audio
+//						if(window == null || quietSamplesLength >= windowLengthMs || !sample.voiceDetected)
+//						{
+//							JScribe.logger.info("Too many quiet samples, clearing window");
+//							window = null;
+//							continue;
+//						}
+//					}
+//					else
+//					{
+//						quietSamplesLength = 0;
+//					}
+					
+					// else if(rawSamples.length == 0)
+					// {
+					// window = null;
+					// continue;
+					// }
 					
 					// If we have a window
 					if(window != null)
@@ -167,6 +202,13 @@ class AudioRecorder extends Thread implements Runnable {
 						// If the current window doesn't have enough samples for the full window size yet
 						if(window.length < windowLength)
 						{
+							// Minor efficiency boost
+							if(transcriber.backlog() > 0)
+							{
+								JScribe.logger.trace("Transcriber is behind on a growing window. Abandoning backlog for new window");
+								transcriber.clearRecordings(); // different from reset, because we still want the transcription result
+							}
+							
 							JScribe.logger.trace("Expanding window");
 							
 							// Create a new window with the old wnidow appended with enough space for the new audio sample
@@ -221,6 +263,7 @@ class AudioRecorder extends Thread implements Runnable {
 						// Send to transcriber
 						if(transcriber.isRunning())
 						{
+							System.out.println("SENDNGIN");
 							transcriber.newRecording(new Recording(window));
 						}
 					}
@@ -263,11 +306,14 @@ class AudioRecorder extends Thread implements Runnable {
 				// latency = newLatency;
 				// }
 			}
-		} catch(LineUnavailableException e)
+		} catch(
+			
+			LineUnavailableException e)
 		{
 			JScribe.logger.error("Line unavailable", e);
 			throw new RuntimeException(e);
-		} catch(IOException e)
+		} catch(
+			IOException e)
 		{
 			JScribe.logger.error("Something went wrong reading audio input", e);
 		} finally
@@ -318,7 +364,7 @@ class AudioRecorder extends Thread implements Runnable {
 	// System.out.println("WAV file has been written to: " + outputFile.getAbsolutePath());
 	// }
 	
-	private float[] recordSample(AudioInputStream stream) throws InterruptedException, IOException
+	private AudioSample recordSample(AudioInputStream stream) throws InterruptedException, IOException
 	{
 		// Denoiser wants short samples with a length as a multiple of 480 (30ms of audio)
 		final int subSamplesSizeInShorts = (int) ((FORMAT.getSampleRate() * FORMAT.getChannels()) / 1000f) * 30;
@@ -329,8 +375,10 @@ class AudioRecorder extends Thread implements Runnable {
 		// Round up to the nearest multiple of 480 for denoiser
 		ShortBuffer shortBuffer = ShortBuffer.allocate((int) Math.ceil(1f * bufferSizeInShorts / subSamplesSizeInShorts) * subSamplesSizeInShorts);
 		
-		boolean hasData = false, hasVoiceActivity = vad == null ? true : false;
+		meetsCriteria = false;
 		final int vadStep = (int) ((FORMAT.getSampleRate() * FORMAT.getChannels()) / 1000f) * 10; // 10ms segments
+		
+		boolean voiceDetected = vad == null, metMinVolume = false;
 		
 		while(shortBuffer.hasRemaining())
 		{
@@ -358,21 +406,26 @@ class AudioRecorder extends Thread implements Runnable {
 			
 			for(short toShort : shorts)
 			{
-				sum += toShort * toShort;
+				sum += (long) toShort * toShort; // casting to long to avoid overflow
 			}
 			
-			// Immediately update receiving audio rather than waiting for the end of the sample for analysis
-			if(!hasData && sum != 0)
-			{
-				hasData = true;
-				receivingAudio = true;
-			}
-			
+			// Calculate volume
 			double rms = Math.sqrt(sum / shorts.length);
 			// number * Math.log10
 			// number is the magic here
 			// The higher the number, the less sensitive to lower values?
-			loudness = 1 - Math.clamp((float) (20 * Math.log10(rms / 32768)) / -100, 0, 1);
+			// loudness = 1 - Math.clamp((float) (20 * Math.log10(rms / 32768)) / -100, 0, 1);
+			
+			double db = 20 * Math.log10(rms / 32768.0);
+			double minDb = -80.0; // floor
+			double maxDb = 0.0; // ceiling
+			double normalized = (db - minDb) / (maxDb - minDb);
+			loudness = (float) Math.clamp(normalized, 0, 1);
+			
+			if(loudness >= inputSensitivity)
+			{
+				metMinVolume = true;
+			}
 			
 			// Denoising
 			if(denoiser != null)
@@ -380,11 +433,13 @@ class AudioRecorder extends Thread implements Runnable {
 				shorts = denoiser.denoise(shorts);
 			}
 			
-			// VAD Processing
-			if(vad != null)
+			// If we don't have any VAD
+			if(vad == null)
 			{
-				boolean subSampleVoice = false;
-				
+				meetsCriteria = metMinVolume;
+			}
+			else
+			{
 				// VAD processing with adjusted step size
 				// Avoid catching an entire frame of 0 padded frames by stopping at one step away
 				for(int i = 0; i < shorts.length - vadStep; i += vadStep)
@@ -393,17 +448,10 @@ class AudioRecorder extends Thread implements Runnable {
 					
 					if(vad.process(frame))
 					{
-						subSampleVoice = true;
-						hasVoiceActivity = true;
 						voiceDetected = true;
+						meetsCriteria = metMinVolume;
 						break;
 					}
-				}
-				
-				// For strictly updating this value live
-				if(!subSampleVoice)
-				{
-					voiceDetected = false;
 				}
 			}
 			
@@ -411,18 +459,10 @@ class AudioRecorder extends Thread implements Runnable {
 		}
 		
 		// Before we analyze the samples, check if the audio isn't empty
-		if(!hasData)
-		{
-			JScribe.logger.trace("Audio was recorded, but it seemed to be empty");
-			receivingAudio = false;
-			return null;
-		}
-		
-		if(!hasVoiceActivity)
-		{
-			JScribe.logger.trace("No voice activity detected");
-			return new float[0];
-		}
+		// if(!meetsCriteria)
+		// {
+		// return null;
+		// }
 		
 		// Move position back to 0 for normalization
 		shortBuffer.flip();
@@ -439,6 +479,10 @@ class AudioRecorder extends Thread implements Runnable {
 		}
 		
 		// Return the normalized float samples
-		return samples;
+		return new AudioSample(samples, voiceDetected, metMinVolume);
+	}
+	
+	private static record AudioSample(float[] samples, boolean voiceDetected, boolean metMinVolume) {
+		
 	}
 }

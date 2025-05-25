@@ -48,11 +48,17 @@ class Transcriber extends Thread implements Runnable {
 		// Transcriber.loadWhisperJNI();
 	}
 	
-	public Transcriber(Path modelPath, boolean useVulkan)
+	public Transcriber(Path modelPath, boolean useVulkan, boolean noLoadNatives)
 	{
 		this.modelPath = modelPath;
 		setName("JScribe Transcriber");
 		setDaemon(true);
+		
+		if(noLoadNatives)
+		{
+			JScribe.logger.warn("Not loading built-in natives");
+			return;
+		}
 		
 		try
 		{
@@ -66,7 +72,7 @@ class Transcriber extends Thread implements Runnable {
 				
 				LibraryUtils.loadLibrary(JScribe.logger::debug);
 				// Then test loading whisper
-				WhisperJNI.setLibraryLogger(JScribe.logger::info);
+				WhisperJNI.setLibraryLogger(JScribe.logger::debug);
 			}
 		} catch(IOException | UnsatisfiedLinkError e)
 		{
@@ -200,17 +206,22 @@ class Transcriber extends Thread implements Runnable {
 		}
 	}
 	
-	public void clearRecordings()
+	public void reset()
 	{
 		JScribe.logger.debug("Clearing recordings and requesting next sample to be abandoned");
 		recordings.clear();
 		abandonSample.set(true);
 	}
 	
+	public void clearRecordings()
+	{
+		recordings.clear();
+	}
+	
 	public void shutdown()
 	{
 		JScribe.logger.debug("Transcription shutting down");
-		recordings.clear(); // do NOT call clearRecordings instead. Creates endless loop
+		recordings.clear(); // do NOT call reset. Creates endless loop
 		running = false;
 	}
 	

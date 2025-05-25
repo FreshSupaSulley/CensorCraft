@@ -24,7 +24,7 @@ public class ModelDownloader {
 	/**
 	 * Converts number of bytes to a human-readable string, such as "10 GB".
 	 * 
-	 * @param bytes
+	 * @param bytes number of bytes
 	 * @return human-readable size of model as a string
 	 */
 	public static String getBytesFancy(long bytes)

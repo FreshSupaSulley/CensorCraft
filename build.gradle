@@ -31,14 +31,12 @@ repositories {
 dependencies {
     // Use macrophone for permissions
     //implementation project(':macrophone')
-    
-    // These used to be implementation before my dumbass realized this is JNI and shading doesn't work
     implementation 'io.github.givimad:whisper-jni:1.7.1' // Speech to text
-    implementation 'io.github.givimad:libfvad-jni:1.0.0-1' // VAD
     implementation 'de.maxhenkel.rnnoise4j:rnnoise4j:2.0.2' // Helps remove white noise which libfvad appreciates
 	implementation 'org.json:json:20250107' // Helps with parsing API responses for downloading models
 	
-    // Don't bundle
+    // Users need to know about these to configure JScribe
+    api 'io.github.givimad:libfvad-jni:1.0.0-1' // VAD
     api 'org.slf4j:slf4j-api:2.0.16'
     
     testImplementation libs.junit.jupiter

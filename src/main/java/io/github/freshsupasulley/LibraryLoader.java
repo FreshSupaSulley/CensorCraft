@@ -91,7 +91,12 @@ public class LibraryLoader {
 		return LibraryLoader.isWindows() && LibraryLoader.getArchitecture().equals("x64") && getVulkanDLL() != null;
 	}
 	
-	private static Path getVulkanDLL()
+	/**
+	 * A system with <code>vulkan-1.dll</code> present on their SystemRoot indicates it can use Vulkan.
+	 * 
+	 * @return path to <code>vulkan-1.dll</code>, or <code>null</code> if not found
+	 */
+	public static Path getVulkanDLL()
 	{
 		// do I bother checking SysWOW64?? I thought this was x64 only
 		List<Path> commonPaths = List.of(Path.of(System.getenv("SystemRoot"), "System32", "vulkan-1.dll"), Path.of(System.getenv("SystemRoot"), "SysWOW64", "vulkan-1.dll"));
@@ -112,7 +117,8 @@ public class LibraryLoader {
 	 */
 	public static void loadVulkan()
 	{
-		if(!canUseVulkan()) throw new IllegalStateException("This system can't use JScribe Vulkan natives");
+		if(!canUseVulkan())
+			throw new IllegalStateException("This system can't use JScribe Vulkan natives");
 		
 		JScribe.logger.info("Loading Vulkan natives for whisper-jni");
 		
@@ -215,7 +221,7 @@ public class LibraryLoader {
 	// }
 	
 	/**
-	 * Extracts a folder to a temp directory which is deleted at JVM exit.
+	 * Extracts a folder from this jar to a temp directory which is deleted at JVM exit.
 	 * 
 	 * @param folderName name of the folder (i.e. "natives/win-amd64-vulkan")
 	 * @return temp directory path

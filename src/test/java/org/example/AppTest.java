@@ -12,13 +12,15 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import io.github.freshsupasulley.JScribe;
+import io.github.freshsupasulley.LibraryLoader;
 import io.github.freshsupasulley.ModelDownloader;
+import io.github.givimad.libfvadjni.VoiceActivityDetector.Mode;
 
 class AppTest {
 	
-	static Path testModel = Path.of("src/test/resources/tiny.bin");
+	static Path testModel = Path.of("src/test/resources/base.en.bin");
 	
-//	@Disabled
+	// @Disabled
 	@BeforeAll
 	@Test
 	static void downloadModel() throws IOException, InterruptedException, ExecutionException
@@ -45,19 +47,30 @@ class AppTest {
 		}
 	}
 	
+//	@Disabled
 	@Test
-	void libraryLoads() throws IOException
+	void test() throws IOException
 	{
-		JScribe scribe = new JScribe.Builder().useVulkan().warmUpModel().build();
-		scribe.start(testModel, "", 1000, 500, true, true);
+		JScribe scribe = new JScribe.Builder(testModel, 1000, 5000).setInputSensitivity(0.2f).enableVAD(Mode.VERY_AGGRESSIVE).setPreferredMicrophone("Microphone (CMTECK)").warmUpModel().skipLoadingNatives().build();
+		
+		// Load custom Vulkan natives manually because we have to
+		String vulkanPath = LibraryLoader.getVulkanDLL().toAbsolutePath().toString();
+		System.load(vulkanPath);
+		
+		Path tempDir = Path.of("src", "main", "resources", "win-amd64-vulkan");
+		System.load(tempDir.resolve("ggml.dll").toAbsolutePath().toString());
+		System.load(tempDir.resolve("whisper.dll").toAbsolutePath().toString());
+		System.load(tempDir.resolve("whisper-jni.dll").toAbsolutePath().toString());
+		
+		scribe.start();
 		
 		// Translate for a while
 		long start = System.currentTimeMillis(), lastMsg = start;
 		String killWord = "subscribe";
 		
-		// 1 mins max
+		// Max time
 		outer:
-		while(System.currentTimeMillis() - start < 60000)
+		while(System.currentTimeMillis() - start < 120000)
 		{
 			if(System.currentTimeMillis() - lastMsg <= 200)
 				continue;
@@ -69,15 +82,15 @@ class AppTest {
 				continue;
 			}
 			
-//			if(scribe.noAudio())
-//			{
-//				System.out.println("No audio, exiting");
-//				break;
-//			}
+			// if(scribe.noAudio())
+			// {
+			// System.out.println("No audio, exiting");
+			// break;
+			// }
 			
-			System.out.println("Audio level: " + scribe.getAudioLevel() + " - " + scribe.noAudio());
+			System.out.println("Audio level: " + scribe.getAudioLevel() + " " + scribe.audioMeetsCriteria() + " - " + scribe.isRunning());
 			
-			for(String buffer = null; !(buffer = scribe.getTranscriptions().getRawString()).isBlank(); System.out.println(buffer))
+			for(String buffer = null; !(buffer = scribe.getTranscriptions().getRawString()).isBlank();/* System.out.println(buffer)*/)
 			{
 				if(buffer.toLowerCase().contains(killWord))
 				{
@@ -86,13 +99,32 @@ class AppTest {
 				}
 			}
 		}
-		
-		while(scribe.isInUse())
-		{
-			assert !scribe.isRunning() && scribe.isShuttingDown();
-		}
 	}
 	
+	@Disabled
+	@Test
+	void startStopTest() throws Exception
+	{
+		JScribe scribe = new JScribe.Builder(testModel, 1000, 5000).setInputSensitivity(0.5f).enableVAD(Mode.VERY_AGGRESSIVE).setPreferredMicrophone("Microphone (CMTECK)").warmUpModel().build();
+		
+		long startTime = System.currentTimeMillis();
+		long testDuration = 20000;
+		
+		System.out.println("Starting stability test");
+		
+		while(System.currentTimeMillis() - startTime < testDuration)
+		{
+			if(scribe.isInUse())
+			{
+				throw new IllegalStateException("Shouldn't be running!");
+			}
+			
+			// Constantly start and stop
+			scribe.start();
+//			Thread.sleep(5000);
+			scribe.stop();
+		}
+	}
 	// private Path samplePath = Path.of("/Users/boschert.12/Desktop/shit/jscribe/src/test/resources/jfk.wav");
 	//
 	// @Test

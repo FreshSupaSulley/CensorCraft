@@ -15,6 +15,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
@@ -38,6 +39,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.github.freshsupasulley.Transcriber.Recording;
+import io.github.givimad.libfvadjni.VoiceActivityDetector;
+import io.github.givimad.libfvadjni.VoiceActivityDetector.Mode;
 
 /**
  * The entry point of the JScribe library.
@@ -46,7 +49,17 @@ public class JScribe implements UncaughtExceptionHandler {
 	
 	static Logger logger = LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
 	
-	private boolean useVulkan, warmUpModel;
+	// Required
+	private final Path modelPath;
+	private final String microphone;
+	private final long latency, overlap;
+	
+	// VAD
+	private final VoiceActivityDetector.Mode mode;
+	private final float inputSensitivity;
+	private final boolean vad;
+	
+	private final boolean denoise, useVulkan, warmUpModel, noLoadNatives;
 	private AudioRecorder recorder;
 	private Transcriber transcriber;
 	
@@ -148,42 +161,33 @@ public class JScribe implements UncaughtExceptionHandler {
 		return names;
 	}
 	
-	private JScribe(Logger logger, boolean useVulkan, boolean warmUpModel)
+	private JScribe(Logger logger, Path modelPath, String microphone, long latency, long overlap, float inputSensitivity, boolean vad, Mode mode, boolean denoise, boolean useVulkan, boolean warmUpModel, boolean noLoadNatives)
 	{
 		JScribe.logger = logger;
+		this.modelPath = modelPath;
+		this.microphone = microphone;
+		this.latency = latency;
+		this.overlap = overlap;
+		this.inputSensitivity = inputSensitivity;
+		this.vad = vad;
+		this.mode = mode;
+		this.denoise = denoise;
 		this.useVulkan = useVulkan;
 		this.warmUpModel = warmUpModel;
+		this.noLoadNatives = noLoadNatives;
 	}
 	
-	//
-	// /**
-	// * Gets the model provided in the constructor.
-	// *
-	// * @return model path
-	// */
-	// public Path getModel()
-	// {
-	// return modelPath;
-	// }
-	//
 	/**
-	 * Starts live audio transcription.
+	 * Starts live audio transcription. Use {@link #stop()} when finished.
 	 * 
 	 * <p>
 	 * You cannot run multiple instances at a time. Use {@linkplain #isInUse()} before to ensure JScribe is ready to start.
 	 * </p>
 	 * 
-	 * @param modelPath  path to GGML formatted Whisper model
-	 * @param microphone preferred microphone name (can be null). Use {@link JScribe#getMicrophones()} to get microphones that support the required audio format.
-	 * @param latency    audio sample length in milliseconds. Must be at least 30ms. If low, set overlap to be much higher to catch full words.
-	 * @param overlap    extra audio in milliseconds. Samples are collected into a window of this size for context to the transcriber. Must be non-negative.
-	 * @param vad        voice activity detection. Enabling will only transcribe words when voice activity is detected
-	 * @param denoise    true to denoise audio samples to help reduce white noise, false for raw audio
-	 * @throws IllegalArgumentException {@code latency < 30} or {@code overlap < 0}
-	 * @throws NoMicrophoneException    if no usable microphones were found
-	 * @throws IOException              if {@link #isInUse()} or something went wrong
+	 * @throws NoMicrophoneException if no usable microphones were found
+	 * @throws IOException           if {@link #isInUse()} or something went wrong
 	 */
-	public synchronized void start(Path modelPath, String microphone, long latency, long overlap, boolean vad, boolean denoise) throws IOException, NoMicrophoneException
+	public synchronized void start() throws IOException, NoMicrophoneException
 	{
 		// Ensure only one process can use JScribe at a time (otherwise causes JNI crashes). Maybe this crash is on a per-model basis, unsure...
 		// Null state means not started or stopped
@@ -194,21 +198,11 @@ public class JScribe implements UncaughtExceptionHandler {
 		
 		try
 		{
-			if(latency < 30)
-			{
-				throw new IllegalArgumentException("Latency must be at least 30ms");
-			}
-			
-			if(overlap < 0)
-			{
-				throw new IllegalArgumentException("Overlap must be non-negative");
-			}
-			
 			state = State.INITIALIZING;
 			
 			logger.info("Starting JScribe");
 			
-			recorder = new AudioRecorder(transcriber = new Transcriber(modelPath, useVulkan), microphone, latency, overlap, true, vad, denoise);
+			recorder = new AudioRecorder(transcriber = new Transcriber(modelPath, useVulkan, noLoadNatives), microphone, latency, overlap, true, inputSensitivity, vad, mode, denoise);
 			
 			// Report errors to this thread
 			recorder.setUncaughtExceptionHandler(this);
@@ -248,12 +242,12 @@ public class JScribe implements UncaughtExceptionHandler {
 				return null;
 			}).thenRun(() ->
 			{
-				synchronized(this)
+				// synchronized(this)
 				{
 					// If the transcriber somehow died
 					if(!transcriber.isRunning())
 					{
-						logger.warn("JScribe was stopped before warm-up completed");
+						logger.warn("JScribe was stopped during warm-up");
 						return;
 					}
 					
@@ -283,7 +277,7 @@ public class JScribe implements UncaughtExceptionHandler {
 	 */
 	public synchronized void stop(Duration wait) throws InterruptedException
 	{
-		if(isShuttingDown())
+		if(state == null || isShuttingDown())
 		{
 			return;
 		}
@@ -293,18 +287,21 @@ public class JScribe implements UncaughtExceptionHandler {
 			logger.info("Stopping JScribe");
 			state = State.STOPPING;
 			
-			if(recorder != null && recorder.isAlive())
+			if(recorder != null)
 				recorder.shutdown();
-			if(transcriber != null && transcriber.isAlive())
+			if(transcriber != null)
 				transcriber.shutdown();
 			
 			// Wait to die
 			logger.info("Waiting for threads to die (max wait: {}s)", wait.toSeconds());
 			
-			if(recorder != null && recorder.isAlive())
-				recorder.join(wait);
-			if(transcriber != null && transcriber.isAlive())
-				transcriber.join(wait);
+			long millis = wait.toMillis();
+			kill(recorder, millis);
+			kill(transcriber, millis);
+			// if(recorder != null && recorder.getState() != Thread.State.NEW)
+			// recorder.join(wait);
+			// if(transcriber != null && recorder.getState() != Thread.State.NEW)
+			// transcriber.join(wait);
 			
 			JScribe.logger.info("Stopped JScribe");
 		} catch(InterruptedException e)
@@ -324,6 +321,21 @@ public class JScribe implements UncaughtExceptionHandler {
 		} finally
 		{
 			state = null;
+		}
+	}
+	
+	private void kill(Thread thread, long millis) throws InterruptedException
+	{
+		if(thread != null && thread.getState() != Thread.State.NEW)
+		{
+			JScribe.logger.trace("Killing " + thread.getName());
+			
+			thread.join(millis);
+			
+			if(thread.isAlive())
+			{
+				throw new IllegalStateException("Failed to kill " + thread.getName());
+			}
 		}
 	}
 	
@@ -350,7 +362,7 @@ public class JScribe implements UncaughtExceptionHandler {
 		{
 			logger.info("Resetting JScribe");
 			recorder.clear();
-			transcriber.clearRecordings();
+			transcriber.reset();
 		}
 		else
 		{
@@ -409,25 +421,25 @@ public class JScribe implements UncaughtExceptionHandler {
 		return state != null;
 	}
 	
-	/**
-	 * Returns true if no audio is being received, meaning there's an open stream to a microphone but it's not returning any data. This can happen when running in
-	 * the Eclipse IDE on macOS due to permission problems. Ensure this is running with {@link JScribe#isRunning()} first, otherwise it will always return true.
-	 * 
-	 * @return true if we're not receiving any audio data from the client, or JScribe is not running
-	 */
-	public boolean noAudio()
-	{
-		return !isRunning() || !recorder.receivingAudio();
-	}
+	// /**
+	// * Returns true if no audio is being received, meaning there's an open stream to a microphone but it's not returning any data. This can happen when running in
+	// * the Eclipse IDE on macOS due to permission problems. Ensure this is running with {@link JScribe#isRunning()} first, otherwise it will always return true.
+	// *
+	// * @return true if we're not receiving any audio data from the client, or JScribe is not running
+	// */
+	// public boolean noAudio()
+	// {
+	// return !isRunning() || !recorder.receivingAudio();
+	// }
 	
 	/**
-	 * True if voice is detected, false otherwise. VAD must be enabled in {@link JScribe#start}.
+	 * True if the currently recording audio sample meets the minimum volume level and voice is detected (if enabled), false otherwise.
 	 * 
-	 * @return true if VAD is enabled and it detected the user is speaking
+	 * @return true if live audio meets minimum volume level, and if VAD detected the user is speaking if enabled
 	 */
-	public boolean voiceDetected()
+	public boolean audioMeetsCriteria()
 	{
-		return isRunning() && recorder.voiceDetected();
+		return isRunning() && recorder.audioMeetsCriteria();
 	}
 	
 	/**
@@ -503,7 +515,126 @@ public class JScribe implements UncaughtExceptionHandler {
 	 */
 	public static class Builder {
 		
-		private boolean vulkan, warmUpModel;
+		// Required
+		private final Path modelPath;
+		
+		private String microphone;
+		private long latency, overlap;
+		
+		private long minWindowContext;
+		
+		// VAD
+		private VoiceActivityDetector.Mode mode;
+		private boolean vad;
+		
+		private float inputSensitivity;
+		
+		private boolean denoise = true, vulkan, warmUpModel, noLoadNatives;
+		
+		/**
+		 * Creates a new JScribe Builder instance. All parameters in this constructor are the minimum required parameters to build a simple instance.
+		 * 
+		 * <p>
+		 * <code>overlap</code> can also be thought of as the length of an individual audio sample. For example, setting latency to 500ms and overlap to 5000ms would
+		 * have transcription results coming back every 500ms, but those results use the full 5000ms context.
+		 * </p>
+		 * 
+		 * @param modelPath path to GGML formatted Whisper model
+		 * @param latency   audio sample length in milliseconds. Must be at least 30ms. If low, set overlap to be much higher to catch full words.
+		 * @param overlap   extra audio in milliseconds. Samples are collected into a window of this size for context to the transcriber. Must be non-negative.
+		 * @throws IllegalArgumentException if {@code latency < 30} or {@code overlap < 0}
+		 */
+		public Builder(Path modelPath, long latency, long overlap)
+		{
+			this.modelPath = modelPath;
+			
+			if(latency < 30)
+			{
+				throw new IllegalArgumentException("Latency must be at least 30ms");
+			}
+			
+			if(overlap < 0)
+			{
+				throw new IllegalArgumentException("Overlap must be non-negative");
+			}
+			
+			this.latency = latency;
+			this.overlap = overlap;
+		}
+		
+//		/**
+//		 * Defines the minimum amount of audio (in milliseconds) the window must fill to before transcribing the entire window.
+//		 * 
+//		 * <p>
+//		 * To only transcribe a full window, set <code>minWindowContext</code> to match the latency.
+//		 * </p>
+//		 * 
+//		 * @param minWindowContext
+//		 * @return
+//		 */
+//		public Builder minimumWindowContext(long minWindowContext)
+//		{
+//			if(minWindowContext < latency)
+//				throw new IllegalArgumentException("Minimum window context must be >= latency");
+//			
+//			this.minWindowContext = minWindowContext;
+//			return this;
+//		}
+		
+		/**
+		 * Sets the input sensitivity that any one sample's volume of an audio recording must match in order to be transcribed. This can be used either with or instead
+		 * of {@link #enableVAD(Mode)}.
+		 * 
+		 * @param sensitivity minimum volume level, [0 - 1.0f]
+		 * @return this, for chaining
+		 */
+		public Builder setInputSensitivity(float sensitivity)
+		{
+			this.inputSensitivity = Math.clamp(sensitivity, 0, 1);
+			return this;
+		}
+		
+		/**
+		 * Tries to use the microphone specified by its name. Must match the name <b>exactly</b>. Use {@link JScribe#getMicrophones()} to get the list of accepted ones.
+		 * 
+		 * <p>
+		 * If the microphone by the provided name isn't found, it uses the first one available.
+		 * </p>
+		 * 
+		 * @param microphone preferred microphone name (must be exact)
+		 * @return this, for chaining
+		 */
+		public Builder setPreferredMicrophone(String microphone)
+		{
+			this.microphone = microphone;
+			return this;
+		}
+		
+		/**
+		 * Voice activity detection. If enabled, does not process audio samples unless it detects the user is speaking.
+		 * 
+		 * @param mode {@link VoiceActivityDetector.Mode} for determining aggressiveness
+		 * @return this, for chaining
+		 */
+		public Builder enableVAD(VoiceActivityDetector.Mode mode)
+		{
+			Objects.requireNonNull(mode);
+			this.vad = true;
+			this.mode = mode;
+			return this;
+		}
+		
+		/**
+		 * Denoising the audio samples. Helps with VAD. On by default.
+		 * 
+		 * @param denoise true to denoise samples, false otherwise
+		 * @return this, for chaining
+		 */
+		public Builder denoise(boolean denoise)
+		{
+			this.denoise = denoise;
+			return this;
+		}
 		
 		/**
 		 * Sets the logger all JScribe operations will use.
@@ -513,6 +644,7 @@ public class JScribe implements UncaughtExceptionHandler {
 		 */
 		public Builder setLogger(Logger logger)
 		{
+			Objects.requireNonNull(logger);
 			JScribe.logger = logger;
 			return this;
 		}
@@ -525,6 +657,22 @@ public class JScribe implements UncaughtExceptionHandler {
 		public Builder warmUpModel()
 		{
 			this.warmUpModel = true;
+			return this;
+		}
+		
+		/**
+		 * Prevents loading any built-in natives and therefore allows for customizing loading <code>whisper-jni</code> natives (and its dependencies), but the
+		 * implementor is responsible for ensuring it will work.
+		 * 
+		 * <p>
+		 * <b>Don't use unless you know what you're doing! </b>
+		 * </p>
+		 * 
+		 * @return this, for chaining
+		 */
+		public Builder skipLoadingNatives()
+		{
+			this.noLoadNatives = true;
 			return this;
 		}
 		
@@ -552,7 +700,7 @@ public class JScribe implements UncaughtExceptionHandler {
 		 */
 		public JScribe build()
 		{
-			return new JScribe(logger, vulkan, warmUpModel);
+			return new JScribe(logger, modelPath, microphone, latency, overlap, inputSensitivity, vad, mode, denoise, vulkan, warmUpModel, noLoadNatives);
 		}
 	}
 	
@@ -561,7 +709,7 @@ public class JScribe implements UncaughtExceptionHandler {
 		INITIALIZING, RUNNING, STOPPING;
 	}
 	
-	public static float[] readWavToFloatSamples(InputStream stream) throws IOException, UnsupportedAudioFileException
+	private static float[] readWavToFloatSamples(InputStream stream) throws IOException, UnsupportedAudioFileException
 	{
 		// Decode WAV header and get PCM stream
 		AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(new BufferedInputStream(stream)); // https://stackoverflow.com/questions/5529754/java-io-ioexception-mark-reset-not-supported
