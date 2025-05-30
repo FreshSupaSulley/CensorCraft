@@ -23,8 +23,8 @@ targetCompatibility = JavaVersion.VERSION_21
 repositories {
     mavenCentral()
     maven {
-        name = "henkelmax.public"
-        url = 'https://maven.maxhenkel.de/repository/public'
+        name = "TarsosDSP"
+        url = 'https://mvn.0110.be/releases'
     }
 }
 
@@ -32,11 +32,15 @@ dependencies {
     // Use macrophone for permissions
     //implementation project(':macrophone')
     implementation 'io.github.givimad:whisper-jni:1.7.1' // Speech to text
-    implementation 'de.maxhenkel.rnnoise4j:rnnoise4j:2.0.2' // Helps remove white noise which libfvad appreciates
+    // implementation 'de.maxhenkel.rnnoise4j:rnnoise4j:2.0.2' // Helps remove white noise which libfvad appreciates
 	implementation 'org.json:json:20250107' // Helps with parsing API responses for downloading models
+	// https://mvnrepository.com/artifact/be.tarsos.dsp/jvm
+	// implementation 'be.tarsos.dsp:jvm:2.5'
+	// https://mvnrepository.com/artifact/be.tarsos.dsp/core
+	implementation 'be.tarsos.dsp:core:2.5'
 	
     // Users need to know about these to configure JScribe
-    api 'io.github.givimad:libfvad-jni:1.0.0-1' // VAD
+    // api 'io.github.givimad:libfvad-jni:1.0.0-1' // VAD
     api 'org.slf4j:slf4j-api:2.0.16'
     
     testImplementation libs.junit.jupiter

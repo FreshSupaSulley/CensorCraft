@@ -14,7 +14,6 @@ import org.junit.jupiter.api.Test;
 import io.github.freshsupasulley.JScribe;
 import io.github.freshsupasulley.LibraryLoader;
 import io.github.freshsupasulley.ModelDownloader;
-import io.github.givimad.libfvadjni.VoiceActivityDetector.Mode;
 
 class AppTest {
 	
@@ -47,65 +46,35 @@ class AppTest {
 		}
 	}
 	
-//	@Disabled
+	@Disabled
 	@Test
 	void test() throws IOException
 	{
-		JScribe scribe = new JScribe.Builder(testModel, 1000, 5000).setInputSensitivity(0.2f).enableVAD(Mode.VERY_AGGRESSIVE).setPreferredMicrophone("Microphone (CMTECK)").warmUpModel().skipLoadingNatives().build();
+		JScribe.Builder builder = new JScribe.Builder(testModel, 48000).warmUpModel();
 		
 		// Load custom Vulkan natives manually because we have to
-		String vulkanPath = LibraryLoader.getVulkanDLL().toAbsolutePath().toString();
-		System.load(vulkanPath);
-		
-		Path tempDir = Path.of("src", "main", "resources", "win-amd64-vulkan");
-		System.load(tempDir.resolve("ggml.dll").toAbsolutePath().toString());
-		System.load(tempDir.resolve("whisper.dll").toAbsolutePath().toString());
-		System.load(tempDir.resolve("whisper-jni.dll").toAbsolutePath().toString());
-		
-		scribe.start();
-		
-		// Translate for a while
-		long start = System.currentTimeMillis(), lastMsg = start;
-		String killWord = "subscribe";
-		
-		// Max time
-		outer:
-		while(System.currentTimeMillis() - start < 120000)
+		if(LibraryLoader.canUseVulkan())
 		{
-			if(System.currentTimeMillis() - lastMsg <= 200)
-				continue;
-			lastMsg = System.currentTimeMillis();
+			builder.skipLoadingNatives();
 			
-			if(scribe.isInitializing())
-			{
-				System.out.println("Initializing");
-				continue;
-			}
+			String vulkanPath = LibraryLoader.getVulkanDLL().toAbsolutePath().toString();
+			System.load(vulkanPath);
 			
-			// if(scribe.noAudio())
-			// {
-			// System.out.println("No audio, exiting");
-			// break;
-			// }
-			
-			System.out.println("Audio level: " + scribe.getAudioLevel() + " " + scribe.audioMeetsCriteria() + " - " + scribe.isRunning());
-			
-			for(String buffer = null; !(buffer = scribe.getTranscriptions().getRawString()).isBlank();/* System.out.println(buffer)*/)
-			{
-				if(buffer.toLowerCase().contains(killWord))
-				{
-					scribe.stop();
-					break outer;
-				}
-			}
+			Path tempDir = Path.of("src", "main", "resources", "win-amd64-vulkan");
+			System.load(tempDir.resolve("ggml.dll").toAbsolutePath().toString());
+			System.load(tempDir.resolve("whisper.dll").toAbsolutePath().toString());
+			System.load(tempDir.resolve("whisper-jni.dll").toAbsolutePath().toString());
 		}
+		
+		JScribe scribe = builder.build();
+		scribe.start();
 	}
 	
 	@Disabled
 	@Test
 	void startStopTest() throws Exception
 	{
-		JScribe scribe = new JScribe.Builder(testModel, 1000, 5000).setInputSensitivity(0.5f).enableVAD(Mode.VERY_AGGRESSIVE).setPreferredMicrophone("Microphone (CMTECK)").warmUpModel().build();
+		JScribe scribe = new JScribe.Builder(testModel, 48000).warmUpModel().build();
 		
 		long startTime = System.currentTimeMillis();
 		long testDuration = 20000;

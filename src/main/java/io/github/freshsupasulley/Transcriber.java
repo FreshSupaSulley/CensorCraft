@@ -29,6 +29,7 @@ class Transcriber extends Thread implements Runnable {
 	
 	private static final WhisperFullParams params;
 	
+	private int sampleRate;
 	private Path modelPath;
 	private boolean running = true;
 	private AtomicBoolean abandonSample = new AtomicBoolean();
@@ -48,8 +49,9 @@ class Transcriber extends Thread implements Runnable {
 		// Transcriber.loadWhisperJNI();
 	}
 	
-	public Transcriber(Path modelPath, boolean useVulkan, boolean noLoadNatives)
+	public Transcriber(int sampleRate, Path modelPath, boolean useVulkan, boolean noLoadNatives)
 	{
+		this.sampleRate = sampleRate;
 		this.modelPath = modelPath;
 		setName("JScribe Transcriber");
 		setDaemon(true);
@@ -96,7 +98,7 @@ class Transcriber extends Thread implements Runnable {
 					continue;
 				}
 				
-				float[] cumulative = new float[(int) (AudioRecorder.FORMAT.getSampleRate() * (MAX_LENGTH_MS / 1000f))];
+				float[] cumulative = new float[(int) (sampleRate * (MAX_LENGTH_MS / 1000f))];
 				
 				int sampleIndex = 0;
 				int numRecordings = 0;
@@ -116,7 +118,7 @@ class Transcriber extends Thread implements Runnable {
 					
 					if(sampleIndex + sampleLength > cumulative.length)
 					{
-						JScribe.logger.warn("JScribe can't keep up! Tried to transcribe audio longer than {}ms", MAX_LENGTH_MS);
+						JScribe.logger.warn("Tried to transcribe audio longer than {}ms", MAX_LENGTH_MS);
 						break; // abandon the next samples who cares
 					}
 					
@@ -139,6 +141,18 @@ class Transcriber extends Thread implements Runnable {
 				// Now merge into one
 				float[] toProcess = new float[sampleIndex];
 				System.arraycopy(cumulative, 0, toProcess, 0, sampleIndex);
+				
+				// Pad to 1000ms (refer to whisper.cpp in whisper in whisper-jni 1.7.1 [whisper btw])
+				final int minLength = (int) (sampleRate * (1050f / 1000)); // because x1f somehow got 990
+				
+				if(toProcess.length < minLength)
+				{
+					JScribe.logger.trace("Padding window with {} zeros", (minLength - toProcess.length));
+					
+					float[] paddedWindow = new float[minLength];
+					System.arraycopy(toProcess, 0, paddedWindow, 0, toProcess.length);
+					toProcess = paddedWindow;
+				}
 				
 				// final float[] samples2 = toProcess;
 				// Thread thread = new Thread(() ->
@@ -246,6 +260,11 @@ class Transcriber extends Thread implements Runnable {
 		results.clear();
 		return result;
 	}
+	
+	// public void newRecording(short[] rawSamples)
+	// {
+	// newRecording(new Recording(samples));
+	// }
 	
 	public void newRecording(Recording recording)
 	{
