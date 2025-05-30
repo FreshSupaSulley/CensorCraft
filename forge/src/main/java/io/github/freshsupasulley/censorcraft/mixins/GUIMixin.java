@@ -8,12 +8,10 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import io.github.freshsupasulley.censorcraft.ClientCensorCraft;
-import io.github.freshsupasulley.censorcraft.config.ClientConfig;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 
@@ -37,10 +35,10 @@ public abstract class GUIMixin {
 	{
 		MutableComponent component = Component.empty();
 		
-		if(ClientConfig.INDICATE_TRANSCRIBING.get() && ClientCensorCraft.TRANSCRIBING)
-		{
-			component.append(Component.literal("Transcribing\n").withColor(0xAAAAAA));
-		}
+//		if(ClientConfig.INDICATE_TRANSCRIBING.get() && ClientCensorCraft.TRANSCRIBING)
+//		{
+//			component.append(Component.literal("Transcribing\n").withColor(0xAAAAAA));
+//		}
 		
 		// If there's text to display and we're not timed out for repetitive messages
 		if(ClientCensorCraft.GUI_TEXT != null)
@@ -62,17 +60,8 @@ public abstract class GUIMixin {
 		
 		Minecraft minecraft = Minecraft.getInstance();
 		
-		final int barWidth = 5, barHeight = minecraft.font.lineHeight * 2;
-		int x = ClientCensorCraft.PADDING;
-		
-		if(ClientConfig.SHOW_VOLUME_BAR.get())
-		{
-			x += barWidth + ClientCensorCraft.PADDING;
-			graphics.fill(RenderType.guiOverlay(), ClientCensorCraft.PADDING, ClientCensorCraft.PADDING + barHeight, ClientCensorCraft.PADDING + barWidth, ClientCensorCraft.PADDING + barHeight - Math.clamp((int) (ClientCensorCraft.JSCRIBE_VOLUME * barHeight), 1, barHeight), 0xAAFFFFFF);
-		}
-		
 		// Color is ARGB
-		graphics.drawWordWrap(minecraft.font, component, x, ClientCensorCraft.PADDING, graphics.guiWidth() - x - ClientCensorCraft.PADDING, 0xFFFFFFFF);
+		graphics.drawWordWrap(minecraft.font, component, ClientCensorCraft.PADDING, ClientCensorCraft.PADDING, graphics.guiWidth() - ClientCensorCraft.PADDING * 2, 0xFFFFFFFF);
 	}
 	
 	// /**

@@ -1,8 +1,5 @@
 package io.github.freshsupasulley.censorcraft.gui;
 
-import java.util.stream.Collectors;
-
-import io.github.freshsupasulley.JScribe;
 import io.github.freshsupasulley.LibraryLoader;
 import io.github.freshsupasulley.censorcraft.ClientCensorCraft;
 import io.github.freshsupasulley.censorcraft.config.ClientConfig;
@@ -24,10 +21,7 @@ import net.minecraft.network.chat.Component;
 public class ConfigScreen extends Screen {
 	
 	private Minecraft minecraft;
-	private MicrophoneList list;
 	private static boolean queuedRestart, restartJScribe;
-	
-	private LinearLayout layout;
 	
 	public ConfigScreen(Minecraft minecraft, Screen screen)
 	{
@@ -64,9 +58,7 @@ public class ConfigScreen extends Screen {
 	{
 		// Lists
 		final int listY = ClientCensorCraft.PADDING * 2 + font.lineHeight;
-		final int listSpacing = 40;
-		final int micListWidth = this.width / 3;
-		final int optionsWidth = this.width - micListWidth - listSpacing - ClientCensorCraft.PADDING;
+		final int optionsWidth = this.width - ClientCensorCraft.PADDING;
 		
 		Button restartButton = Button.builder(Component.literal("Restart"), button ->
 		{
@@ -74,8 +66,8 @@ public class ConfigScreen extends Screen {
 			queuedRestart = true;
 		}).size(Button.SMALL_WIDTH, Button.DEFAULT_HEIGHT).build();
 		
-		this.layout = LinearLayout.vertical().spacing(ClientCensorCraft.PADDING / 2);
-		// layout.addChild(new SpacerElement(optionsWidth, 1));
+		LinearLayout layout = LinearLayout.vertical().spacing(ClientCensorCraft.PADDING / 2);
+		layout.defaultCellSetting().alignHorizontallyCenter();
 		
 		// Everything else is aligned to the left
 		layout.addChild(Checkbox.builder(Component.literal("Show speech"), font).tooltip(Tooltip.create(Component.literal("Displays live audio transcriptions"))).selected(ClientConfig.SHOW_TRANSCRIPTION.get()).onValueChange((button, value) ->
@@ -83,17 +75,10 @@ public class ConfigScreen extends Screen {
 			ClientConfig.SHOW_TRANSCRIPTION.set(value);
 		}).build());
 		
-		layout.addChild(Checkbox.builder(Component.literal("Show microphone volume"), font).selected(ClientConfig.SHOW_VOLUME_BAR.get()).onValueChange((button, value) ->
-		{
-			ClientConfig.SHOW_VOLUME_BAR.set(value);
-		}).build());
-		
-		layout.addChild(Checkbox.builder(Component.literal("Indicate when transcribing"), font).tooltip(Tooltip.create(Component.literal("Text appears when voice is detected and audio meets input sensitivity"))).selected(ClientConfig.INDICATE_TRANSCRIBING.get()).onValueChange((button, value) ->
-		{
-			ClientConfig.INDICATE_TRANSCRIBING.set(value);
-		}).build()).active = ClientConfig.VAD.get();
-		
-		layout.addChild(new InputSensitivity(minecraft.options, restartButton));
+//		layout.addChild(Checkbox.builder(Component.literal("Indicate when transcribing"), font).tooltip(Tooltip.create(Component.literal("Text appears when voice is detected and audio meets input sensitivity"))).selected(ClientConfig.INDICATE_TRANSCRIBING.get()).onValueChange((button, value) ->
+//		{
+//			ClientConfig.INDICATE_TRANSCRIBING.set(value);
+//		}).build());
 		
 		layout.addChild(new OptionInstance<Integer>(null, OptionInstance.cachedConstantTooltip(Component.literal("Latency")), (component, value) ->
 		{
@@ -117,7 +102,7 @@ public class ConfigScreen extends Screen {
 		layout.addChild(Button.builder(Component.literal("Open models folder"), pButton -> Util.getPlatform().openPath(ClientCensorCraft.getModelDir())).build());
 		
 		// Experimental
-		layout.addChild(new SpacerElement(optionsWidth, 6));
+		layout.addChild(new SpacerElement(optionsWidth, 12));
 		layout.addChild(new StringWidget(Component.literal("Experimental"), font));
 		layout.addChild(Checkbox.builder(Component.literal("Use GPU (Windows x64 only)"), font).tooltip(Tooltip.create(Component.literal("Use Vulkan for GPU acceleration. GPU driver must support Vulkan"))).selected(ClientConfig.USE_VULKAN.get() && LibraryLoader.canUseVulkan()).onValueChange((button, value) ->
 		{
@@ -152,16 +137,11 @@ public class ConfigScreen extends Screen {
 		
 		buttonLayout.visitWidgets(this::addRenderableWidget);
 		
-		// List of microphones on left
-		list = new MicrophoneList(restartButton, ClientCensorCraft.PADDING, listY, micListWidth - ClientCensorCraft.PADDING * 2, layoutY - listY - ClientCensorCraft.PADDING, minecraft, JScribe.getMicrophones().stream().map(mic -> mic.getName()).collect(Collectors.toList()));
-		addRenderableWidget(list);
-		
 		// List of options on right
-		int optionsX = list.getRight() + listSpacing + ClientCensorCraft.PADDING;
+		int optionsX = ClientCensorCraft.PADDING;
 		addRenderableWidget(new ScrollArea(layout, optionsX, listY, optionsWidth, layoutY - listY - ClientCensorCraft.PADDING * 2));
 		
 		// Add text
-		addRenderableWidget(new StringWidget(ClientCensorCraft.PADDING, ClientCensorCraft.PADDING, micListWidth, font.lineHeight, Component.literal("Select Microphone"), font));
 		addRenderableWidget(new StringWidget(optionsX, ClientCensorCraft.PADDING, optionsWidth, font.lineHeight, Component.literal("Options"), font));
 	}
 }

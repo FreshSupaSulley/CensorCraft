@@ -1,18 +1,25 @@
 package io.github.freshsupasulley.censorcraft;
 
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
 
+import de.maxhenkel.voicechat.api.ForgeVoicechatPlugin;
+import de.maxhenkel.voicechat.api.VoicechatApi;
+import de.maxhenkel.voicechat.api.VoicechatPlugin;
+import de.maxhenkel.voicechat.api.events.ClientSoundEvent;
+import de.maxhenkel.voicechat.api.events.EventRegistration;
 import io.github.freshsupasulley.JScribe;
 import io.github.freshsupasulley.Model;
-import io.github.freshsupasulley.NoMicrophoneException;
+import io.github.freshsupasulley.RollingAudioBuffer;
 import io.github.freshsupasulley.Transcriptions;
 import io.github.freshsupasulley.censorcraft.config.ClientConfig;
 import io.github.freshsupasulley.censorcraft.gui.ConfigScreen;
 import io.github.freshsupasulley.censorcraft.gui.DownloadScreen;
 import io.github.freshsupasulley.censorcraft.network.WordPacket;
+import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.PopupScreen;
 import net.minecraft.client.gui.screens.DisconnectedScreen;
@@ -24,7 +31,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
 import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.ClientPauseChangeEvent;
 import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.client.event.ScreenEvent;
 import net.minecraftforge.common.MinecraftForge;
@@ -36,10 +42,9 @@ import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.loading.FMLPaths;
 import net.minecraftforge.network.PacketDistributor;
 
+@ForgeVoicechatPlugin
 @Mod.EventBusSubscriber(modid = CensorCraft.MODID, value = Dist.CLIENT)
-public class ClientCensorCraft {
-	
-	private static final long OVERLAP_LENGTH = 200;
+public class ClientCensorCraft implements VoicechatPlugin {
 	
 	// JScribe
 	public static boolean librariesLoaded; // used for telling the player if we already loaded JScribe natives and they need to restart mc
@@ -47,7 +52,6 @@ public class ClientCensorCraft {
 	private static JScribe controller;
 	private static Path model;
 	private static boolean monitorVoice;
-	private static long audioContextLength;
 	
 	private static boolean loggedIn, paused, startJScribeAttempt;
 	
@@ -65,41 +69,51 @@ public class ClientCensorCraft {
 	
 	public static MutableComponent GUI_TEXT;
 	public static boolean FORCE_GUI_REFRESH;
-	public static float JSCRIBE_VOLUME;
-	public static boolean TRANSCRIBING;
 	
-	private static StringBuilder transcription = new StringBuilder(MAX_TRANSCRIPTION_LENGTH);
+	// private static StringBuilder transcription = new StringBuilder(MAX_TRANSCRIPTION_LENGTH);
+	private static String transcription;
 	private static int recordings;
+	
+	/** MS between samples before the rolling audio buffer is cleared */
+	private static final long DRAIN_DELAY = 1000, MIN_SAMPLE_MS = 200;
+	
+	private static final int SAMPLE_RATE = 48000;
+	private static final RollingAudioBuffer ringBuffer = new RollingAudioBuffer(15000, SAMPLE_RATE); // hold a MAX of 15s. Can't even see us needing this much
+	private static long lastSample, lastTranscription;
 	
 	public static void clientSetup(FMLClientSetupEvent event)
 	{
 		MinecraftForge.registerConfigScreen((minecraft, screen) -> new ConfigScreen(minecraft, screen));
 	}
 	
-	// Looks like we're not bundling models in. Too big of a jar file
-	// static
-	// {
-	// MinecraftForge.registerConfigScreen((minecraft, screen) -> new ConfigScreen(minecraft, screen));
-	//
-	// final String tinyModel = "tiny.en";
-	//
-	// // If we don't have tiny.en in the models directory yet (probably one of the first times booting this mod)
-	// if(!hasModel(tinyModel))
-	// {
-	// try
-	// {
-	// Path model = getModelPath(tinyModel);
-	// CensorCraft.LOGGER.info("Copying built-in model to {}", model);
-	//
-	// Files.copy(CensorCraft.class.getClassLoader().getResourceAsStream(tinyModel + ".bin"), model, StandardCopyOption.REPLACE_EXISTING);
-	// CensorCraft.LOGGER.info("Put built-in model at {}", tinyModel);
-	// } catch(IOException e)
-	// {
-	// CensorCraft.LOGGER.error("Failed to extract fallback model", e);
-	// System.exit(1);
-	// }
-	// }
-	// }
+	@Override
+	public String getPluginId()
+	{
+		return CensorCraft.MODID;
+	}
+	
+	@Override
+	public void initialize(VoicechatApi api)
+	{
+		CensorCraft.LOGGER.info("INITIALIZED SIMPLE VOICE CHAT API!");
+	}
+	
+	@Override
+	public void registerEvents(EventRegistration registration)
+	{
+		registration.registerEvent(ClientSoundEvent.class, this::onClientSound);
+	}
+	
+	public void onClientSound(ClientSoundEvent event)
+	{
+		lastSample = System.currentTimeMillis();
+		ringBuffer.append(event.getRawAudio());
+	}
+	
+	private static int msToSamples(long ms)
+	{
+		return (int) ((ms * SAMPLE_RATE) / 1000);
+	}
 	
 	public static Path getModelDir()
 	{
@@ -144,12 +158,13 @@ public class ClientCensorCraft {
 		// This lets error messages (if any) appear again
 		setGUIText(Component.empty());
 		
-		JScribe.Builder builder = new JScribe.Builder(model, ClientConfig.LATENCY.get(), Math.max(0, audioContextLength - ClientConfig.LATENCY.get()) + OVERLAP_LENGTH);
+		// apparently not defined anywhere in the api, only the mod, and that's runtime only
+		JScribe.Builder builder = new JScribe.Builder(model, SAMPLE_RATE);
 		builder.setLogger(CensorCraft.LOGGER);
-		builder.denoise(ClientConfig.DENOISE.get());
-		builder.enableVAD(ClientConfig.VAD_MODE.get());
-		builder.setInputSensitivity(ClientConfig.INPUT_SENSITIVITY.get());
-		builder.setPreferredMicrophone(ClientConfig.PREFERRED_MIC.get());
+		// builder.denoise(ClientConfig.DENOISE.get());
+		// builder.enableVAD(ClientConfig.VAD_MODE.get());
+		// builder.setInputSensitivity(ClientConfig.INPUT_SENSITIVITY.get());
+		// builder.setPreferredMicrophone(ClientConfig.PREFERRED_MIC.get());
 		builder.warmUpModel();
 		
 		if(ClientConfig.USE_VULKAN.get())
@@ -161,19 +176,15 @@ public class ClientCensorCraft {
 		controller = builder.build();
 		
 		// Reset debug params
+		ringBuffer.drain();
 		recordings = 0;
-		transcription.setLength(0);
-		
-		appendResult("");
+		transcription = "";
 		
 		// Model might have changed, might as well reinstantiate
 		try
 		{
 			librariesLoaded = true;
 			controller.start();
-		} catch(NoMicrophoneException e)
-		{
-			CensorCraft.LOGGER.error("No microphones found", e);
 		} catch(Exception e)
 		{
 			CensorCraft.LOGGER.error("Failed to start JScribe", e);
@@ -182,10 +193,6 @@ public class ClientCensorCraft {
 	
 	private static void stopJScribe()
 	{
-		// Reset GUI elements
-		JSCRIBE_VOLUME = 0;
-		TRANSCRIBING = false;
-		
 		if(!monitorVoice)
 		{
 			CensorCraft.LOGGER.debug("Not stopping JScribe, monitorVoice is disabled");
@@ -228,7 +235,11 @@ public class ClientCensorCraft {
 				}
 				else
 				{
-					event.setNewScreen(new PopupScreen.Builder(new TitleScreen(), Component.literal("Missing model")).setMessage(Component.literal("This server requires a transcription model to play (").append(Component.literal(requestedModel + ", " + model.getSizeFancy()).withStyle(Style.EMPTY.withBold(true))).append(")\n\nDownload the model?")).addButton(CommonComponents.GUI_YES, (screen) ->
+					event.setNewScreen(new PopupScreen.Builder(new TitleScreen(), Component.literal("Missing model")).setMessage(Component.literal("This server requires a transcription model to play (").append(Component.literal(requestedModel + ", " + model.getSizeFancy()).withStyle(Style.EMPTY.withBold(true))).append(")\n\nDownload the model?")).addButton(Component.literal("Learn more"), (screen) ->
+					{
+						Util.getPlatform().openUri(URI.create("https://github.com/FreshSupaSulley/CensorCraft"));
+						// screen.onClose();
+					}).addButton(CommonComponents.GUI_YES, (screen) ->
 					{
 						Minecraft.getInstance().setScreen(new DownloadScreen(model));
 					}).addButton(CommonComponents.GUI_NO, PopupScreen::onClose).build());
@@ -252,31 +263,6 @@ public class ClientCensorCraft {
 		return errorScreen(title, t.getLocalizedMessage() == null ? t.getClass().toString() : t.getLocalizedMessage());
 	}
 	
-	/**
-	 * This only has an effect in singleplayer worlds. When connected to a server, pausing on the client side doesn't stop transcription.
-	 * 
-	 * @param event
-	 */
-	@SubscribeEvent
-	public static void onPause(ClientPauseChangeEvent.Post event)
-	{
-		// This event is so weird. Detects pausing like every tick regardless if you're in game
-		if(loggedIn && event.isPaused() != paused)
-		{
-			paused = event.isPaused();
-			CensorCraft.LOGGER.info("Paused: {}", paused);
-			
-			if(paused)
-			{
-				stopJScribe();
-			}
-			else
-			{
-				startJScribe();
-			}
-		}
-	}
-	
 	// its expected that SetupPacket will be consumed before this
 	@SubscribeEvent
 	public static void onJoinWorld(ClientPlayerNetworkEvent.LoggingIn event)
@@ -294,14 +280,13 @@ public class ClientCensorCraft {
 		stopJScribe();
 	}
 	
-	//
 	// @SubscribeEvent
 	// public static void onRespawn(PlayerEvent.PlayerRespawnEvent event)
 	// {
 	// CensorCraft.LOGGER.info("Player respawned");
 	// startJScribe();
 	// }
-	//
+	
 	/**
 	 * Every (client) tick, JScribe should be running. If it's not, we need to signal that to the user.
 	 * 
@@ -334,12 +319,6 @@ public class ClientCensorCraft {
 			stopJScribe();
 		}
 		
-		// Update bar height, "smoothly"
-		// Use mth.lerp
-		// JSCRIBE_VOLUME = lerp(Math.clamp(controller.getAudioLevel() * 1.5f, 0, 1), controller.getAudioLevel(), 0.1f);
-		JSCRIBE_VOLUME = controller.getAudioLevel();
-		TRANSCRIBING = controller.audioMeetsCriteria();
-		
 		// If the mic source changed, user restarted it, etc.
 		if(ConfigScreen.restart())
 		{
@@ -363,12 +342,31 @@ public class ClientCensorCraft {
 				setGUIText(Component.literal("CensorCraft not running!\n").withStyle(style -> style.withBold(true).withColor(0xFF0000)).append(Component.literal("Rejoin world or click Restart in the mod config menu. If this persists, check logs.").withStyle(style -> style.withBold(false).withColor(0xAAAAAA))), true);
 				return;
 			}
-			// else if(controller.noAudio())
-			// {
-			// setGUIText(Component.literal("Not receiving audio!\n").withStyle(style -> style.withBold(true).withColor(0xFF0000)).append(Component.literal("Try changing
-			// the microphone in the mod config menu.").withStyle(style -> style.withBold(false).withColor(0xAAAAAA))));
-			// return;
-			// }
+			
+			// If it's been longer than X ms since our last audio packet, scrap the context
+			if(System.currentTimeMillis() - lastSample > DRAIN_DELAY)
+			{
+				// But before we do that, make sure we don't have to transcribe the remains
+				if(ringBuffer.getSize() >= msToSamples(MIN_SAMPLE_MS))
+				{
+					lastTranscription = System.currentTimeMillis();
+					controller.transcribe(ringBuffer.getSnapshot());
+				}
+				
+				ringBuffer.drain();
+			}
+			else
+			{
+				// How many samples we need for our target buffer size
+				long latency = ClientConfig.LATENCY.get();
+				
+				// If we’ve collected enough and latency says we want another sample
+				if(ringBuffer.getSize() >= msToSamples(MIN_SAMPLE_MS) && System.currentTimeMillis() - lastTranscription >= latency)
+				{
+					lastTranscription = System.currentTimeMillis();
+					controller.transcribe(ringBuffer.getSnapshot());
+				}
+			}
 			
 			// Beyond this point, we need it to be running and actively transcribing
 			// If it's not blank, send it
@@ -377,13 +375,16 @@ public class ClientCensorCraft {
 			
 			if(!results.isEmpty())
 			{
-				String text = results.getRawString();
-				appendResult(text);
+				String raw = results.getRawString();
 				
-				CensorCraft.LOGGER.info("Sending \"{}\"", text);
+				// Show end instead of front
+				String text = (raw.length() > MAX_TRANSCRIPTION_LENGTH) ? "... " + raw.substring(raw.length() - MAX_TRANSCRIPTION_LENGTH) : raw;
+				
+				CensorCraft.LOGGER.info("Sending \"{}\"", raw);
 				lastWordPacket = System.currentTimeMillis();
-				CensorCraft.channel.send(new WordPacket(text), PacketDistributor.SERVER.noArg());
+				CensorCraft.channel.send(new WordPacket(raw), PacketDistributor.SERVER.noArg());
 				
+				transcription = text;
 				recordings = results.getTotalRecordings();
 			}
 			
@@ -446,30 +447,30 @@ public class ClientCensorCraft {
 		}
 	}
 	
-	private static String appendResult(String word)
-	{
-		// Separate words with spaces
-		String string = word + " ";
-		
-		if(string.length() >= transcription.capacity())
-		{
-			transcription.setLength(0);
-			transcription.append(string.substring(string.length() - transcription.capacity()));
-		}
-		else
-		{
-			int overflow = transcription.length() + string.length() - transcription.capacity();
-			
-			if(overflow > 0)
-			{
-				transcription.delete(0, overflow);
-			}
-			
-			transcription.append(string);
-		}
-		
-		return transcription.toString();
-	}
+	// private static String appendResult(String word)
+	// {
+	// // Separate words with spaces
+	// String string = word + " ";
+	//
+	// if(string.length() >= transcription.capacity())
+	// {
+	// transcription.setLength(0);
+	// transcription.append(string.substring(string.length() - transcription.capacity()));
+	// }
+	// else
+	// {
+	// int overflow = transcription.length() + string.length() - transcription.capacity();
+	//
+	// if(overflow > 0)
+	// {
+	// transcription.delete(0, overflow);
+	// }
+	//
+	// transcription.append(string);
+	// }
+	//
+	// return transcription.toString();
+	// }
 	
 	private static void setGUIText(MutableComponent component, boolean forceRefresh)
 	{
@@ -492,7 +493,6 @@ public class ClientCensorCraft {
 		// stopJScribe();
 		ClientCensorCraft.model = model;
 		ClientCensorCraft.monitorVoice = monitorVoice;
-		ClientCensorCraft.audioContextLength = audioContextLength;
 		startJScribe();
 	}
 	
