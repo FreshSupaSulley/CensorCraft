@@ -158,8 +158,7 @@ public class ClientCensorCraft implements VoicechatPlugin {
 		// This lets error messages (if any) appear again
 		setGUIText(Component.empty());
 		
-		// apparently not defined anywhere in the api, only the mod, and that's runtime only
-		JScribe.Builder builder = new JScribe.Builder(model, SAMPLE_RATE);
+		JScribe.Builder builder = new JScribe.Builder(model);
 		builder.setLogger(CensorCraft.LOGGER);
 		// builder.denoise(ClientConfig.DENOISE.get());
 		// builder.enableVAD(ClientConfig.VAD_MODE.get());
@@ -506,6 +505,7 @@ public class ClientCensorCraft implements VoicechatPlugin {
 	{
 		if(controller != null && controller.isRunning())
 		{
+			ringBuffer.drain();
 			controller.reset();
 		}
 	}

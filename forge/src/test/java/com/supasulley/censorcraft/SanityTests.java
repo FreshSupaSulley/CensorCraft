@@ -48,7 +48,7 @@ class SanityTests {
 			Thread.sleep(1000);
 		}
 		
-		JScribe scribe = new JScribe.Builder(temp.toPath(), SAMPLE_RATE).build();
+		JScribe scribe = new JScribe.Builder(temp.toPath()).build();
 		scribe.start();
 		
 		float[] samples = ringBuffer.getSnapshot();

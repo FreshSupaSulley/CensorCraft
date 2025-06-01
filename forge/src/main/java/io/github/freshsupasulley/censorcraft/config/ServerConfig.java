@@ -48,6 +48,9 @@ public class ServerConfig extends Config {
 //		RAT_DELAY = builder.comment("Seconds between ratting on players (expose_rats must be true)").defineInRange("rat_delay", 60f, 1, Float.MAX_VALUE);
 		CHAT_TABOOS = builder.comment("When someone is punished, send what the player said to chat").define("chat_taboos", true);
 		
+		// i don't see a use for this
+//		PUNISH_IF_DEAD = builder.comment("Attempts to punish the player even if they're dead or dying").define("punish_if_dead", false);
+		
 		// Begin punishments section
 		builder.comment("List of all punishment options. To enable one, set enabled = true").comment("Each punishment may have their own additional list of taboos that will only trigger that punishment").push("punishments");
 		
