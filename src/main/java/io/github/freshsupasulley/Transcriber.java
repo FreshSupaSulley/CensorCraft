@@ -1,12 +1,20 @@
 package io.github.freshsupasulley;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import be.tarsos.dsp.AudioDispatcher;
+import be.tarsos.dsp.AudioEvent;
+import be.tarsos.dsp.AudioProcessor;
+import be.tarsos.dsp.SilenceDetector;
+import be.tarsos.dsp.io.UniversalAudioInputStream;
 import io.github.freshsupasulley.Transcriptions.Transcription;
 import io.github.givimad.whisperjni.WhisperContext;
 import io.github.givimad.whisperjni.WhisperFullParams;
@@ -24,13 +32,12 @@ class Transcriber extends Thread implements Runnable {
 	
 	private final WhisperJNI whisper = new WhisperJNI();
 	private final LinkedBlockingQueue<Recording> recordings = new LinkedBlockingQueue<Recording>();
-	private final StringBuffer buffer = new StringBuffer();
 	private final List<Transcription> results = new ArrayList<Transcription>();
 	
 	private static final WhisperFullParams params;
 	
-	private int sampleRate;
-	private Path modelPath;
+	private final Path modelPath;
+	
 	private boolean running = true;
 	private AtomicBoolean abandonSample = new AtomicBoolean();
 	
@@ -45,14 +52,12 @@ class Transcriber extends Thread implements Runnable {
 		params.printTimestamps = false;
 		params.suppressNonSpeechTokens = true;
 		params.suppressBlank = true;
-		
-		// Transcriber.loadWhisperJNI();
 	}
 	
-	public Transcriber(int sampleRate, Path modelPath, boolean useVulkan, boolean noLoadNatives)
+	public Transcriber(Path modelPath, boolean useVulkan, boolean noLoadNatives)
 	{
-		this.sampleRate = sampleRate;
 		this.modelPath = modelPath;
+		
 		setName("JScribe Transcriber");
 		setDaemon(true);
 		
@@ -98,7 +103,7 @@ class Transcriber extends Thread implements Runnable {
 					continue;
 				}
 				
-				float[] cumulative = new float[(int) (sampleRate * (MAX_LENGTH_MS / 1000f))];
+				float[] cumulativeFullWindow = new float[(int) (JScribe.FORMAT.getSampleRate() * (MAX_LENGTH_MS / 1000f))];
 				
 				int sampleIndex = 0;
 				int numRecordings = 0;
@@ -116,14 +121,14 @@ class Transcriber extends Thread implements Runnable {
 					
 					int sampleLength = sample.samples().length;
 					
-					if(sampleIndex + sampleLength > cumulative.length)
+					if(sampleIndex + sampleLength > cumulativeFullWindow.length)
 					{
 						JScribe.logger.warn("Tried to transcribe audio longer than {}ms", MAX_LENGTH_MS);
 						break; // abandon the next samples who cares
 					}
 					
 					// Copy samples from this recording into cumulative window
-					System.arraycopy(sample.samples(), 0, cumulative, sampleIndex, sampleLength);
+					System.arraycopy(sample.samples(), 0, cumulativeFullWindow, sampleIndex, sampleLength);
 					sampleIndex += sampleLength;
 					
 					// Also keep track of any completables
@@ -133,17 +138,23 @@ class Transcriber extends Thread implements Runnable {
 					}
 				}
 				
+				// This can happen as recordings could get cleared at any time
 				if(numRecordings == 0)
 				{
 					continue;
 				}
 				
+				long startTime = System.currentTimeMillis();
+				
 				// Now merge into one
 				float[] toProcess = new float[sampleIndex];
-				System.arraycopy(cumulative, 0, toProcess, 0, sampleIndex);
+				System.arraycopy(cumulativeFullWindow, 0, toProcess, 0, sampleIndex);
+				
+				// Trim it down to remove silence
+//				toProcess = trimWithTarsos(toProcess, -30);
 				
 				// Pad to 1000ms (refer to whisper.cpp in whisper in whisper-jni 1.7.1 [whisper btw])
-				final int minLength = (int) (sampleRate * (1050f / 1000)); // because x1f somehow got 990
+				final int minLength = (int) (JScribe.FORMAT.getSampleRate() * (1050f / 1000)); // because x1f somehow got 990
 				
 				if(toProcess.length < minLength)
 				{
@@ -154,19 +165,19 @@ class Transcriber extends Thread implements Runnable {
 					toProcess = paddedWindow;
 				}
 				
-				// final float[] samples2 = toProcess;
-				// Thread thread = new Thread(() ->
-				// {
-				// try
-				// {
-				// AudioRecorder.writeWavFile(System.currentTimeMillis() + ".wav", samples2, AudioRecorder.FORMAT.getSampleRate(), AudioRecorder.FORMAT.getChannels());
-				// } catch(IOException | LineUnavailableException e)
-				// {
-				// // FIXME Auto-generated catch block
-				// e.printStackTrace();
-				// }
-				// });
-				// thread.start();
+//				final float[] samples2 = toProcess;
+//				Thread thread = new Thread(() ->
+//				{
+//					try
+//					{
+//						JScribe.writeWavFile(16000, samples2, Path.of("src/test/resources/test" + ".wav"));
+//					} catch(IOException e)
+//					{
+//						// TODO Auto-generated catch block
+//						e.printStackTrace();
+//					}
+//				});
+//				thread.start();
 				
 				JScribe.logger.debug("Transcribing {} recordings (length {})", numRecordings, toProcess.length);
 				
@@ -184,6 +195,8 @@ class Transcriber extends Thread implements Runnable {
 				// does it need to be atomic?
 				if(!abandonSample.get())
 				{
+					List<Transcription> transcriptions = new ArrayList<Transcription>(numSegments);
+					
 					for(int i = 0; i < numSegments; i++)
 					{
 						String text = whisper.fullGetSegmentTextFromState(state, i).trim();
@@ -193,15 +206,17 @@ class Transcriber extends Thread implements Runnable {
 						// if(text.equals("[BLANK_AUDIO]"))
 						// continue;
 						
-						JScribe.logger.info("Raw transcription ({} samples): {}", numRecordings, text);
-						buffer.append(text);
+						JScribe.logger.debug("Raw transcription ({} samples): {}", numRecordings, text);
 						
-						results.add(new Transcription(text, numRecordings));
+						transcriptions.add(new Transcription(text, numRecordings, System.currentTimeMillis() - startTime));
 					}
+					
+					// because I want to add all transcriptions at the same time to not freak out the results
+					results.addAll(transcriptions);
 				}
 				else
 				{
-					JScribe.logger.info("Abandoning sample (size {}, {} recordings)", toProcess.length, numRecordings);
+					JScribe.logger.debug("Abandoning sample (size {}, {} recordings)", toProcess.length, numRecordings);
 				}
 				
 				// Run all success runnables
@@ -218,6 +233,70 @@ class Transcriber extends Thread implements Runnable {
 			// Ensure running is set to false
 			shutdown();
 		}
+	}
+	
+	public static float[] trimWithTarsos(float[] samples, double silenceThresholdDb)
+	{
+		SilenceDetector detector = new SilenceDetector(silenceThresholdDb, false);
+		
+		// Convert your float[] samples to byte[] for the audio stream
+		byte[] byteData = JScribe.floatToPCM(samples); // assumes PCM 16-bit little-endian
+		UniversalAudioInputStream inputStream = new UniversalAudioInputStream(new ByteArrayInputStream(byteData), JScribe.FORMAT);
+		
+		// Create dispatcher: 1024 sample frames, 512 overlap
+		AudioDispatcher dispatcher = new AudioDispatcher(inputStream, 1024, 512);
+		
+		AtomicInteger firstNonSilentFrame = new AtomicInteger(-1);
+		AtomicInteger lastNonSilentFrame = new AtomicInteger(-1);
+		AtomicInteger frameCount = new AtomicInteger(0);
+		
+		dispatcher.addAudioProcessor(detector);
+		
+		// Attach silence detection processor
+		dispatcher.addAudioProcessor(new AudioProcessor()
+		{
+			@Override
+			public boolean process(AudioEvent audioEvent)
+			{
+				double dB = detector.currentSPL();
+				
+				if(dB > silenceThresholdDb)
+				{
+					if(firstNonSilentFrame.get() == -1)
+					{
+						firstNonSilentFrame.set(frameCount.get());
+					}
+					
+					lastNonSilentFrame.set(frameCount.get());
+				}
+				
+				frameCount.incrementAndGet();
+				return true;
+			}
+			
+			@Override
+			public void processingFinished()
+			{
+				// no-op
+			}
+		});
+		
+		// Run the dispatcher (blocking call)
+		dispatcher.run();
+		
+		// If no non-silent audio found
+		if(firstNonSilentFrame.get() == -1)
+		{
+			return new float[0];
+		}
+		
+		// Compute sample range
+		int frameSize = 1024;
+		int startSample = firstNonSilentFrame.get() * frameSize;
+		int endSample = Math.min(samples.length, (lastNonSilentFrame.get() + 1) * frameSize);
+		
+		// Return trimmed sample array
+		return Arrays.copyOfRange(samples, startSample, endSample);
 	}
 	
 	public void reset()
@@ -260,11 +339,6 @@ class Transcriber extends Thread implements Runnable {
 		results.clear();
 		return result;
 	}
-	
-	// public void newRecording(short[] rawSamples)
-	// {
-	// newRecording(new Recording(samples));
-	// }
 	
 	public void newRecording(Recording recording)
 	{

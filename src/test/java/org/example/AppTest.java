@@ -3,9 +3,12 @@
  */
 package org.example;
 
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.concurrent.ExecutionException;
+
+import javax.sound.sampled.UnsupportedAudioFileException;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
@@ -14,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import io.github.freshsupasulley.JScribe;
 import io.github.freshsupasulley.LibraryLoader;
 import io.github.freshsupasulley.ModelDownloader;
+import io.github.freshsupasulley.Transcriptions;
 
 class AppTest {
 	
@@ -46,11 +50,11 @@ class AppTest {
 		}
 	}
 	
-	@Disabled
+//	@Disabled
 	@Test
-	void test() throws IOException
+	void test() throws Exception
 	{
-		JScribe.Builder builder = new JScribe.Builder(testModel, 48000).warmUpModel();
+		JScribe.Builder builder = new JScribe.Builder(testModel).warmUpModel();
 		
 		// Load custom Vulkan natives manually because we have to
 		if(LibraryLoader.canUseVulkan())
@@ -60,7 +64,15 @@ class AppTest {
 			String vulkanPath = LibraryLoader.getVulkanDLL().toAbsolutePath().toString();
 			System.load(vulkanPath);
 			
+//			Path tempDir = Path.of("src", "main", "resources", "win-amd64-vulkan");
+//			System.load(tempDir.resolve("ggml.dll").toAbsolutePath().toString());
+//			System.load(tempDir.resolve("whisper.dll").toAbsolutePath().toString());
+//			System.load(tempDir.resolve("whisper-jni.dll").toAbsolutePath().toString());
+			
 			Path tempDir = Path.of("src", "main", "resources", "win-amd64-vulkan");
+			System.load(tempDir.resolve("ggml-base.dll").toAbsolutePath().toString());
+			System.load(tempDir.resolve("ggml-cpu.dll").toAbsolutePath().toString());
+			System.load(tempDir.resolve("ggml-vulkan.dll").toAbsolutePath().toString());
 			System.load(tempDir.resolve("ggml.dll").toAbsolutePath().toString());
 			System.load(tempDir.resolve("whisper.dll").toAbsolutePath().toString());
 			System.load(tempDir.resolve("whisper-jni.dll").toAbsolutePath().toString());
@@ -68,13 +80,49 @@ class AppTest {
 		
 		JScribe scribe = builder.build();
 		scribe.start();
+		
+		while(!scribe.isRunning())
+		{
+			System.out.println("Waiting to run");
+			Thread.sleep(1000);
+		}
+		
+		time(scribe, "src/test/resources/motivation.wav");
+		
+//		for(int i = 0; i < 10; i++)
+//		{
+//			time(scribe, "src/test/resources/corn.wav");
+//		}
+//		
+//		for(int i = 0; i < 10; i++)
+//		{
+//			time(scribe, "src/test/resources/long.wav");
+//		}
+	}
+	
+	private void time(JScribe scribe, String file) throws UnsupportedAudioFileException, IOException, InterruptedException
+	{
+		System.out.println("Backlog : " + scribe.getTranscriptionBacklog());
+		scribe.transcribe(JScribe.readWavToFloatSamples(new FileInputStream(file)));
+		
+		Transcriptions t = null;
+		while((t = scribe.getTranscriptions()).isEmpty())
+		{
+			Thread.sleep(500);
+		}
+		
+		System.out.println("Transcriptions: " + t.getTranscriptions().size());
+		t.forEach(transcription -> {
+			System.out.println("took " + transcription.processingTime() + " --- " + transcription.text());
+		});
+		System.out.println();
 	}
 	
 	@Disabled
 	@Test
 	void startStopTest() throws Exception
 	{
-		JScribe scribe = new JScribe.Builder(testModel, 48000).warmUpModel().build();
+		JScribe scribe = new JScribe.Builder(testModel).warmUpModel().build();
 		
 		long startTime = System.currentTimeMillis();
 		long testDuration = 20000;
@@ -94,59 +142,4 @@ class AppTest {
 			scribe.stop();
 		}
 	}
-	// private Path samplePath = Path.of("/Users/boschert.12/Desktop/shit/jscribe/src/test/resources/jfk.wav");
-	//
-	// @Test
-	// public void testVAD() throws IOException, UnsupportedAudioFileException
-	// {
-	// var sampleFile = samplePath.toFile();
-	// if(!sampleFile.exists() || !sampleFile.isFile())
-	// {
-	// throw new RuntimeException("Missing sample file");
-	// }
-	// VoiceActivityDetector.loadLibrary();
-	// VoiceActivityDetector vad = VoiceActivityDetector.newInstance();
-	//
-	// int sampleRate = 16000;
-	// vad.setMode(VoiceActivityDetector.Mode.QUALITY);
-	// vad.setSampleRate(VoiceActivityDetector.SampleRate.fromValue(sampleRate));
-	// short[] samples = readJFKFileSamples();
-	// int samplesLength = samples.length;
-	// int step = (sampleRate / 1000) * 10; // 10ms step (only allows 10, 20 or 30ms frame)
-	// int detection = 0;
-	// for(int i = 0; i < samplesLength - step; i += step)
-	// {
-	// short[] frame = Arrays.copyOfRange(samples, i, i + step);
-	// if(vad.process(frame))
-	// {
-	// detection = i;
-	// break;
-	// }
-	// }
-	// System.out.println(detection);
-	// assertEquals(640, detection);
-	// }
-	//
-	// private short[] readJFKFileSamples() throws UnsupportedAudioFileException, IOException
-	// {
-	// // sample is a 16 bit int 16000hz little endian wav file
-	// AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(samplePath.toFile());
-	// // read all the available data to a little endian capture buffer
-	// ByteBuffer captureBuffer = ByteBuffer.allocate(audioInputStream.available());
-	// captureBuffer.order(ByteOrder.LITTLE_ENDIAN);
-	// int read = audioInputStream.read(captureBuffer.array());
-	// if(read == -1)
-	// {
-	// throw new IOException("Empty file");
-	// }
-	// // obtain the 16 int audio samples, short type in java
-	// var shortBuffer = captureBuffer.asShortBuffer();
-	// short[] samples = new short[captureBuffer.capacity() / 2];
-	// var i = 0;
-	// while(shortBuffer.hasRemaining())
-	// {
-	// samples[i++] = shortBuffer.get();
-	// }
-	// return samples;
-	// }
 }

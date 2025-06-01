@@ -1,23 +1,12 @@
 package io.github.freshsupasulley;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.file.Path;
 
-import javax.sound.sampled.AudioFileFormat;
-import javax.sound.sampled.AudioFormat;
-import javax.sound.sampled.AudioInputStream;
-import javax.sound.sampled.AudioSystem;
-
 import be.tarsos.dsp.AudioEvent;
-import be.tarsos.dsp.io.TarsosDSPAudioFormat;
 import be.tarsos.dsp.resample.RateTransposer;
 
 public class RollingAudioBuffer {
-	
-	// The format Whisper wants (wave file)
-	// public static final AudioFormat FORMAT = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 16000, 16, 1, 2, 16000, false);
-	public static final TarsosDSPAudioFormat FORMAT = new TarsosDSPAudioFormat(16000, 16, 1, true, false);
 	
 	private final float[] buffer;
 	private final int sampleRate, capacity;
@@ -33,7 +22,7 @@ public class RollingAudioBuffer {
 	public RollingAudioBuffer(int maxBufferMs, int sampleRate)
 	{
 		this.sampleRate = sampleRate;
-		this.capacity = (int) (maxBufferMs * FORMAT.getSampleRate()) / 1000;
+		this.capacity = (int) (maxBufferMs * JScribe.FORMAT.getSampleRate()) / 1000;
 		this.buffer = new float[capacity];
 	}
 	
@@ -42,10 +31,10 @@ public class RollingAudioBuffer {
 	 */
 	public void append(short[] rawSamples)
 	{
-		float[] normalized = JScribe.normalizePcmToFloat(rawSamples);
+		float[] normalized = JScribe.pcmToFloat(rawSamples);
 		
-		RateTransposer resampler = new RateTransposer(FORMAT.getSampleRate() * 1f / sampleRate);
-		AudioEvent audioEvent = new AudioEvent(FORMAT);
+		RateTransposer resampler = new RateTransposer(JScribe.FORMAT.getSampleRate() * 1f / sampleRate);
+		AudioEvent audioEvent = new AudioEvent(JScribe.FORMAT);
 		audioEvent.setFloatBuffer(normalized);
 		resampler.process(audioEvent);
 		
@@ -127,25 +116,7 @@ public class RollingAudioBuffer {
 	 */
 	public void writeWavFile(Path path) throws IOException
 	{
-		float[] buffer = getSnapshot();
-		
-		// Convert float[] to 16-bit little-endian PCM bytes
-		byte[] pcmData = new byte[buffer.length * 2];
-		
-		for(int i = 0; i < buffer.length; i++)
-		{
-			short pcm = (short) Math.max(Short.MIN_VALUE, Math.min(buffer[i] * Short.MAX_VALUE, Short.MAX_VALUE));
-			pcmData[i * 2] = (byte) (pcm & 0xFF); // Low byte
-			pcmData[i * 2 + 1] = (byte) ((pcm >> 8) & 0xFF); // High byte
-		}
-		
-		ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(pcmData);
-		AudioFormat format = new AudioFormat(sampleRate, 16, 1, true, false); // little-endian PCM
-		
-		AudioInputStream audioInputStream = new AudioInputStream(byteArrayInputStream, format, buffer.length);
-		
-		AudioSystem.write(audioInputStream, AudioFileFormat.Type.WAVE, path.toFile());
-		JScribe.logger.info("WAV file written to {}", path.toAbsolutePath());
+		JScribe.writeWavFile(sampleRate, getSnapshot(), path);
 	}
 	
 	public boolean isFull()

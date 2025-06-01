@@ -130,6 +130,9 @@ public class LibraryLoader {
 			System.load(vulkanPath);
 			
 			Path tempDir = LibraryLoader.extractFolderToTemp("win-amd64-vulkan");
+			System.load(tempDir.resolve("ggml-base.dll").toAbsolutePath().toString());
+			System.load(tempDir.resolve("ggml-cpu.dll").toAbsolutePath().toString());
+			System.load(tempDir.resolve("ggml-vulkan.dll").toAbsolutePath().toString());
 			System.load(tempDir.resolve("ggml.dll").toAbsolutePath().toString());
 			System.load(tempDir.resolve("whisper.dll").toAbsolutePath().toString());
 			System.load(tempDir.resolve("whisper-jni.dll").toAbsolutePath().toString());

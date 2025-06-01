@@ -1,6 +1,7 @@
 package io.github.freshsupasulley;
 
 import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.Thread.UncaughtExceptionHandler;
@@ -25,6 +26,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import javax.sound.sampled.AudioFileFormat;
+import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.UnsupportedAudioFileException;
@@ -34,6 +37,7 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import be.tarsos.dsp.io.TarsosDSPAudioFormat;
 import io.github.freshsupasulley.Transcriber.Recording;
 
 /**
@@ -41,11 +45,14 @@ import io.github.freshsupasulley.Transcriber.Recording;
  */
 public class JScribe implements UncaughtExceptionHandler {
 	
+	// The format Whisper wants (wave file)
+	// public static final AudioFormat FORMAT = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 16000, 16, 1, 2, 16000, false);
+	public static final TarsosDSPAudioFormat FORMAT = new TarsosDSPAudioFormat(16000, 16, 1, true, false);
+	
 	static Logger logger = LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
 	
 	// Required
 	private final Path modelPath;
-	private final int sampleRate;
 	private final boolean useVulkan, warmUpModel, noLoadNatives;
 	private Transcriber transcriber;
 	
@@ -123,11 +130,10 @@ public class JScribe implements UncaughtExceptionHandler {
 		return new ModelDownloader(modelName, destination, onComplete);
 	}
 	
-	private JScribe(Logger logger, Path modelPath, int sampleRate, boolean useVulkan, boolean warmUpModel, boolean noLoadNatives)
+	private JScribe(Logger logger, Path modelPath, boolean useVulkan, boolean warmUpModel, boolean noLoadNatives)
 	{
 		JScribe.logger = logger;
 		this.modelPath = modelPath;
-		this.sampleRate = sampleRate;
 		this.useVulkan = useVulkan;
 		this.warmUpModel = warmUpModel;
 		this.noLoadNatives = noLoadNatives;
@@ -157,7 +163,7 @@ public class JScribe implements UncaughtExceptionHandler {
 			
 			logger.info("Starting JScribe");
 			
-			transcriber = new Transcriber(sampleRate, modelPath, useVulkan, noLoadNatives);
+			transcriber = new Transcriber(modelPath, useVulkan, noLoadNatives);
 			
 			// Report errors to this thread
 			transcriber.setUncaughtExceptionHandler(this);
@@ -317,39 +323,13 @@ public class JScribe implements UncaughtExceptionHandler {
 	}
 	
 	/**
-	 * Transcribes a raw audio frame.
+	 * Transcribes a raw audio frame. Must match {@link JScribe#FORMAT}!
 	 * 
 	 * @param rawSamples normalized audio samples
 	 */
 	public void transcribe(float[] rawSamples)
 	{
 		transcriber.newRecording(new Recording(rawSamples));
-	}
-	
-	/**
-	 * Converts an array of 16-bit PCM audio samples into a normalized float array.
-	 * 
-	 * <p>
-	 * Each sample in {@code rawSamples} is a signed 16-bit value (range: -32768 to 32767) and is converted to a float value in the range of [-1.0, 1.0]. This
-	 * format is commonly used for audio processing libraries that operate on normalized float values.
-	 * </p>
-	 *
-	 * @param rawSamples the raw 16-bit PCM audio samples to convert
-	 * @return a float array of normalized audio samples in the range [-1.0, 1.0]
-	 */
-	public static float[] normalizePcmToFloat(short[] rawSamples)
-	{
-		// Normalize the 16-bit short values to float values between -1 and 1
-		float[] samples = new float[rawSamples.length];
-		
-		for(int i = 0; i < samples.length; i++)
-		{
-			// Normalize the 16-bit short value to a float between -1 and 1
-			float newVal = Math.max(-1f, Math.min(((float) rawSamples[i]) / 32768f, 1f));
-			samples[i++] = newVal;
-		}
-		
-		return samples;
 	}
 	
 	/**
@@ -443,17 +423,14 @@ public class JScribe implements UncaughtExceptionHandler {
 		
 		// Required
 		private final Path modelPath;
-		private final int sampleRate;
-		
 		private boolean vulkan, warmUpModel, noLoadNatives;
 		
 		/**
 		 * Creates a new JScribe Builder instance. All parameters in this constructor are the minimum required parameters to build a simple instance.
 		 */
-		public Builder(Path modelPath, int sampleRate)
+		public Builder(Path modelPath)
 		{
 			this.modelPath = modelPath;
-			this.sampleRate = sampleRate;
 		}
 		
 		// /**
@@ -539,7 +516,7 @@ public class JScribe implements UncaughtExceptionHandler {
 		 */
 		public JScribe build()
 		{
-			return new JScribe(logger, modelPath, sampleRate, vulkan, warmUpModel, noLoadNatives);
+			return new JScribe(logger, modelPath, vulkan, warmUpModel, noLoadNatives);
 		}
 	}
 	
@@ -548,7 +525,67 @@ public class JScribe implements UncaughtExceptionHandler {
 		INITIALIZING, RUNNING, STOPPING;
 	}
 	
-	private static float[] readWavToFloatSamples(InputStream stream) throws IOException, UnsupportedAudioFileException
+	/**
+	 * Converts an array of 16-bit PCM audio samples into a normalized float array.
+	 * 
+	 * <p>
+	 * Each sample in {@code rawSamples} is a signed 16-bit value (range: -32768 to 32767) and is converted to a float value in the range of [-1.0, 1.0]. This
+	 * format is commonly used for audio processing libraries that operate on normalized float values.
+	 * </p>
+	 *
+	 * @param rawSamples the raw 16-bit PCM audio samples to convert
+	 * @return a float array of normalized audio samples in the range [-1.0, 1.0]
+	 */
+	public static float[] pcmToFloat(short[] rawSamples)
+	{
+		// Normalize the 16-bit short values to float values between -1 and 1
+		float[] samples = new float[rawSamples.length];
+		
+		for(int i = 0; i < samples.length; i++)
+		{
+			// Normalize the 16-bit short value to a float between -1 and 1
+			float newVal = Math.max(-1f, Math.min(((float) rawSamples[i]) / 32768f, 1f));
+			samples[i++] = newVal;
+		}
+		
+		return samples;
+	}
+	
+	public static byte[] floatToPCM(float[] buffer)
+	{
+		// Convert float[] to 16-bit little-endian PCM bytes
+		byte[] pcmData = new byte[buffer.length * 2];
+		
+		for(int i = 0; i < buffer.length; i++)
+		{
+			short pcm = (short) Math.max(Short.MIN_VALUE, Math.min(buffer[i] * Short.MAX_VALUE, Short.MAX_VALUE));
+			pcmData[i * 2] = (byte) (pcm & 0xFF); // Low byte
+			pcmData[i * 2 + 1] = (byte) ((pcm >> 8) & 0xFF); // High byte
+		}
+		
+		return pcmData;
+	}
+	
+	/**
+	 * Writes float[] to a WAV file.
+	 * 
+	 * @param sampleRate sample rate of the array
+	 * @param buffer     PCM samples
+	 * @param path       destination path
+	 * @throws IOException if something goes wrong
+	 */
+	public static void writeWavFile(int sampleRate, float[] buffer, Path path) throws IOException
+	{
+		ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(floatToPCM(buffer));
+		AudioFormat format = new AudioFormat(sampleRate, 16, 1, true, false); // little-endian PCM
+		
+		AudioInputStream audioInputStream = new AudioInputStream(byteArrayInputStream, format, buffer.length);
+		
+		AudioSystem.write(audioInputStream, AudioFileFormat.Type.WAVE, path.toFile());
+		JScribe.logger.info("WAV file written to {}", path.toAbsolutePath());
+	}
+	
+	public static float[] readWavToFloatSamples(InputStream stream) throws IOException, UnsupportedAudioFileException
 	{
 		// Decode WAV header and get PCM stream
 		AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(new BufferedInputStream(stream)); // https://stackoverflow.com/questions/5529754/java-io-ioexception-mark-reset-not-supported

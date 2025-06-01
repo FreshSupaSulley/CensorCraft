@@ -91,10 +91,11 @@ public class Transcriptions implements Iterable<Transcription> {
 	 * the number of audio recordings that had to be spliced together.
 	 * </p>
 	 * 
-	 * @param text       raw text received from the model
-	 * @param recordings amount of recordings concatenated together that compose this transcription
+	 * @param text           raw text received from the model
+	 * @param recordings     amount of recordings concatenated together that compose this transcription
+	 * @param processingTime time it took to process these recordings, in milliseconds
 	 */
-	public static record Transcription(String text, int recordings) {
+	public static record Transcription(String text, int recordings, long processingTime) {
 	}
 	
 	@Override
