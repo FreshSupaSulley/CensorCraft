@@ -3,25 +3,24 @@ package io.github.freshsupasulley;
 import java.io.IOException;
 import java.nio.file.Path;
 
-import be.tarsos.dsp.AudioEvent;
 import be.tarsos.dsp.resample.RateTransposer;
 
 public class RollingAudioBuffer {
 	
+	private static final int INPUT_SAMPLE_RATE = 48000;
+	
 	private final float[] buffer;
-	private final int sampleRate, capacity;
+	private final int capacity;
 	private int writeIndex = 0;
 	private boolean filled;
 	
 	/**
-	 * Initializes a new rolling audio buffer.
+	 * Initializes a new rolling audio buffer. The input sample rate is expected to match simple voice chat at 48kHz.
 	 * 
 	 * @param maxBufferMs maximum size (in milliseconds) that the audio buffer can store
-	 * @param sampleRate  input sample rate
 	 */
-	public RollingAudioBuffer(int maxBufferMs, int sampleRate)
+	public RollingAudioBuffer(int maxBufferMs)
 	{
-		this.sampleRate = sampleRate;
 		this.capacity = (int) (maxBufferMs * JScribe.FORMAT.getSampleRate()) / 1000;
 		this.buffer = new float[capacity];
 	}
@@ -33,10 +32,9 @@ public class RollingAudioBuffer {
 	{
 		float[] normalized = JScribe.pcmToFloat(rawSamples);
 		
-		RateTransposer resampler = new RateTransposer(JScribe.FORMAT.getSampleRate() * 1f / sampleRate);
-		AudioEvent audioEvent = new AudioEvent(JScribe.FORMAT);
-		audioEvent.setFloatBuffer(normalized);
-		resampler.process(audioEvent);
+		RateTransposer resampler = new RateTransposer(JScribe.FORMAT.getSampleRate() / INPUT_SAMPLE_RATE);
+		float[] resampled = new float[(int) (normalized.length * (JScribe.FORMAT.getSampleRate() / INPUT_SAMPLE_RATE))];
+        resampler.process(JScribe.FORMAT.getSampleRate() / INPUT_SAMPLE_RATE, normalized, 0, normalized.length, true, resampled, 0, resampled.length);
 		
 		for(float sample : audioEvent.getFloatBuffer())
 		{
@@ -116,7 +114,7 @@ public class RollingAudioBuffer {
 	 */
 	public void writeWavFile(Path path) throws IOException
 	{
-		JScribe.writeWavFile(sampleRate, getSnapshot(), path);
+		JScribe.writeWavFile(INPUT_SAMPLE_RATE, getSnapshot(), path);
 	}
 	
 	public boolean isFull()
