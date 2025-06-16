@@ -20,12 +20,10 @@ Punishments are set by the server admin. All punishment options are available in
 
 ## Project Structure
 
-This is a multi-project gradle build:
+This is a multi-project gradle build (but currently only has one subproject):
 
 - [forge](./forge)
-Forge mod source. Depends on JScribe.
-- [jscribe](./jscribe)
-Transcribes speech-to-text using (technically a fork of) [whisper-jni](https://github.com/GiviMAD/whisper-jni).
+Forge mod source. Depends on [JScribe](https://github.com/FreshSupaSulley/jscribe) to transcribe speech-to-text using (technically a fork of) [whisper-jni](https://github.com/GiviMAD/whisper-jni).
 
 # Contributing
 
