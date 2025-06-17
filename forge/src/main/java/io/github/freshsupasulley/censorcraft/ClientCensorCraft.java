@@ -234,14 +234,14 @@ public class ClientCensorCraft implements VoicechatPlugin {
 				}
 				else
 				{
-					event.setNewScreen(new PopupScreen.Builder(new TitleScreen(), Component.literal("Missing model")).setMessage(Component.literal("This server requires a transcription model to play (").append(Component.literal(requestedModel + ", " + model.getSizeFancy()).withStyle(Style.EMPTY.withBold(true))).append(")\n\nDownload the model?")).addButton(Component.literal("Learn more"), (screen) ->
-					{
-						Util.getPlatform().openUri(URI.create("https://github.com/FreshSupaSulley/CensorCraft"));
-						// screen.onClose();
-					}).addButton(CommonComponents.GUI_YES, (screen) ->
+					event.setNewScreen(new PopupScreen.Builder(new TitleScreen(), Component.literal("Missing model")).setMessage(Component.literal("This server requires a transcription model to play (").append(Component.literal(requestedModel + ", " + model.getSizeFancy()).withStyle(Style.EMPTY.withBold(true))).append(")\n\nDownload the model?")).addButton(CommonComponents.GUI_YES, (screen) ->
 					{
 						Minecraft.getInstance().setScreen(new DownloadScreen(model));
-					}).addButton(CommonComponents.GUI_NO, PopupScreen::onClose).build());
+					}).addButton(CommonComponents.GUI_NO, PopupScreen::onClose).addButton(Component.literal("Learn more"), (screen) ->
+					{
+						Util.getPlatform().openUri(URI.create("https://www.curseforge.com/minecraft/mc-mods/censorcraft"));
+						// screen.onClose();
+					}).build());
 				}
 			} catch(IOException e)
 			{

@@ -22,7 +22,7 @@ public class ClientConfig extends Config {
 	{
 		ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
 		builder.push("general");
-		SHOW_TRANSCRIPTION = builder.comment("Display live transcription").define("show_transcription", true);
+		SHOW_TRANSCRIPTION = builder.comment("Display live transcriptions").define("show_transcription", false);
 //		INDICATE_TRANSCRIBING = builder.comment("Indicates when the audio feed will be transcribed").define("indicate_transcribing", true);
 		DEBUG = builder.comment("Shows helpful debugging information").define("debug", false);
 		LATENCY = builder.comment("Transcription latency (in milliseconds). Internally represents the size of an individual audio sample").defineInRange("latency", 1000, MIN_LATENCY, MAX_LATENCY);
