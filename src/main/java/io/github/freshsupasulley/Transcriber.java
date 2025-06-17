@@ -1,20 +1,12 @@
 package io.github.freshsupasulley;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 
-import be.tarsos.dsp.AudioDispatcher;
-import be.tarsos.dsp.AudioEvent;
-import be.tarsos.dsp.AudioProcessor;
-import be.tarsos.dsp.SilenceDetector;
-import be.tarsos.dsp.io.UniversalAudioInputStream;
 import io.github.freshsupasulley.Transcriptions.Transcription;
 import io.github.givimad.whisperjni.WhisperContext;
 import io.github.givimad.whisperjni.WhisperFullParams;
@@ -235,69 +227,69 @@ class Transcriber extends Thread implements Runnable {
 		}
 	}
 	
-	public static float[] trimWithTarsos(float[] samples, double silenceThresholdDb)
-	{
-		SilenceDetector detector = new SilenceDetector(silenceThresholdDb, false);
-		
-		// Convert your float[] samples to byte[] for the audio stream
-		byte[] byteData = JScribe.floatToPCM(samples); // assumes PCM 16-bit little-endian
-		UniversalAudioInputStream inputStream = new UniversalAudioInputStream(new ByteArrayInputStream(byteData), JScribe.FORMAT);
-		
-		// Create dispatcher: 1024 sample frames, 512 overlap
-		AudioDispatcher dispatcher = new AudioDispatcher(inputStream, 1024, 512);
-		
-		AtomicInteger firstNonSilentFrame = new AtomicInteger(-1);
-		AtomicInteger lastNonSilentFrame = new AtomicInteger(-1);
-		AtomicInteger frameCount = new AtomicInteger(0);
-		
-		dispatcher.addAudioProcessor(detector);
-		
-		// Attach silence detection processor
-		dispatcher.addAudioProcessor(new AudioProcessor()
-		{
-			@Override
-			public boolean process(AudioEvent audioEvent)
-			{
-				double dB = detector.currentSPL();
-				
-				if(dB > silenceThresholdDb)
-				{
-					if(firstNonSilentFrame.get() == -1)
-					{
-						firstNonSilentFrame.set(frameCount.get());
-					}
-					
-					lastNonSilentFrame.set(frameCount.get());
-				}
-				
-				frameCount.incrementAndGet();
-				return true;
-			}
-			
-			@Override
-			public void processingFinished()
-			{
-				// no-op
-			}
-		});
-		
-		// Run the dispatcher (blocking call)
-		dispatcher.run();
-		
-		// If no non-silent audio found
-		if(firstNonSilentFrame.get() == -1)
-		{
-			return new float[0];
-		}
-		
-		// Compute sample range
-		int frameSize = 1024;
-		int startSample = firstNonSilentFrame.get() * frameSize;
-		int endSample = Math.min(samples.length, (lastNonSilentFrame.get() + 1) * frameSize);
-		
-		// Return trimmed sample array
-		return Arrays.copyOfRange(samples, startSample, endSample);
-	}
+//	public static float[] trimWithTarsos(float[] samples, double silenceThresholdDb)
+//	{
+//		SilenceDetector detector = new SilenceDetector(silenceThresholdDb, false);
+//		
+//		// Convert your float[] samples to byte[] for the audio stream
+//		byte[] byteData = JScribe.floatToPCM(samples); // assumes PCM 16-bit little-endian
+//		UniversalAudioInputStream inputStream = new UniversalAudioInputStream(new ByteArrayInputStream(byteData), JScribe.FORMAT);
+//		
+//		// Create dispatcher: 1024 sample frames, 512 overlap
+//		AudioDispatcher dispatcher = new AudioDispatcher(inputStream, 1024, 512);
+//		
+//		AtomicInteger firstNonSilentFrame = new AtomicInteger(-1);
+//		AtomicInteger lastNonSilentFrame = new AtomicInteger(-1);
+//		AtomicInteger frameCount = new AtomicInteger(0);
+//		
+//		dispatcher.addAudioProcessor(detector);
+//		
+//		// Attach silence detection processor
+//		dispatcher.addAudioProcessor(new AudioProcessor()
+//		{
+//			@Override
+//			public boolean process(AudioEvent audioEvent)
+//			{
+//				double dB = detector.currentSPL();
+//				
+//				if(dB > silenceThresholdDb)
+//				{
+//					if(firstNonSilentFrame.get() == -1)
+//					{
+//						firstNonSilentFrame.set(frameCount.get());
+//					}
+//					
+//					lastNonSilentFrame.set(frameCount.get());
+//				}
+//				
+//				frameCount.incrementAndGet();
+//				return true;
+//			}
+//			
+//			@Override
+//			public void processingFinished()
+//			{
+//				// no-op
+//			}
+//		});
+//		
+//		// Run the dispatcher (blocking call)
+//		dispatcher.run();
+//		
+//		// If no non-silent audio found
+//		if(firstNonSilentFrame.get() == -1)
+//		{
+//			return new float[0];
+//		}
+//		
+//		// Compute sample range
+//		int frameSize = 1024;
+//		int startSample = firstNonSilentFrame.get() * frameSize;
+//		int endSample = Math.min(samples.length, (lastNonSilentFrame.get() + 1) * frameSize);
+//		
+//		// Return trimmed sample array
+//		return Arrays.copyOfRange(samples, startSample, endSample);
+//	}
 	
 	public void reset()
 	{

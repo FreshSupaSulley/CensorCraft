@@ -7,22 +7,25 @@ import be.tarsos.dsp.resample.RateTransposer;
 
 public class RollingAudioBuffer {
 	
-	private static final int INPUT_SAMPLE_RATE = 48000;
-	
 	private final float[] buffer;
 	private final int capacity;
 	private int writeIndex = 0;
 	private boolean filled;
 	
+	private final RateTransposer transposer;
+	
 	/**
-	 * Initializes a new rolling audio buffer. The input sample rate is expected to match simple voice chat at 48kHz.
+	 * Initializes a new rolling audio buffer.
 	 * 
 	 * @param maxBufferMs maximum size (in milliseconds) that the audio buffer can store
+	 * @param inputSampleRate  input sample rate
 	 */
-	public RollingAudioBuffer(int maxBufferMs)
+	public RollingAudioBuffer(int maxBufferMs, int inputSampleRate)
 	{
 		this.capacity = (int) (maxBufferMs * JScribe.FORMAT.getSampleRate()) / 1000;
 		this.buffer = new float[capacity];
+		
+		transposer = new RateTransposer(JScribe.FORMAT.getSampleRate() * 1f / inputSampleRate);
 	}
 	
 	/**
@@ -32,11 +35,10 @@ public class RollingAudioBuffer {
 	{
 		float[] normalized = JScribe.pcmToFloat(rawSamples);
 		
-		RateTransposer resampler = new RateTransposer(JScribe.FORMAT.getSampleRate() / INPUT_SAMPLE_RATE);
-		float[] resampled = new float[(int) (normalized.length * (JScribe.FORMAT.getSampleRate() / INPUT_SAMPLE_RATE))];
-        resampler.process(JScribe.FORMAT.getSampleRate() / INPUT_SAMPLE_RATE, normalized, 0, normalized.length, true, resampled, 0, resampled.length);
+//		AudioEvent audioEvent = new AudioEvent(JScribe.FORMAT);
+//		audioEvent.setFloatBuffer(normalized);
 		
-		for(float sample : audioEvent.getFloatBuffer())
+		for(float sample : transposer.process(normalized))
 		{
 			buffer[writeIndex] = sample;
 			writeIndex = (writeIndex + 1) % capacity;
@@ -114,7 +116,7 @@ public class RollingAudioBuffer {
 	 */
 	public void writeWavFile(Path path) throws IOException
 	{
-		JScribe.writeWavFile(INPUT_SAMPLE_RATE, getSnapshot(), path);
+		JScribe.writeWavFile((int) JScribe.FORMAT.getSampleRate(), getSnapshot(), path);
 	}
 	
 	public boolean isFull()

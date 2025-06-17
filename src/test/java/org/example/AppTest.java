@@ -52,11 +52,11 @@ class AppTest {
 	
 //	@Disabled
 	@Test
-	void testVulkan() throws IOException
+	void testVulkan() throws Exception
 	{
 		if(!LibraryLoader.canUseVulkan()) return;
 		
-		JScribe scribe = new JScribe.Builder(testModel, 1000, 5000).setInputSensitivity(0.2f).enableVAD(Mode.VERY_AGGRESSIVE).setPreferredMicrophone("Microphone (CMTECK)").warmUpModel().skipLoadingNatives().build();
+		JScribe.Builder builder = new JScribe.Builder(testModel).warmUpModel();
 		
 		// Load custom Vulkan natives manually because we have to
 		if(LibraryLoader.canUseVulkan())

@@ -1,3 +1,38 @@
+/*
+*      _______                       _____   _____ _____  
+*     |__   __|                     |  __ \ / ____|  __ \ 
+*        | | __ _ _ __ ___  ___  ___| |  | | (___ | |__) |
+*        | |/ _` | '__/ __|/ _ \/ __| |  | |\___ \|  ___/ 
+*        | | (_| | |  \__ \ (_) \__ \ |__| |____) | |     
+*        |_|\__,_|_|  |___/\___/|___/_____/|_____/|_|     
+*                                                         
+* -------------------------------------------------------------
+*
+* TarsosDSP is developed by Joren Six at IPEM, University Ghent
+*  
+* -------------------------------------------------------------
+*
+*  Info: http://0110.be/tag/TarsosDSP
+*  Github: https://github.com/JorenSix/TarsosDSP
+*  Releases: http://0110.be/releases/TarsosDSP/
+*  
+*  TarsosDSP includes modified source code by various authors,
+*  for credits and info, see README.
+* 
+*/
+
+/******************************************************************************
+ *
+ * libresample4j
+ * Copyright (c) 2009 Laszlo Systems, Inc. All Rights Reserved.
+ *
+ * libresample4j is a Java port of Dominic Mazzoni's libresample 0.1.3,
+ * which is in turn based on Julius Smith's Resample 1.7 library.
+ *      http://www-ccrma.stanford.edu/~jos/resample/
+ *
+ * License: LGPL -- see the file LICENSE.txt for more information
+ *
+ *****************************************************************************/
 package be.tarsos.dsp.resample;
 
 import java.nio.FloatBuffer;
@@ -63,8 +98,7 @@ public class Resampler {
      * @param minFactor   lower bound on resampling factor for this session
      * @param maxFactor   upper bound on resampling factor for this session
      * @throws IllegalArgumentException if minFactor or maxFactor is not
-     *                                  positive, or if maxFactor is less than
-     *                                  minFactor
+     *                                  positive, or if maxFactor is less than minFactor
      */
     public Resampler(boolean highQuality, double minFactor, double maxFactor) {
         if (minFactor <= 0.0 || maxFactor <= 0.0) {
@@ -131,14 +165,12 @@ public class Resampler {
     }
 
     /**
-     * Process a batch of samples. There is no guarantee that the input buffer will
-     * be drained.
+     * Process a batch of samples. There is no guarantee that the input buffer will be drained.
      *
      * @param factor    factor at which to resample this batch
      * @param buffers   sample buffer for producing input and consuming output
      * @param lastBatch true if this is known to be the last batch of samples
-     * @return true iff resampling is complete (ie. no input samples consumed and no
-     *         output samples produced)
+     * @return true iff resampling is complete (ie. no input samples consumed and no output samples produced)
      */
     public boolean process(double factor, SampleBuffers buffers, boolean lastBatch) {
         if (factor < this.minFactor || factor > this.maxFactor) {
@@ -164,9 +196,9 @@ public class Resampler {
             int len = Math.min(outBufferLen - outSampleCount, this.Yp);
 
             buffers.consumeOutput(this.Y, 0, len);
-            // for (int i = 0; i < len; i++) {
-            // outBuffer[outBufferOffset + outSampleCount + i] = this.Y[i];
-            // }
+            //for (int i = 0; i < len; i++) {
+            //    outBuffer[outBufferOffset + outSampleCount + i] = this.Y[i];
+            //}
 
             outSampleCount += len;
             for (int i = 0; i < this.Yp - len; i++) {
@@ -205,9 +237,9 @@ public class Resampler {
             }
 
             buffers.produceInput(this.X, this.Xread, len);
-            // for (int i = 0; i < len; i++) {
-            // this.X[this.Xread + i] = inBuffer[inBufferOffset + inBufferUsed + i];
-            // }
+            //for (int i = 0; i < len; i++) {
+            //    this.X[this.Xread + i] = inBuffer[inBufferOffset + inBufferUsed + i];
+            //}
 
             inBufferUsed += len;
             this.Xread += len;
@@ -266,10 +298,9 @@ public class Resampler {
             }
 
             /*
-             * #ifdef DEBUG
-             * printf("New Xread=%d\n", Nreuse);
-             * #endif
-             */
+            #ifdef DEBUG
+            printf("New Xread=%d\n", Nreuse);
+            #endif */
 
             this.Xread = Nreuse; // Pos in input buff to read new data into
             this.Xp = this.Xoff;
@@ -281,9 +312,9 @@ public class Resampler {
                 len = Math.min(outBufferLen - outSampleCount, this.Yp);
 
                 buffers.consumeOutput(this.Y, 0, len);
-                // for (int i = 0; i < len; i++) {
-                // outBuffer[outBufferOffset + outSampleCount + i] = this.Y[i];
-                // }
+                //for (int i = 0; i < len; i++) {
+                //    outBuffer[outBufferOffset + outSampleCount + i] = this.Y[i];
+                //}
 
                 outSampleCount += len;
                 for (int i = 0; i < this.Yp - len; i++) {
@@ -293,7 +324,7 @@ public class Resampler {
             }
 
             // If there are still output samples left, return now,
-            // since we need the full output buffer available
+            //   since we need the full output buffer available
             if (this.Yp != 0) {
                 break;
             }
@@ -303,18 +334,15 @@ public class Resampler {
     }
 
     /**
-     * Process a batch of samples. Convenience method for when the input and output
-     * are both floats.
+     * Process a batch of samples. Convenience method for when the input and output are both floats.
      *
      * @param factor       factor at which to resample this batch
      * @param inputBuffer  contains input samples in the range -1.0 to 1.0
      * @param outputBuffer output samples will be deposited here
      * @param lastBatch    true if this is known to be the last batch of samples
-     * @return true iff resampling is complete (ie. no input samples consumed and no
-     *         output samples produced)
+     * @return true iff resampling is complete (ie. no input samples consumed and no output samples produced)
      */
-    public boolean process(double factor, final FloatBuffer inputBuffer, boolean lastBatch,
-            final FloatBuffer outputBuffer) {
+    public boolean process(double factor, final FloatBuffer inputBuffer, boolean lastBatch, final FloatBuffer outputBuffer) {
         SampleBuffers sampleBuffers = new SampleBuffers() {
             public int getInputBufferLength() {
                 return inputBuffer.remaining();
@@ -336,22 +364,19 @@ public class Resampler {
     }
 
     /**
-     * Process a batch of samples. Alternative interface if you prefer to work with
-     * arrays.
+     * Process a batch of samples. Alternative interface if you prefer to work with arrays.
      *
-     * @param factor          resampling rate for this batch
-     * @param inBuffer        array containing input samples in the range -1.0 to
-     *                        1.0
-     * @param inBufferOffset  offset into inBuffer at which to start processing
-     * @param inBufferLen     number of valid elements in the inputBuffer
-     * @param lastBatch       pass true if this is the last batch of samples
-     * @param outBuffer       array to hold the resampled data
+     * @param factor         resampling rate for this batch
+     * @param inBuffer       array containing input samples in the range -1.0 to 1.0
+     * @param inBufferOffset offset into inBuffer at which to start processing
+     * @param inBufferLen    number of valid elements in the inputBuffer
+     * @param lastBatch      pass true if this is the last batch of samples
+     * @param outBuffer      array to hold the resampled data
      * @param outBufferOffset Offset in the output buffer.
      * @param outBufferLen    Output buffer length.
      * @return the number of samples consumed and generated
      */
-    public Result process(double factor, float[] inBuffer, int inBufferOffset, int inBufferLen, boolean lastBatch,
-            float[] outBuffer, int outBufferOffset, int outBufferLen) {
+    public Result process(double factor, float[] inBuffer, int inBufferOffset, int inBufferLen, boolean lastBatch, float[] outBuffer, int outBufferOffset, int outBufferLen) {
         FloatBuffer inputBuffer = FloatBuffer.wrap(inBuffer, inBufferOffset, inBufferLen);
         FloatBuffer outputBuffer = FloatBuffer.wrap(outBuffer, outBufferOffset, outBufferLen);
 
@@ -360,12 +385,14 @@ public class Resampler {
         return new Result(inputBuffer.position() - inBufferOffset, outputBuffer.position() - outBufferOffset);
     }
 
+
+
     /*
      * Sampling rate up-conversion only subroutine; Slightly faster than
      * down-conversion;
      */
     private int lrsSrcUp(float X[], float Y[], double factor, int Nx, int Nwing, float LpScl, float Imp[],
-            float ImpD[], boolean Interp) {
+                         float ImpD[], boolean Interp) {
 
         float[] Xp_array = X;
         int Xp_index;
@@ -403,7 +430,7 @@ public class Resampler {
     }
 
     private int lrsSrcUD(float X[], float Y[], double factor, int Nx, int Nwing, float LpScl, float Imp[],
-            float ImpD[], boolean Interp) {
+                         float ImpD[], boolean Interp) {
 
         float[] Xp_array = X;
         int Xp_index;
