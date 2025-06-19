@@ -12,9 +12,10 @@ import io.github.freshsupasulley.censorcraft.config.punishments.Explosion;
 import io.github.freshsupasulley.censorcraft.config.punishments.Ignite;
 import io.github.freshsupasulley.censorcraft.config.punishments.Kill;
 import io.github.freshsupasulley.censorcraft.config.punishments.Lightning;
-import io.github.freshsupasulley.censorcraft.config.punishments.PotionEffects;
+import io.github.freshsupasulley.censorcraft.config.punishments.MobEffects;
 import io.github.freshsupasulley.censorcraft.config.punishments.PunishmentOption;
-import io.github.freshsupasulley.censorcraft.config.punishments.Sky;
+import io.github.freshsupasulley.censorcraft.config.punishments.Teleport;
+import io.github.freshsupasulley.censorcraft.network.Trie;
 import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.common.ForgeConfigSpec.ConfigValue;
 import net.minecraftforge.fml.config.ModConfig;
@@ -25,8 +26,8 @@ public class ServerConfig extends Config {
 	// General
 	public static ConfigValue<List<? extends String>> GLOBAL_TABOO;
 	public static ConfigValue<String> PREFERRED_MODEL;
-	public static ConfigValue<Float> CONTEXT_LENGTH, PUNISHMENT_COOLDOWN;//, RAT_DELAY;
-	public static ConfigValue<Boolean> CHAT_TABOOS, /*EXPOSE_RATS, */ISOLATE_WORDS, MONITOR_VOICE, MONITOR_CHAT;
+	public static ConfigValue<Float> CONTEXT_LENGTH, PUNISHMENT_COOLDOWN;// , RAT_DELAY;
+	public static ConfigValue<Boolean> CHAT_TABOOS, /* EXPOSE_RATS, */ISOLATE_WORDS, MONITOR_VOICE, MONITOR_CHAT;
 	
 	public static PunishmentOption[] PUNISHMENTS;
 	
@@ -44,20 +45,26 @@ public class ServerConfig extends Config {
 		MONITOR_CHAT = builder.comment("Punish players for sending taboos to chat").define("monitor_chat", true);
 		ISOLATE_WORDS = builder.comment("If true, only whole words are considered (surrounded by spaces or word boundaries). If false, partial matches are allowed (e.g., 'art' triggers punishment for 'start')").define("isolate_words", true);
 		PUNISHMENT_COOLDOWN = builder.comment("Delay (in seconds) before a player can be punished again").defineInRange("punishment_cooldown", 0f, 0f, Float.MAX_VALUE);
-//		EXPOSE_RATS = builder.comment("Rats on players in the chat if no audio data is being received, or they aren't using the appropriate model").define("expose_rats", true);
-//		RAT_DELAY = builder.comment("Seconds between ratting on players (expose_rats must be true)").defineInRange("rat_delay", 60f, 1, Float.MAX_VALUE);
+		// EXPOSE_RATS = builder.comment("Rats on players in the chat if no audio data is being received, or they aren't using the appropriate
+		// model").define("expose_rats", true);
+		// RAT_DELAY = builder.comment("Seconds between ratting on players (expose_rats must be true)").defineInRange("rat_delay", 60f, 1, Float.MAX_VALUE);
 		CHAT_TABOOS = builder.comment("When someone is punished, send what the player said to chat").define("chat_taboos", true);
+		
+		// i don't see a use for this
+		// PUNISH_IF_DEAD = builder.comment("Attempts to punish the player even if they're dead or dying").define("punish_if_dead", false);
 		
 		// Begin punishments section
 		builder.comment("List of all punishment options. To enable one, set enabled = true").comment("Each punishment may have their own additional list of taboos that will only trigger that punishment").push("punishments");
 		
 		// explosion is enabled by default
-		PUNISHMENTS = new PunishmentOption[] {new Commands(), new Crash(), new Dimension(), new Entities(), new Explosion(true), new Ignite(), new Kill(), new Lightning(), new PotionEffects(), new Sky()};
+		PUNISHMENTS = new PunishmentOption[] {new Commands(), new Crash(), new Dimension(), new Entities(), new Explosion(true), new Ignite(), new Kill(), new Lightning(), new MobEffects(), new Teleport()};
 		
 		for(PunishmentOption option : PUNISHMENTS)
 		{
 			option.init(builder);
 		}
+		
+		builder.define("hi", new Trie(null));
 		
 		builder.pop();
 		

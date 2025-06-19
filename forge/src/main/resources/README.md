@@ -1,1 +1,0 @@
-Run *download-ggml-model* to get any model you need (taken from [whispercpp](https://github.com/ggerganov/whisper.cpp)).
