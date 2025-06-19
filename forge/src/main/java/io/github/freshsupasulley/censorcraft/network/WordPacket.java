@@ -93,6 +93,8 @@ public class WordPacket implements IPacket {
 		String word = participant.appendWord(payload);
 		String globalTaboo = ServerConfig.ISOLATE_WORDS.get() ? globalTrie.containsAnyIsolatedIgnoreCase(word) : globalTrie.containsAnyIgnoreCase(word);
 		
+		boolean announced = false;
+		
 		// If a global taboo was spoken
 		if(globalTaboo != null)
 		{
@@ -104,6 +106,7 @@ public class WordPacket implements IPacket {
 			// Notify all players of the sin
 			if(ServerConfig.CHAT_TABOOS.get())
 			{
+				announced = true;
 				player.level().players().forEach(sample -> sample.displayClientMessage(Component.literal(participant.getName()).withStyle(style -> style.withBold(true)).append(Component.literal(" said ").withStyle(style -> style.withBold(false))).append(Component.literal("\"" + globalTaboo + "\"")), false));
 			}
 			
@@ -139,8 +142,9 @@ public class WordPacket implements IPacket {
 						options.add(option);
 						
 						// Notify all players of the sin
-						if(ServerConfig.CHAT_TABOOS.get())
+						if(!announced && ServerConfig.CHAT_TABOOS.get())
 						{
+							announced = true;
 							player.level().players().forEach(sample -> sample.displayClientMessage(Component.literal(participant.getName()).withStyle(style -> style.withBold(true)).append(Component.literal(" said ").withStyle(style -> style.withBold(false))).append(Component.literal("\"" + taboo + "\"")), false));
 						}
 						
