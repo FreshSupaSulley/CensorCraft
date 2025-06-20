@@ -17,9 +17,9 @@ public class ClientConfig extends RawConfig {
 	@Override
 	protected void register()
 	{
-		SHOW_TRANSCRIPTION = add(new ConfigValueBuilder<Boolean>("general.show_transcription", false));
-		DEBUG = add(new ConfigValueBuilder<Boolean>("general.debug", false));
-		LATENCY = add(new ConfigValueBuilder<Integer>("general.latency", 1000).addValidator(t -> t > MIN_LATENCY && t < MAX_LATENCY));
-		USE_VULKAN = add(new ConfigValueBuilder<Boolean>("general.use_vulkan", LibraryLoader.canUseVulkan()));
+		SHOW_TRANSCRIPTION = add(newConfig("general.show_transcription", false));
+		DEBUG = add(newConfig("general.debug", false));
+		LATENCY = add(newConfig("general.latency", 1000).setRange(MIN_LATENCY, MAX_LATENCY));//.addValidator(t -> t > MIN_LATENCY && t < MAX_LATENCY));
+		USE_VULKAN = add(newConfig("general.use_vulkan", LibraryLoader.canUseVulkan()));
 	}
 }
