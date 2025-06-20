@@ -166,7 +166,7 @@ public class ClientCensorCraft implements VoicechatPlugin {
 		// builder.setPreferredMicrophone(ClientConfig.PREFERRED_MIC.get());
 		builder.warmUpModel();
 		
-		if(ClientConfig.USE_VULKAN.get())
+		if(ClientConfig.useVulkan())
 		{
 			CensorCraft.LOGGER.warn("Vulkan enabled in client config");
 			builder.useVulkan();
@@ -300,7 +300,7 @@ public class ClientCensorCraft implements VoicechatPlugin {
 		// There is nothing to do if monitorVoice is disabled
 		if(!monitorVoice)
 		{
-			if(ClientConfig.DEBUG.get())
+			if(ClientConfig.debug())
 			{
 				setGUIText(Component.literal("Transcription is off\n"), true);
 			}
@@ -357,7 +357,7 @@ public class ClientCensorCraft implements VoicechatPlugin {
 			else
 			{
 				// How many samples we need for our target buffer size
-				long latency = ClientConfig.LATENCY.get();
+				long latency = ClientConfig.getLatency();
 				
 				// If we’ve collected enough and latency says we want another sample
 				if(ringBuffer.getSize() >= msToSamples(MIN_SAMPLE_MS) && System.currentTimeMillis() - lastTranscription >= latency)
@@ -396,7 +396,7 @@ public class ClientCensorCraft implements VoicechatPlugin {
 			}
 			
 			// Show transcriptions only if necessary
-			if(ClientConfig.SHOW_TRANSCRIPTION.get())
+			if(ClientConfig.showTranscription())
 			{
 				if(transcription != null && !transcription.toString().isBlank())
 				{
@@ -404,10 +404,10 @@ public class ClientCensorCraft implements VoicechatPlugin {
 				}
 			}
 			
-			if(ClientConfig.DEBUG.get())
+			if(ClientConfig.debug())
 			{
 				component.append(Component.literal(String.format("%.1f", controller.getTimeBehind() / 1000f) + "s behind\n").withColor(0xAAAAAA));
-				component.append(Component.literal("Latency: " + ClientConfig.LATENCY.get() + "\n"));
+				component.append(Component.literal("Latency: " + ClientConfig.getLatency() + "\n"));
 				component.append(Component.literal("Last transcribed " + recordings + " recording" + (recordings != 1 ? "s" : "") + "\n")).withColor(0xAAAAAA);
 				component.append(Component.literal(controller.getTranscriptionBacklog() + " samples queued\n"));
 				component.append(Component.literal("Using " + model.getFileName() + " model\n"));
@@ -417,7 +417,7 @@ public class ClientCensorCraft implements VoicechatPlugin {
 			// setGUIText(Component.empty());
 			// }
 			
-			setGUIText(component, ClientConfig.DEBUG.get());
+			setGUIText(component, ClientConfig.debug());
 		}
 		// If we're NOT supposed to be running
 		else

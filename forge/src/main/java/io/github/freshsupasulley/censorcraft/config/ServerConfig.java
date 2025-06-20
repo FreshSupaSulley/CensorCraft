@@ -64,8 +64,6 @@ public class ServerConfig extends Config {
 			option.init(builder);
 		}
 		
-		builder.define("hi", new Trie(null));
-		
 		builder.pop();
 		
 		return builder.build();
