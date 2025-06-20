@@ -1,9 +1,14 @@
 package io.github.freshsupasulley.censorcraft.config;
 
+import java.io.File;
+import java.nio.file.Path;
+import java.util.List;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
+import com.electronwill.nightconfig.core.ConfigSpec;
 import com.electronwill.nightconfig.core.file.CommentedFileConfig;
 import com.electronwill.nightconfig.core.file.FileNotFoundAction;
 import com.electronwill.nightconfig.core.io.WritingMode;
@@ -11,6 +16,9 @@ import com.electronwill.nightconfig.core.io.WritingMode;
 import io.github.freshsupasulley.censorcraft.CensorCraft;
 import net.minecraftforge.fml.loading.FMLPaths;
 
+/**
+ * Alternative to {@link ConfigSpec}.
+ */
 public abstract class RawConfig {
 	
 	private CommentedFileConfig config;
@@ -23,6 +31,11 @@ public abstract class RawConfig {
 		register();
 		
 		config.save();
+	}
+	
+	public Path getFilePath()
+	{
+		return config.getNioPath();
 	}
 	
 	protected abstract void register();
@@ -48,9 +61,9 @@ public abstract class RawConfig {
 			config.set(built.key, built.defaultValue);
 		}
 		
-		if(built.comment != null)
+		if(!builder.comments.isEmpty())
 		{
-			config.setComment(built.key, built.comment);
+			config.setComment(built.key, builder.comments.stream().collect(Collectors.joining(System.getProperty("line.separator"))));
 		}
 		
 		return built;
@@ -62,7 +75,7 @@ public abstract class RawConfig {
 		private final T defaultValue;
 		
 		// Optional
-		private String comment;
+		private List<String> comments = List.of();
 		private Predicate<T> validator = (t) -> true;
 		
 		public ConfigValueBuilder(String key, T defaultValue)
@@ -73,37 +86,40 @@ public abstract class RawConfig {
 		
 		public ConfigValueBuilder<T> addValidator(Predicate<T> validator)
 		{
+			if(validator.test(defaultValue))
+			{
+				throw new IllegalArgumentException("Default value fails validation");
+			}
+			
 			this.validator = validator;
 			return this;
 		}
 		
 		public ConfigValueBuilder<T> addComment(String comment)
 		{
-			this.comment = comment;
+			this.comments.add(comment);
 			return this;
 		}
 		
 		public ConfigValue<T> build(CommentedFileConfig config)
 		{
-			return new ConfigValue<T>(config, key, defaultValue, validator, comment);
+			return new ConfigValue<T>(config, key, defaultValue, validator);
 		}
 	}
 	
-	class ConfigValue<T> {
+	public class ConfigValue<T> {
 		
 		private final CommentedFileConfig config;
 		private final String key;
 		private final T defaultValue;
 		private Predicate<T> validator;
-		private String comment;
 		
-		public ConfigValue(CommentedFileConfig config, String key, T defaultValue, Predicate<T> validator, @Nullable String comment)
+		public ConfigValue(CommentedFileConfig config, String key, T defaultValue, Predicate<T> validator)
 		{
 			this.config = config;
 			this.key = key;
 			this.defaultValue = defaultValue;
 			this.validator = validator;
-			this.comment = comment;
 		}
 		
 		public T get()
@@ -124,11 +140,6 @@ public abstract class RawConfig {
 			{
 				config.set(key, value);
 			}
-		}
-		
-		public String getKey()
-		{
-			return key;
 		}
 	}
 }
