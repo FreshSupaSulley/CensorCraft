@@ -6,6 +6,9 @@ public class ClientConfig extends RawConfig {
 	
 	public static final int MIN_LATENCY = 100, MAX_LATENCY = 5000;
 	
+	public static ConfigValue<Boolean> SHOW_TRANSCRIPTION, DEBUG, USE_VULKAN;
+	public static ConfigValue<Integer> LATENCY;
+	
 	public ClientConfig()
 	{
 		super("client");
@@ -14,29 +17,9 @@ public class ClientConfig extends RawConfig {
 	@Override
 	protected void register()
 	{
-		setDefault(config, "general.show_transcription", showTranscription(), "Display live transcriptions");
-		setDefault(config, "general.debug", debug(), "Shows helpful debugging information");
-		setDefault(config, "general.latency", getLatency(), "Transcription latency in milliseconds");
-		setDefault(config, "general.use_vulkan", useVulkan(), "Use Vulkan-based GPU libraries (Windows only)");
-	}
-	
-	public static boolean showTranscription()
-	{
-		return config.getOrElse("general.show_transcription", false);
-	}
-	
-	public static boolean debug()
-	{
-		return config.getOrElse("general.debug", false);
-	}
-	
-	public static boolean useVulkan()
-	{
-		return config.getOrElse("general.use_vulkan", LibraryLoader.canUseVulkan());
-	}
-	
-	public static int getLatency()
-	{
-		return config.getOrElse("general.latency", 1000);
+		SHOW_TRANSCRIPTION = add(new ConfigValueBuilder<Boolean>("general.show_transcription", false));
+		DEBUG = add(new ConfigValueBuilder<Boolean>("general.debug", false));
+		LATENCY = add(new ConfigValueBuilder<Integer>("general.latency", 1000).addValidator(t -> t > MIN_LATENCY && t < MAX_LATENCY));
+		USE_VULKAN = add(new ConfigValueBuilder<Boolean>("general.use_vulkan", LibraryLoader.canUseVulkan()));
 	}
 }
