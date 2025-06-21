@@ -71,7 +71,7 @@ public class SetupPacket implements IPacket {
 	@Override
 	public void consume(Context context)
 	{
-		CensorCraft.LOGGER.info("Consuming setup packet (model: {}, monitorVoice: {}", model, monitorVoice);
+		CensorCraft.LOGGER.info("Consuming setup packet (model: {}, monitorVoice: {})", model, monitorVoice);
 		
 		// If we don't have the model requested by the server
 		if(monitorVoice && !ClientCensorCraft.hasModel(model))

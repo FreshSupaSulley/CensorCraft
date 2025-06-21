@@ -1,6 +1,7 @@
 package io.github.freshsupasulley.censorcraft.config;
 
 import io.github.freshsupasulley.LibraryLoader;
+import net.minecraftforge.fml.config.ModConfig;
 
 public class ClientConfig extends RawConfig {
 	
@@ -11,15 +12,15 @@ public class ClientConfig extends RawConfig {
 	
 	public ClientConfig()
 	{
-		super("client");
+		super(ModConfig.Type.CLIENT);
 	}
 	
 	@Override
 	protected void register()
 	{
-		SHOW_TRANSCRIPTION = add(newConfig("general.show_transcription", false));
-		DEBUG = add(newConfig("general.debug", false));
-		LATENCY = add(newConfig("general.latency", 1000).setRange(MIN_LATENCY, MAX_LATENCY));//.addValidator(t -> t > MIN_LATENCY && t < MAX_LATENCY));
-		USE_VULKAN = add(newConfig("general.use_vulkan", LibraryLoader.canUseVulkan()));
+		SHOW_TRANSCRIPTION = newConfig("general.show_transcription", false).build();
+		DEBUG = newConfig("general.debug", false).build();
+		LATENCY = newConfig("general.latency", 1000).setRange(MIN_LATENCY, MAX_LATENCY).build();// .addValidator(t -> t > MIN_LATENCY && t < MAX_LATENCY));
+		USE_VULKAN = newConfig("general.use_vulkan", LibraryLoader.canUseVulkan()).build();
 	}
 }
