@@ -5,16 +5,16 @@ import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.config.ModConfigEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 
-public abstract class Config {
+public abstract class CCConfig {
 	
 	public static ClientConfig CLIENT = new ClientConfig();
 	private ForgeConfigSpec spec;
 	
 	public static void register(FMLJavaModLoadingContext context)
 	{
-		Config[] configs = {new ServerConfig()};
+		CCConfig[] configs = {new ServerConfig()};
 		
-		for(Config config : configs)
+		for(CCConfig config : configs)
 		{
 			context.registerConfig(config.getType(), config.spec = config.register());
 			context.getModEventBus().addListener(config::onConfigLoad);

@@ -3,7 +3,7 @@ package io.github.freshsupasulley.censorcraft.gui;
 import io.github.freshsupasulley.LibraryLoader;
 import io.github.freshsupasulley.censorcraft.ClientCensorCraft;
 import io.github.freshsupasulley.censorcraft.config.ClientConfig;
-import io.github.freshsupasulley.censorcraft.config.Config;
+import io.github.freshsupasulley.censorcraft.config.CCConfig;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.OptionInstance;
@@ -120,7 +120,7 @@ public class ConfigScreen extends Screen {
 			ClientConfig.DEBUG.set(value);
 		}).build());
 		
-		layout.addChild(Button.builder(Component.literal("Open config file"), pButton -> Util.getPlatform().openPath(Config.CLIENT.getFilePath())).build());//.active = ClientConfig.filePath != null;
+		layout.addChild(Button.builder(Component.literal("Open config file"), pButton -> Util.getPlatform().openPath(CCConfig.CLIENT.getFilePath())).build());//.active = ClientConfig.filePath != null;
 		
 		LinearLayout buttonLayout = LinearLayout.horizontal().spacing(ClientCensorCraft.PADDING);
 		

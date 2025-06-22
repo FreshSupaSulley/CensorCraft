@@ -21,7 +21,7 @@ import net.minecraftforge.common.ForgeConfigSpec.ConfigValue;
 import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.config.ModConfig.Type;
 
-public class ServerConfig extends Config {
+public class ServerConfig extends CCConfig {
 	
 	// General
 	public static ConfigValue<List<? extends String>> GLOBAL_TABOO;
