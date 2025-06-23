@@ -49,6 +49,7 @@ public class Participant {
 	
 	public void punish(List<PunishmentOption> punishments, ServerPlayer player)
 	{
+		System.out.println("SENDING EVIL PACKET");
 		CensorCraft.channel.send(new PunishedPacket(punishments.stream().map(PunishmentOption::getName).collect(Collectors.toList()).toArray(String[]::new)), PacketDistributor.PLAYER.with(player));
 		buffer.setLength(0);
 		heartbeat();

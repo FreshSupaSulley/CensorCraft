@@ -35,7 +35,7 @@ public abstract class GUIMixin {
 	private void renderHotbarAndDecorations(GuiGraphics graphics, DeltaTracker tracker, CallbackInfo info)
 	{
 		MutableComponent component = Component.empty();
-		component.append(Component.literal(ClientConfig.UNWANTED.get()));
+//		component.append(Component.literal(ClientConfig.UNWANTED.get().get(0).get("balls")));
 		
 //		if(ClientConfig.INDICATE_TRANSCRIBING.get() && ClientCensorCraft.TRANSCRIBING)
 //		{

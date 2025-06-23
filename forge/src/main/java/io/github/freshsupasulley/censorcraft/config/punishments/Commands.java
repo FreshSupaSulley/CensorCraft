@@ -2,30 +2,30 @@ package io.github.freshsupasulley.censorcraft.config.punishments;
 
 import java.util.List;
 
+import com.electronwill.nightconfig.core.CommentedConfig;
+import com.electronwill.nightconfig.core.ConfigSpec;
+
 import net.minecraft.CrashReport;
 import net.minecraft.CrashReportCategory;
 import net.minecraft.ReportedException;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.common.ForgeConfigSpec.Builder;
-import net.minecraftforge.common.ForgeConfigSpec.ConfigValue;
 
 public class Commands extends PunishmentOption {
 	
-	private static ConfigValue<List<? extends String>> COMMANDS;
-	
 	@Override
-	public void build(Builder builder)
+	public void build(CommentedConfig config, ConfigSpec spec)
 	{
-		COMMANDS = builder.defineListAllowEmpty("commands", List.of("/kill @a"), element -> true);
+		spec.define("commands", List.of("/kill @a"));
 	}
 	
+	@SuppressWarnings("unchecked")
 	@Override
 	public void punish(ServerPlayer player)
 	{
 		MinecraftServer server = player.getServer();
 		
-		for(String command : COMMANDS.get())
+		for(String command : (List<String>) config.get("commands"))
 		{
 			// Ripped from (Base)CommandBlock
 			try

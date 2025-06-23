@@ -4,7 +4,8 @@ import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
 
-import io.github.freshsupasulley.censorcraft.config.CCConfig;
+import io.github.freshsupasulley.censorcraft.config.ClientConfig;
+import io.github.freshsupasulley.censorcraft.config.ServerConfig;
 import io.github.freshsupasulley.censorcraft.network.IPacket;
 import io.github.freshsupasulley.censorcraft.network.PunishedPacket;
 import io.github.freshsupasulley.censorcraft.network.SetupPacket;
@@ -28,10 +29,13 @@ public class CensorCraft {
 	public static final long HEARTBEAT_TIME = 30000, HEARTBEAT_SAFETY_NET = 5000;
 	public static SimpleChannel channel;
 	
+	public static ClientConfig CLIENT = new ClientConfig();
+	public static ServerConfig SERVER = new ServerConfig();
+	
 	public CensorCraft(FMLJavaModLoadingContext context)
 	{
 		// Forbidden words are defined at the server level
-		CCConfig.register(context);
+//		CCConfig.register(context);
 		
 		// Register ourselves for server and other game events we are interested in
 		// MinecraftForge.registerConfigScreen(null);.EVENT_BUS.register(this);
