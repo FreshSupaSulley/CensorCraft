@@ -14,9 +14,6 @@ import com.electronwill.nightconfig.core.ConfigSpec.CorrectionListener;
 import com.electronwill.nightconfig.core.file.CommentedFileConfig;
 import com.electronwill.nightconfig.core.io.ParsingException;
 
-import io.github.freshsupasulley.censorcraft.CensorCraft;
-import net.minecraftforge.fml.config.ConfigFileTypeHandler;
-
 public class ConfigWrapper {
 	
 	// Solely for IO operations
@@ -196,7 +193,7 @@ public class ConfigWrapper {
 						// Put the file back if the user deletes it
 						if(!file.getFile().exists())
 						{
-							CensorCraft.LOGGER.warn("File is missing! Recreating...");
+							System.err.println("File is missing! Recreating...");
 							file.save();
 						}
 						
@@ -210,17 +207,17 @@ public class ConfigWrapper {
 				throw new ParsingException("Invalid config value for key " + key + ": " + rawValue);
 			} catch(ClassCastException | ParsingException e)
 			{
-				CensorCraft.LOGGER.warn("Configuration file {} is not correct. Correcting", file.getNioPath());
-				CensorCraft.LOGGER.debug("Config file exception", e);
+				System.err.println("Configuration file {} is not correct. Correcting" + file.getNioPath());
+				e.printStackTrace();
 				
 				// Store the user's changes in a separate file so they can repair it easier
-				CensorCraft.LOGGER.warn("Created backup config file");
-				ConfigFileTypeHandler.backUpConfig(file);
+				System.err.println("Created backup config file");
+//				ConfigFileTypeHandler.backUpConfig(file);
 				
 				CorrectionListener listener = (action, path, incorrectValue, correctedValue) ->
 				{
 					String pathString = String.join(".", path);
-					CensorCraft.LOGGER.debug("Corrected '{}': was '{}', is now '{}'", pathString, incorrectValue, correctedValue);
+					System.err.println("Corrected '{}': was '{}', is now '{}'" + pathString + incorrectValue + correctedValue);
 				};
 				
 				spec.correct(config, listener);
