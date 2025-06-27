@@ -4,7 +4,6 @@ import java.nio.charset.Charset;
 
 import io.github.freshsupasulley.censorcraft.CensorCraft;
 import io.github.freshsupasulley.censorcraft.ClientCensorCraft;
-import io.github.freshsupasulley.censorcraft.config.ServerConfig;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraftforge.event.network.CustomPayloadEvent.Context;
@@ -55,7 +54,7 @@ public class SetupPacket implements IPacket {
 	public static void playerJoinedEvent(GatherLoginConfigurationTasksEvent event)
 	{
 		// Inform the player of the preferred model
-		CensorCraft.channel.send(new SetupPacket(ServerConfig.PREFERRED_MODEL.get(), ServerConfig.MONITOR_VOICE.get(), (long) (ServerConfig.CONTEXT_LENGTH.get() * 1000)), event.getConnection()); // CONTEXT_LENGTH is in seconds, convert to ms
+		CensorCraft.channel.send(new SetupPacket(CensorCraft.SERVER.getPreferredModel(), CensorCraft.SERVER.isMonitorVoice(), (long) (CensorCraft.SERVER.getContextLength() * 1000)), event.getConnection()); // CONTEXT_LENGTH is in seconds, convert to ms
 	}
 	
 	public void encode(FriendlyByteBuf buffer)

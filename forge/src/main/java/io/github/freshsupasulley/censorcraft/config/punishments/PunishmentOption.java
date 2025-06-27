@@ -1,13 +1,7 @@
 package io.github.freshsupasulley.censorcraft.config.punishments;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.function.Supplier;
-
-import com.electronwill.nightconfig.core.serde.annotations.SerdeDefault;
-import com.electronwill.nightconfig.core.serde.annotations.SerdeDefault.WhenValue;
-
 import io.github.freshsupasulley.censorcraft.network.Trie;
+import net.minecraft.server.level.ServerPlayer;
 
 public abstract class PunishmentOption {
 	
@@ -57,7 +51,7 @@ public abstract class PunishmentOption {
 		return "";
 	}
 	
-	public abstract void punish();
+	public abstract void punish(ServerPlayer player);
 	
 	public String getName()
 	{
