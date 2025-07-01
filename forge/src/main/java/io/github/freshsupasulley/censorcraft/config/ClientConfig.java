@@ -1,6 +1,5 @@
 package io.github.freshsupasulley.censorcraft.config;
 
-import com.electronwill.nightconfig.core.CommentedConfig;
 import com.electronwill.nightconfig.core.ConfigSpec;
 
 import io.github.freshsupasulley.LibraryLoader;
@@ -65,11 +64,11 @@ public class ClientConfig extends ConfigFile {
 	}
 	
 	@Override
-	void applyComments(CommentedConfig config)
+	void postLoad()
 	{
-		config.setComment("show_transcription", "Display live transcriptions");
-		config.setComment("debug", "Shows helpful debugging information");
-		config.setComment("use_vulkan", "Uses Vulkan-built libraries for Windows GPU support. Can break on some machines");
-		config.setComment("latency", "Transcription latency (in milliseconds). Internally represents the size of an individual audio sample");
+		addComment("show_transcription", "Display live transcriptions");
+		addComment("debug", "Shows helpful debugging information");
+		addComment("use_vulkan", "Uses Vulkan-built libraries for Windows GPU support. Can break on some machines");
+		addComment("latency", "Transcription latency (in milliseconds). Internally represents the size of an individual audio sample");
 	}
 }

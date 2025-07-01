@@ -100,7 +100,7 @@ public class WordPacket implements IPacket {
 			CensorCraft.LOGGER.info("Global taboo said by {}: \"{}\"!", participant.getName(), globalTaboo);
 			
 			// Update punishment timing and clear buffer
-			List<PunishmentOption> options = new ArrayList<PunishmentOption>();
+			List<PunishmentOption<?>> options = new ArrayList<PunishmentOption<?>>();
 			
 			// Notify all players of the sin
 			if(CensorCraft.SERVER.isChatTaboos())
@@ -110,7 +110,7 @@ public class WordPacket implements IPacket {
 			}
 			
 			// Go through all enabled punishments
-			for(PunishmentOption option : CensorCraft.SERVER.getPunishments())
+			for(PunishmentOption<?> option : CensorCraft.SERVER.getPunishments())
 			{
 				if(option.isEnabled() && !option.ignoresGlobalTaboos())
 				{
@@ -125,10 +125,10 @@ public class WordPacket implements IPacket {
 		}
 		else
 		{
-			List<PunishmentOption> options = new ArrayList<PunishmentOption>();
+			List<PunishmentOption<?>> options = new ArrayList<PunishmentOption<?>>();
 			
 			// Check all punishments for particular taboos
-			for(PunishmentOption option : CensorCraft.SERVER.getPunishments())
+			for(PunishmentOption<?> option : CensorCraft.SERVER.getPunishments())
 			{
 				if(option.isEnabled())
 				{
