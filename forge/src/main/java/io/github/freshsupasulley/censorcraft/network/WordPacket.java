@@ -110,7 +110,7 @@ public class WordPacket implements IPacket {
 			}
 			
 			// Go through all enabled punishments
-			for(PunishmentOption option : CensorCraft.SERVER.PUNISHMENTS)
+			for(PunishmentOption option : CensorCraft.SERVER.getPunishments())
 			{
 				if(option.isEnabled() && !option.ignoresGlobalTaboos())
 				{
@@ -128,11 +128,11 @@ public class WordPacket implements IPacket {
 			List<PunishmentOption> options = new ArrayList<PunishmentOption>();
 			
 			// Check all punishments for particular taboos
-			for(PunishmentOption option : CensorCraft.SERVER.PUNISHMENTS)
+			for(PunishmentOption option : CensorCraft.SERVER.getPunishments())
 			{
 				if(option.isEnabled())
 				{
-					String taboo = option.getTaboo(word);
+					String taboo = option.getTaboo(word, CensorCraft.SERVER.isIsolateWords());
 					
 					if(taboo != null)
 					{

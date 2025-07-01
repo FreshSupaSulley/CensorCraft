@@ -89,7 +89,7 @@ public class ConfigScreen extends Screen {
 				case ClientConfig.MAX_LATENCY -> Component.literal("Slow");
 				default -> Component.literal(value + "ms");
 			};
-		}, new OptionInstance.IntRange(ClientConfig.MIN_LATENCY, ClientConfig.MAX_LATENCY), (int) CensorCraft.CLIENT.getLatency(), CensorCraft.CLIENT::setLatency).createButton(minecraft.options)); // no clue what minecraft.options is
+		}, new OptionInstance.IntRange(ClientConfig.MIN_LATENCY, ClientConfig.MAX_LATENCY), CensorCraft.CLIENT.getLatency(), CensorCraft.CLIENT::setLatency).createButton(minecraft.options)); // no clue what minecraft.options is
 		
 		// I actually prefer the default width more
 		// slider.setWidth(optionsWidth - 10); // remove a bit so it doesnt intersect the slider

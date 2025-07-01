@@ -1,27 +1,28 @@
 package io.github.freshsupasulley.censorcraft.config.punishments;
 
 import java.util.List;
-import java.util.function.Supplier;
 
-import com.electronwill.nightconfig.core.serde.annotations.SerdeDefault;
-import com.electronwill.nightconfig.core.serde.annotations.SerdeDefault.WhenValue;
+import com.electronwill.nightconfig.core.CommentedConfig;
+import com.electronwill.nightconfig.core.ConfigSpec;
 
 import net.minecraft.server.level.ServerPlayer;
 
 public class Commands extends PunishmentOption {
 	
-	@SerdeDefault(provider = "getDefault", whenValue = WhenValue.IS_NULL)
-	private List<String> commands;
-	public static transient Supplier<List<String>> getDefault = () -> List.of("clash of clans");
+	public Commands(CommentedConfig config)
+	{
+		super(config);
+	}
 	
+	@SuppressWarnings("unchecked")
 	@Override
 	public void punish(ServerPlayer player)
 	{
 		// MinecraftServer server = player.getServer();
 		
-		for(String command : commands)
+		for(String command : (List<String>) config.get("commands"))
 		{
-			System.out.println("hey there! " + commands);
+			System.out.println("hey there! " + command);
 			// Ripped from (Base)CommandBlock
 			// try
 			// {
@@ -36,4 +37,15 @@ public class Commands extends PunishmentOption {
 		}
 	}
 	
+	@Override
+	void build(CommentedConfig config)
+	{
+		config.set("commands", List.of());
+	}
+	
+	@Override
+	public PunishmentOption deserialize(CommentedConfig aot)
+	{
+		return new Commands(aot);
+	}
 }

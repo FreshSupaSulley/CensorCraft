@@ -1,140 +1,129 @@
 package io.github.freshsupasulley.censorcraft.config;
 
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Supplier;
 
-import com.electronwill.nightconfig.core.serde.annotations.SerdeDefault;
-import com.electronwill.nightconfig.core.serde.annotations.SerdeDefault.WhenValue;
+import com.electronwill.nightconfig.core.CommentedConfig;
+import com.electronwill.nightconfig.core.ConfigSpec;
 
 import io.github.freshsupasulley.censorcraft.config.punishments.Commands;
 import io.github.freshsupasulley.censorcraft.config.punishments.PunishmentOption;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.fml.config.ModConfig;
 
-/**
- * Just know I hate this as much as you do. Only Allah knows why Forge config doesn't support maps (array of tables).
- */
 public class ServerConfig extends ConfigFile {
 	
-	@SerdeDefault(provider = "defaultGlobalTaboos", whenValue = WhenValue.IS_NULL)
-	private List<String> GLOBAL_TABOOS = defaultGlobalTaboos.get();
-	static transient Supplier<List<String>> defaultGlobalTaboos = () -> Arrays.asList("boom");
-	
-	@SerdeDefault(provider = "defaultPreferredModel", whenValue = WhenValue.IS_NULL)
-	private String PREFERRED_MODEL = defaultPreferredModel.get();
-	static transient Supplier<String> defaultPreferredModel = () -> "base.en";
-	
-	@SerdeDefault(provider = "defaultContextLength", whenValue = WhenValue.IS_NULL)
-	private Float CONTEXT_LENGTH = defaultContextLength.get();
-	static transient Supplier<Float> defaultContextLength = () -> 3f;
-	
-	@SerdeDefault(provider = "defaultPunishmentCooldown", whenValue = WhenValue.IS_NULL)
-	private Float PUNISHMENT_COOLDOWN = defaultPunishmentCooldown.get();
-	static transient Supplier<Float> defaultPunishmentCooldown = () -> 0f;
-	
-	@SerdeDefault(provider = "defaultChatTaboos", whenValue = WhenValue.IS_NULL)
-	private Boolean CHAT_TABOOS = defaultChatTaboos.get();
-	static transient Supplier<Boolean> defaultChatTaboos = () -> true;
-	
-	@SerdeDefault(provider = "defaultExposeRats", whenValue = WhenValue.IS_NULL)
-	private Boolean EXPOSE_RATS = defaultExposeRats.get();
-	static transient Supplier<Boolean> defaultExposeRats = () -> true;
-	
-	@SerdeDefault(provider = "defaultIsolateWords", whenValue = WhenValue.IS_NULL)
-	private Boolean ISOLATE_WORDS = defaultIsolateWords.get();
-	static transient Supplier<Boolean> defaultIsolateWords = () -> true;
-	
-	@SerdeDefault(provider = "defaultMonitorVoice", whenValue = WhenValue.IS_NULL)
-	private Boolean MONITOR_VOICE = defaultMonitorVoice.get();
-	static transient Supplier<Boolean> defaultMonitorVoice = () -> true;
-	
-	@SerdeDefault(provider = "defaultMonitorChat", whenValue = WhenValue.IS_NULL)
-	private Boolean MONITOR_CHAT = defaultMonitorChat.get();
-	static transient Supplier<Boolean> defaultMonitorChat = () -> true;
-	
-	@SerdeDefault(provider = "defaultPunishments", whenValue = WhenValue.IS_NULL)
-	public PunishmentOption[] PUNISHMENTS = defaultPunishments.get();
-	static transient Supplier<PunishmentOption[]> defaultPunishments = () -> new PunishmentOption[] {new Commands()};
+	private PunishmentOption[] defaults;
 	
 	public ServerConfig()
 	{
 		super(ModConfig.Type.SERVER);
-		
-		// Begin punishments section
-		// will be annotatino comment?
-		// ConfigWrapper sub = config.sub("punishments", "List of all punishment options. To enable one, set enabled = true", "Each punishment may have their own
-		// additional list of taboos that will only trigger that punishment");
-		//
-		// explosion is enabled by default
-		// PUNISHMENTS = new PunishmentOption[] {new Commands()};// , new Crash(), new Dimension(), new Entities(), new Explosion(true), new Ignite(), new Kill(), new
-		// Lightning(), new MobEffects(), new Teleport()};
-		
-		// for(PunishmentOption option : PUNISHMENTS)
-		{
-			// Build an array of tables with just one table to start. User can add as many
-			// as they want
-			// sub.buildTable(option.getName(), (table, spec) ->
-			// {
-			// option.init(table, spec);
-			// }, option.getDescription());
-			
-			// option.init(sub);
-		}
 	}
 	
 	public List<String> getGlobalTaboos()
 	{
-		return config.get("GLOBAL_TABOOS");
+		return config.get("global_taboos");
 	}
 	
 	public String getPreferredModel()
 	{
-		return config.get("PREFERRED_MODEL");
+		return config.get("preferred_model");
 	}
 	
-	public float getContextLength()
+	public double getContextLength()
 	{
-		return config.get("CONTEXT_LENGTH");
+		return config.get("context_length");
 	}
 	
-	public float getPunishmentCooldown()
+	public double getPunishmentCooldown()
 	{
-		return config.get("PUNISHMENT_COOLDOWN");
+		return config.get("punishment_cooldown");
 	}
 	
 	public boolean isChatTaboos()
 	{
-		return config.get("CHAT_TABOOS");
+		return config.get("chat_taboos");
+	}
+	
+	public boolean isExposeRats()
+	{
+		return config.get("expose_rats");
 	}
 	
 	public boolean isIsolateWords()
 	{
-		return config.get("ISOLATE_WORDS");
+		return config.get("isolate_words");
 	}
 	
 	public boolean isMonitorVoice()
 	{
-		return config.get("MONITOR_VOICE");
+		return config.get("monitor_voice");
 	}
 	
 	public boolean isMonitorChat()
 	{
-		return config.get("MONITOR_CHAT");
+		return config.get("monitor_chat");
 	}
 	
-	// @Override
-	// protected void onConfigUpdate(ModConfig config)
-	// {
-	// if(!Stream.of(PUNISHMENTS).anyMatch(PunishmentOption::isEnabled))
-	// {
-	// CensorCraft.LOGGER.warn("No punishments are enabled. Navigate to {} to enable
-	// a punishment", config.getFileName());
-	// }
-	//
-	// if(!MONITOR_CHAT.get() && !MONITOR_VOICE.get())
-	// {
-	// CensorCraft.LOGGER.warn("You are not monitoring voice or chat! CensorCraft is
-	// effectively disabled");
-	// }
-	// }
+	public List<PunishmentOption> getPunishments()
+	{
+		List<PunishmentOption> options = new ArrayList<PunishmentOption>();
+		
+		// By fucking LAW each default option needs to be in the server config file
+		for(PunishmentOption punishment : defaults)
+		{
+			// array of tables not attack on titan :(
+			List<CommentedConfig> aot = config.get(punishment.getName());
+			
+			aot.forEach(config ->
+			{
+				options.add(punishment.deserialize(config));
+			});
+		}
+		
+		return options;
+	}
+	
+	@Override
+	void register(ConfigSpec spec)
+	{
+		spec.define("global_taboos", List.of("boom"));
+		spec.define("preferred_model", "base.en");
+		spec.defineInRange("context_length", 3D, 0D, Double.MAX_VALUE);
+		spec.defineInRange("punishment_cooldown", 0D, 0D, Double.MAX_VALUE);
+		spec.define("chat_taboos", true);
+		spec.define("expose_rats", true);
+		spec.define("isolate_words", true);
+		spec.define("monitor_voice", true);
+		spec.define("monitor_chat", true);
+		
+		// Punishments are special. They are an array of tables
+		// List<CommentedConfig> punishments = new ArrayList<>();
+		defaults = new PunishmentOption[] {new Commands(null)};
+		
+		for(PunishmentOption option : defaults)
+		{
+			CommentedConfig table = config.createSubConfig();
+			option.init(false, table);
+			// punishments.add(table);
+			spec.define(option.getName(), List.of(table));
+		}
+		
+		// spec.define("punishments", punishments);
+	}
+	
+	@Override
+	void applyComments(CommentedConfig config)
+	{
+		config.setComment("global_taboos", "Words that are always censored regardless of mode");
+		config.setComment("preferred_model", "Name of the preferred model for recognition");
+		config.setComment("context_length", "How many seconds of audio context to retain");
+		config.setComment("punishment_cooldown", "Delay (in seconds) before a player can be punished again");
+		config.setComment("chat_taboos", "Whether to censor typed chat");
+		config.setComment("expose_rats", "Enable rat reporting for taboo snitches");
+		config.setComment("isolate_words", "Whether taboo word matching must be isolated (e.g., 'kill' won't match 'skill')");
+		config.setComment("monitor_voice", "Whether to listen to microphone input");
+		config.setComment("monitor_chat", "Whether to monitor typed chat");
+		config.setComment("punishments", "List of enabled punishment options. Each entry is a table with its own settings.");
+	}
 }
