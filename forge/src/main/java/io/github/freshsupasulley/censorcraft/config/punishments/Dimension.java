@@ -43,7 +43,7 @@ public class Dimension extends PunishmentOption<Dimension> {
 	@Override
 	public void executePunishment(ServerPlayer player)
 	{
-		VanillaDimensions desiredDimension = config.get("dimension");
+		VanillaDimensions desiredDimension = config.getEnum("dimension", VanillaDimensions.class);
 		ResourceKey<Level> playerDimension = player.level().dimension();
 		
 		// If we are already in the desired dimension
@@ -53,7 +53,7 @@ public class Dimension extends PunishmentOption<Dimension> {
 			
 			if(enableFallback)
 			{
-				VanillaDimensions fallback = config.get("fallback");
+				VanillaDimensions fallback = config.getEnum("fallback", VanillaDimensions.class);
 				
 				// AND the fallback dimension is different
 				// random.toLevel() is null so this should still work, assuming playerDimension will never be null

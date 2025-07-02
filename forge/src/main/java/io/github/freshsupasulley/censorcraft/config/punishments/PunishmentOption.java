@@ -37,7 +37,7 @@ public abstract class PunishmentOption<T extends PunishmentOption<T>> {
 	final <E> void define(String key, E value, String... comments)
 	{
 		config.set(key, value);
-		config.setComment(key, Stream.of(comments).collect(Collectors.joining(System.getProperty("line.separator"))));
+		config.setComment(key, Stream.of(comments).map(comment -> " " + comment).collect(Collectors.joining(System.getProperty("line.separator"))));
 	}
 	
 	/**

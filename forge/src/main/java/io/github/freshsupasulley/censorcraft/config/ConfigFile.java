@@ -12,6 +12,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.electronwill.nightconfig.core.CommentedConfig;
+import com.electronwill.nightconfig.core.Config;
 import com.electronwill.nightconfig.core.ConfigSpec;
 import com.electronwill.nightconfig.core.ConfigSpec.CorrectionListener;
 import com.electronwill.nightconfig.core.file.CommentedFileConfig;
@@ -22,7 +23,6 @@ import net.minecraftforge.fml.config.ConfigFileTypeHandler;
 import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.loading.FMLPaths;
 
-// System.out.println("SETTING UP" + FMLConfig.getConfigValue(FMLConfig.ConfigValue.DEFAULT_CONFIG_PATH));
 /**
  * A custom config file handler, because Forge is lacking support for array of tables.
  * 
@@ -32,6 +32,12 @@ import net.minecraftforge.fml.loading.FMLPaths;
  * </p>
  */
 public abstract class ConfigFile {
+	
+	static
+	{
+		// For ConfigSpecs. preserveInsertionOrder() on the main CommentedFileConfig isn't enough
+		Config.setInsertionOrderPreserved(true);
+	}
 	
 	protected final CommentedFileConfig config;
 	protected final ConfigSpec spec = new ConfigSpec();
@@ -46,14 +52,16 @@ public abstract class ConfigFile {
 	
 	public ConfigFile(ModConfig.Type type)
 	{
+		// System.out.println("SETTING UP" + FMLConfig.getConfigValue(FMLConfig.ConfigValue.DEFAULT_CONFIG_PATH));
 		Path file = FMLPaths.GAMEDIR.get().resolve(String.format(Locale.ROOT, "%s-%s.toml", CensorCraft.MODID, type.extension()));
 		
 		// Why is it called this lmao
 		boolean newFile = Files.notExists(file);
 		
-		// This creates the file
-		config = CommentedFileConfig.builder(file).autosave().autoreload().sync().onLoadFilter(new ConfigLoadFilter()
+		// This creates the file due to the default onFileNotFound
+		config = CommentedFileConfig.builder(file).autosave().autoreload().sync().preserveInsertionOrder().onLoadFilter(new ConfigLoadFilter()
 		{
+			
 			@Override
 			public boolean acceptNewVersion(CommentedConfig newConfig)
 			{
@@ -75,7 +83,15 @@ public abstract class ConfigFile {
 		// Without this check, it will load a blank file and thus correct itself, needlessly creating a blank backup file
 		if(!newFile)
 		{
-			config.load();
+			// In case the file is bad on load, log and correct it
+			try
+			{
+				config.load();
+			} catch(Exception e)
+			{
+				CensorCraft.LOGGER.error("Failed loading config file: {}", file.toAbsolutePath(), e);
+				ConfigFileTypeHandler.backUpConfig(config);
+			}
 		}
 		
 		// Apply comments
@@ -140,7 +156,8 @@ public abstract class ConfigFile {
 	 */
 	void addComment(String key, String... comments)
 	{
-		this.comments.computeIfAbsent(key, list -> new ArrayList<String>(comments.length)).addAll(Stream.of(comments).toList());
+		// I like a space between the pound and the comment
+		this.comments.computeIfAbsent(key, list -> new ArrayList<String>(comments.length)).addAll(Stream.of(comments).map(comment -> " " + comment).toList());
 	}
 	
 	abstract void register(ConfigSpec spec);

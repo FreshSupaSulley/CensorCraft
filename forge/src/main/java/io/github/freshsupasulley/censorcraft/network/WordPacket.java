@@ -121,7 +121,6 @@ public class WordPacket implements IPacket {
 				}
 			}
 			
-			System.out.println("TIME TO SEND SOMETHING");
 			participant.punish(options, player);
 		}
 		else
@@ -156,7 +155,6 @@ public class WordPacket implements IPacket {
 			// This is necessary and not in globals because in globals it's guaranteed that a taboo was said at this line. That's not the case here
 			if(!options.isEmpty())
 			{
-				System.out.println("TIME TO SEND SOMETHING2");
 				// Update punishment timing and clear buffer
 				participant.punish(options, player);
 			}

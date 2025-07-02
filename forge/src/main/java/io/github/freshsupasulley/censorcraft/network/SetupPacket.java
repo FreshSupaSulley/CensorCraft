@@ -32,23 +32,6 @@ public class SetupPacket implements IPacket {
 		this.audioContextLength = buffer.readLong();
 	}
 	
-	// @SubscribeEvent
-	// public static void playerJoinedEvent(PlayerLoggedInEvent event)
-	// {
-	// // Inform the player of the preferred model
-	// CensorCraft.channel.send(new SetupPacket(Config.Server.PREFERRED_MODEL.get()), ((ServerPlayer) event.getEntity()).connection.getConnection());
-	// }
-	
-	// @SubscribeEvent
-	// public static void playerJoinedEvent(ConnectionStartEvent event)
-	// {
-	// if(event.isClient()) return;
-	//
-	// System.out.println("SENDING TO CLIENT");
-	// // Inform the player of the preferred model
-	// CensorCraft.channel.send(new SetupPacket(Config.Server.PREFERRED_MODEL.get()), event.getConnection());
-	// }
-	
 	// earliest event i was able to hook in
 	@SubscribeEvent
 	public static void playerJoinedEvent(GatherLoginConfigurationTasksEvent event)
