@@ -1,7 +1,5 @@
 package io.github.freshsupasulley.censorcraft.config.punishments;
 
-import com.electronwill.nightconfig.core.CommentedConfig;
-
 import net.minecraft.server.level.ServerPlayer;
 
 public class Ignite extends PunishmentOption<Ignite> {
@@ -13,7 +11,7 @@ public class Ignite extends PunishmentOption<Ignite> {
 	}
 	
 	@Override
-	public void build(CommentedConfig config)
+	public void build()
 	{
 		defineInRange("ignite_seconds", 5D, 0D, Double.MAX_VALUE, "Amount of seconds player is on fire for");
 	}

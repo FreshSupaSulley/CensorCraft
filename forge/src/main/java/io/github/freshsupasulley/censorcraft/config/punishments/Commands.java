@@ -3,8 +3,6 @@ package io.github.freshsupasulley.censorcraft.config.punishments;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.electronwill.nightconfig.core.CommentedConfig;
-
 import net.minecraft.CrashReport;
 import net.minecraft.CrashReportCategory;
 import net.minecraft.ReportedException;
@@ -36,9 +34,9 @@ public class Commands extends PunishmentOption<Commands> {
 	}
 	
 	@Override
-	void build(CommentedConfig config)
+	void build()
 	{
-		config.set("commands", new ArrayList<>(List.of("")));
+		define("commands", new ArrayList<>(List.of("")));
 	}
 	
 	@Override

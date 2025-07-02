@@ -134,6 +134,7 @@ public class WordPacket implements IPacket {
 				{
 					String taboo = option.getTaboo(word, CensorCraft.SERVER.isIsolateWords());
 					
+					System.out.println("GOT BACK " + taboo);
 					if(taboo != null)
 					{
 						CensorCraft.LOGGER.info("{} taboo spoken: \"{}\"!", option.getName(), taboo);

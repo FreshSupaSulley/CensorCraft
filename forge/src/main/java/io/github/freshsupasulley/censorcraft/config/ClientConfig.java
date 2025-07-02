@@ -57,18 +57,9 @@ public class ClientConfig extends ConfigFile {
 	@Override
 	void register(ConfigSpec spec)
 	{
-		spec.define("show_transcription", false);
-		spec.define("debug", false);
-		spec.define("use_vulkan", LibraryLoader.canUseVulkan());
-		spec.defineInRange("latency", 1000, MIN_LATENCY, MAX_LATENCY);
-	}
-	
-	@Override
-	void postLoad()
-	{
-		addComment("show_transcription", "Display live transcriptions");
-		addComment("debug", "Shows helpful debugging information");
-		addComment("use_vulkan", "Uses Vulkan-built libraries for Windows GPU support. Can break on some machines");
-		addComment("latency", "Transcription latency (in milliseconds). Internally represents the size of an individual audio sample");
+		define("show_transcription", false, "Display live transcriptions");
+		define("debug", false, "Shows helpful debugging information");
+		define("use_vulkan", LibraryLoader.canUseVulkan(), "Uses Vulkan-built libraries for Windows GPU support. Can break on some machines");
+		defineInRange("latency", 1000, MIN_LATENCY, MAX_LATENCY, "Transcription latency (in milliseconds). Internally represents the size of an individual audio sample");
 	}
 }

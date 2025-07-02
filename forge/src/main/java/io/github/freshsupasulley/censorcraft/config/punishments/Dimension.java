@@ -3,8 +3,6 @@ package io.github.freshsupasulley.censorcraft.config.punishments;
 import java.util.Map.Entry;
 import java.util.Optional;
 
-import com.electronwill.nightconfig.core.CommentedConfig;
-
 import io.github.freshsupasulley.censorcraft.CensorCraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
@@ -31,15 +29,15 @@ public class Dimension extends PunishmentOption<Dimension> {
 	}
 	
 	@Override
-	public void build(CommentedConfig config)
+	public void build()
 	{
 		// builder.comment("Using RANDOM means the player will be sent to a dimension they are not already in");
-		define("dimension", VanillaDimensions.NETHER, "Dimension to send the player to");
+		defineEnum("dimension", VanillaDimensions.NETHER, "Dimension to send the player to");
 		define("safe_teleport", true, "Tries to put the player in a safe position");
 		define("avoid_nether_roof", true, "Avoids putting the player on the nether roof (not a guarantee)");
 		define("summon_dirt_block", true, "Places a dirt block below the players feet if they're going to fall (useful in the end)");
 		define("enable_fallback", true, "Sends the player to another dimension if they are already there");
-		define("fallback", VanillaDimensions.RANDOM, "Fallback dimension (enable_fallback must be true)");
+		defineEnum("fallback", VanillaDimensions.RANDOM, "Fallback dimension (enable_fallback must be true)");
 	}
 	
 	@Override

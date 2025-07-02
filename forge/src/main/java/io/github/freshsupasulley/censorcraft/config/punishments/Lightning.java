@@ -1,7 +1,5 @@
 package io.github.freshsupasulley.censorcraft.config.punishments;
 
-import com.electronwill.nightconfig.core.CommentedConfig;
-
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LightningBolt;
@@ -10,7 +8,7 @@ import net.minecraft.world.phys.Vec3;
 public class Lightning extends PunishmentOption<Lightning> {
 	
 	@Override
-	public void build(CommentedConfig config)
+	public void build()
 	{
 		defineInRange("strikes", 1, 1, 1000, "Number of lightning bolts", "Successive lightning bolts doesn't seem to increase damage proportionately");
 	}

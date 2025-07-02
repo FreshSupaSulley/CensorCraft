@@ -1,13 +1,11 @@
 package io.github.freshsupasulley.censorcraft.config.punishments;
 
-import com.electronwill.nightconfig.core.CommentedConfig;
-
 import net.minecraft.server.level.ServerPlayer;
 
 public class Kill extends PunishmentOption<Kill> {
 	
 	@Override
-	public void build(CommentedConfig config)
+	public void build()
 	{
 		// General settings
 		define("ignore_totem", false, "Killing the player ignores totems (enable must be true)");

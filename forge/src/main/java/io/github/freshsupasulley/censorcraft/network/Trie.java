@@ -5,7 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
+import java.util.stream.Stream;
 
 public class Trie {
 	
@@ -20,7 +20,7 @@ public class Trie {
 	public void update(Iterable<?> rawList)
 	{
 		// Check if we need to update
-		List<String> newList = StreamSupport.stream(rawList.spliterator(), false).map(Object::toString).collect(Collectors.toList());
+		List<String> newList = Stream.of(rawList).map(Object::toString).collect(Collectors.toList());
 		
 		if(!newList.equals(list))
 		{

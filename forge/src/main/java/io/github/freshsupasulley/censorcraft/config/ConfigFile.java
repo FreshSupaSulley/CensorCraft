@@ -1,5 +1,6 @@
 package io.github.freshsupasulley.censorcraft.config;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -46,9 +47,13 @@ public abstract class ConfigFile {
 	public ConfigFile(ModConfig.Type type)
 	{
 		Path file = FMLPaths.GAMEDIR.get().resolve(String.format(Locale.ROOT, "%s-%s.toml", CensorCraft.MODID, type.extension()));
+		
+		// Why is it called this lmao
+		boolean newFile = Files.notExists(file);
+		
+		// This creates the file
 		config = CommentedFileConfig.builder(file).autosave().autoreload().sync().onLoadFilter(new ConfigLoadFilter()
 		{
-			
 			@Override
 			public boolean acceptNewVersion(CommentedConfig newConfig)
 			{
@@ -66,7 +71,12 @@ public abstract class ConfigFile {
 		}).build();
 		
 		register(spec);
-		config.load();
+		
+		// Without this check, it will load a blank file and thus correct itself, needlessly creating a blank backup file
+		if(!newFile)
+		{
+			config.load();
+		}
 		
 		// Apply comments
 		comments.forEach((key, value) ->
@@ -79,16 +89,30 @@ public abstract class ConfigFile {
 	}
 	
 	/**
+	 * Convenience method to bundle defining a value and a comment.
+	 * 
+	 * @param <E>      value type
+	 * @param key      config key
+	 * @param value    initial value
+	 * @param comments config comments
+	 */
+	final <E> void define(String key, E value, String... comments)
+	{
+		spec.define(key, value);
+		addComment(key, comments);
+	}
+	
+	/**
 	 * Convenience method to define a value within a range.
 	 * 
 	 * @param <T>          {@link Comparable} type
 	 * @param key          config key
-	 * @param description  config comment
 	 * @param defaultValue initial value (must be within the range)
 	 * @param min          minimum value
 	 * @param max          maximum value
+	 * @param comments     config comments
 	 */
-	<T extends Comparable<? super T>> void defineInRange(String key, String comment, T defaultValue, T min, T max)
+	<T extends Comparable<? super T>> void defineInRange(String key, T defaultValue, T min, T max, String... comments)
 	{
 		Predicate<Object> validator = v ->
 		{
@@ -100,10 +124,11 @@ public abstract class ConfigFile {
 			return min.compareTo(val) <= 0 && max.compareTo(val) >= 0;
 		};
 		
-		if(validator.test(defaultValue))
+		if(!validator.test(defaultValue))
 			throw new IllegalStateException("Default value fails range validation");
 		
-		addComment(key, comment, "Range: " + min + " ~ " + max);
+		// Range needs to go at the bottom
+		Stream.concat(Stream.of(comments), Stream.of("Range: " + min + " ~ " + max)).forEach(comment -> addComment(key, comment));
 		spec.define(key, defaultValue, validator);
 	}
 	
@@ -119,11 +144,6 @@ public abstract class ConfigFile {
 	}
 	
 	abstract void register(ConfigSpec spec);
-	
-	/**
-	 * Use this method to define comments with {@link ConfigFile#addComment(String, String...)}}.
-	 */
-	abstract void postLoad();
 	
 	public Path getFilePath()
 	{

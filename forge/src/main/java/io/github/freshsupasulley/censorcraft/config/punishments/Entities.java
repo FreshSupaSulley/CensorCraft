@@ -4,8 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import com.electronwill.nightconfig.core.CommentedConfig;
-
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntitySpawnReason;
@@ -20,7 +18,7 @@ public class Entities extends PunishmentOption<Entities> {
 	}
 	
 	@Override
-	public void build(CommentedConfig config)
+	public void build()
 	{
 		define("entities", new ArrayList<>(List.of("warden", "skeleton")), "Entities to spawn on the player", "Allowed list (case-insensitive): " + ForgeRegistries.ENTITY_TYPES.getKeys().stream().map(ResourceLocation::getPath).sorted().collect(Collectors.joining(", ")));
 	}

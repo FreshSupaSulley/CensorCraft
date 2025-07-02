@@ -4,8 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import com.electronwill.nightconfig.core.CommentedConfig;
-
 import io.github.freshsupasulley.censorcraft.CensorCraft;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -21,7 +19,7 @@ public class MobEffects extends PunishmentOption<MobEffects> {
 	}
 	
 	@Override
-	public void build(CommentedConfig config)
+	public void build()
 	{
 		define("effects", new ArrayList<>(List.of("")), "Potion effects to apply to the player", "Allowed list (case-insensitive): " + ForgeRegistries.MOB_EFFECTS.getKeys().stream().map(ResourceLocation::getPath).sorted().collect(Collectors.joining(", ")));
 		define("duration", 10, "Number of game ticks effects are active");

@@ -13,20 +13,16 @@ import net.minecraft.server.level.ServerPlayer;
 public abstract class PunishmentOption<T extends PunishmentOption<T>> {
 	
 	protected CommentedConfig config;
-	private Trie tabooTrie;
 	
 	public void init(boolean initEnable, CommentedConfig config)
 	{
-		config.set("enable", initEnable);
+		this.config = config;
 		
-		config.set("taboo", new ArrayList<>(List.of("")));
-		config.setComment("taboo", "List of punishment-specific forbidden words and phrases (case-insensitive)");
-		tabooTrie = new Trie(List.of()); // Will be updated when getTaboo is called
+		define("enable", initEnable);
+		define("taboo", new ArrayList<>(List.of("")), "List of punishment-specific forbidden words and phrases (case-insensitive)");
+		define("ignore_global_taboos", false, "Global taboos don't trigger this punishment");
 		
-		config.set("ignore_global_taboos", false);
-		config.setComment("ignore_global_taboos", "Global taboos don't trigger this punishment");
-		
-		build(config);
+		build();
 	}
 	
 	/**
@@ -51,7 +47,7 @@ public abstract class PunishmentOption<T extends PunishmentOption<T>> {
 	 * @param value    initial value (enum entry)
 	 * @param comments config comments
 	 */
-	final <E extends Enum<E>> void define(String key, E value, String... comments)
+	final <E extends Enum<E>> void defineEnum(String key, E value, String... comments)
 	{
 		// holy UGLYYYY
 		define(key, value, Stream.concat(Stream.of(comments), Stream.of("Allowed Values: " + Stream.of(value.getDeclaringClass().getEnumConstants()).map(Enum::name).collect(Collectors.joining(", ")))).toArray(String[]::new));
@@ -72,14 +68,15 @@ public abstract class PunishmentOption<T extends PunishmentOption<T>> {
 		define(key, value, Stream.concat(Stream.of("Range: " + min + " ~ " + max), Stream.of(comments)).toArray(String[]::new));
 	}
 	
-	abstract void build(CommentedConfig config);
+	abstract void build();
 	
 	abstract T newInstance();
 	
 	public final T deserialize(CommentedConfig config)
 	{
-		this.config = config;
-		return newInstance();
+		T option = newInstance();
+		option.config = config;
+		return option;
 	}
 	
 	public final boolean isEnabled()
@@ -94,9 +91,11 @@ public abstract class PunishmentOption<T extends PunishmentOption<T>> {
 	
 	public final String getTaboo(String word, boolean isolateWords)
 	{
-		// Update trie in case the taboos did
-		tabooTrie.update(config.get("taboo"));
-		return isolateWords ? tabooTrie.containsAnyIsolatedIgnoreCase(word) : tabooTrie.containsAnyIgnoreCase(word);
+		// We can't store Tries as instance variables anymore so this is required
+		List<String> taboos = config.get("taboo");
+		Trie trie = new Trie(List.of("fart"));
+		System.out.println(trie.containsAnyIgnoreCase(word) + " --- " + trie.containsAnyIsolatedIgnoreCase(word));
+		return isolateWords ? trie.containsAnyIsolatedIgnoreCase(word) : trie.containsAnyIgnoreCase(word);
 	}
 	
 	public abstract void punish(ServerPlayer player);

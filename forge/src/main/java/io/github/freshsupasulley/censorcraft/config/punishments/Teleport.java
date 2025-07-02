@@ -1,7 +1,5 @@
 package io.github.freshsupasulley.censorcraft.config.punishments;
 
-import com.electronwill.nightconfig.core.CommentedConfig;
-
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
 
@@ -14,7 +12,7 @@ public class Teleport extends PunishmentOption<Teleport> {
 	}
 	
 	@Override
-	public void build(CommentedConfig config)
+	public void build()
 	{
 		define("x_coord", 0D);
 		define("y_coord", 50D);

@@ -1,7 +1,5 @@
 package io.github.freshsupasulley.censorcraft.config.punishments;
 
-import com.electronwill.nightconfig.core.CommentedConfig;
-
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.ExplosionDamageCalculator;
 import net.minecraft.world.level.Level.ExplosionInteraction;
@@ -10,7 +8,7 @@ import net.minecraft.world.phys.Vec3;
 public class Explosion extends PunishmentOption<Explosion> {
 	
 	@Override
-	public void build(CommentedConfig config)
+	public void build()
 	{
 		defineInRange("explosion_radius", 5D, 0D, Double.MAX_VALUE); // it seems by not defining a range, forge thinks the config file is broken
 		define("create_fires", true);

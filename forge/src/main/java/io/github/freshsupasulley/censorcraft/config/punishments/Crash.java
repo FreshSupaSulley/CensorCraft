@@ -1,7 +1,5 @@
 package io.github.freshsupasulley.censorcraft.config.punishments;
 
-import com.electronwill.nightconfig.core.CommentedConfig;
-
 import io.github.freshsupasulley.censorcraft.CensorCraft;
 import net.minecraft.server.level.ServerPlayer;
 
@@ -14,7 +12,7 @@ public class Crash extends PunishmentOption<Crash> {
 	}
 	
 	@Override
-	public void build(CommentedConfig config)
+	public void build()
 	{
 		defineInRange("seconds", 0, 3, Integer.MAX_VALUE, "Delay (in seconds) before Minecraft crashes (creates a \"Not Responding\" screen)");
 	}

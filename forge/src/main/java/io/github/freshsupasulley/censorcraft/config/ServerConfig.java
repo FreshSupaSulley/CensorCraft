@@ -7,7 +7,16 @@ import com.electronwill.nightconfig.core.CommentedConfig;
 import com.electronwill.nightconfig.core.ConfigSpec;
 
 import io.github.freshsupasulley.censorcraft.config.punishments.Commands;
+import io.github.freshsupasulley.censorcraft.config.punishments.Crash;
+import io.github.freshsupasulley.censorcraft.config.punishments.Dimension;
+import io.github.freshsupasulley.censorcraft.config.punishments.Entities;
+import io.github.freshsupasulley.censorcraft.config.punishments.Explosion;
+import io.github.freshsupasulley.censorcraft.config.punishments.Ignite;
+import io.github.freshsupasulley.censorcraft.config.punishments.Kill;
+import io.github.freshsupasulley.censorcraft.config.punishments.Lightning;
+import io.github.freshsupasulley.censorcraft.config.punishments.MobEffects;
 import io.github.freshsupasulley.censorcraft.config.punishments.PunishmentOption;
+import io.github.freshsupasulley.censorcraft.config.punishments.Teleport;
 import net.minecraftforge.fml.config.ModConfig;
 
 public class ServerConfig extends ConfigFile {
@@ -42,11 +51,6 @@ public class ServerConfig extends ConfigFile {
 	public boolean isChatTaboos()
 	{
 		return config.get("chat_taboos");
-	}
-	
-	public boolean isExposeRats()
-	{
-		return config.get("expose_rats");
 	}
 	
 	public boolean isIsolateWords()
@@ -86,19 +90,18 @@ public class ServerConfig extends ConfigFile {
 	@Override
 	void register(ConfigSpec spec)
 	{
-		spec.define("global_taboos", new ArrayList<>(List.of("boom")));
-		spec.define("preferred_model", "base.en");
-		defineInRange("context_length", "How many seconds of audio context to retain", 3D, 0D, Double.MAX_VALUE);
-		defineInRange("punishment_cooldown", "Delay (in seconds) before a player can be punished again", 0D, 0D, Double.MAX_VALUE);
-		spec.define("chat_taboos", true);
-		spec.define("expose_rats", true);
-		spec.define("isolate_words", true);
-		spec.define("monitor_voice", true);
-		spec.define("monitor_chat", true);
+		define("global_taboos", new ArrayList<>(List.of("boom")), "List of forbidden words and phrases (case-insensitive)", "All enabled punishments will fire when they are spoken");
+		define("preferred_model", "base.en", "Name of the transcription model players need to use (determines the language and accuracy)", "Better models have larger file sizes. Clients have tiny.en built-in. See https://github.com/ggml-org/whisper.cpp/blob/master/models/README.md#available-models for available models");
+		defineInRange("context_length", 3D, 0D, Double.MAX_VALUE, "Maximum amount of time (in seconds) an individual audio recording is. The higher the value, the more intensive on players PCs");
+		defineInRange("punishment_cooldown", 0D, 0D, Double.MAX_VALUE, "Delay (in seconds) before a player can be punished again");
+		define("chat_taboos", true, "When someone is punished, send what the player said to chat");
+		define("isolate_words", true, "If true, only whole words are considered (surrounded by spaces or word boundaries). If false, partial matches are allowed (e.g., 'art' triggers punishment for 'start')");
+		define("monitor_voice", true, "Punish players for speaking taboos into their mic");
+		define("monitor_chat", true, "Punish players for sending taboos to chat");
 		
 		// Punishments are special. They are an array of tables
 		// List<CommentedConfig> punishments = new ArrayList<>();
-		defaults = new PunishmentOption[] {new Commands()};
+		defaults = new PunishmentOption[] {new Commands(), new Crash(), new Dimension(), new Entities(), new Explosion(), new Ignite(), new Kill(), new Lightning(), new MobEffects(), new Teleport()};
 		
 		for(PunishmentOption<?> option : defaults)
 		{
@@ -107,21 +110,9 @@ public class ServerConfig extends ConfigFile {
 			// punishments.add(table);
 			// Intentionally lax validator, otherwise NightConfig freaks out
 			spec.define(option.getName(), List.of(table), value -> value instanceof List);
+//			config.setComment(option.getName(), option.getDescription());
 		}
 		
 		// spec.define("punishments", punishments);
-	}
-	
-	@Override
-	void postLoad()
-	{
-		addComment("global_taboos", "Words that are always censored regardless of mode");
-		addComment("preferred_model", "Name of the preferred model for recognition");
-		addComment("chat_taboos", "Whether to censor typed chat");
-		addComment("expose_rats", "Enable rat reporting for taboo snitches");
-		addComment("isolate_words", "Whether taboo word matching must be isolated (e.g., 'kill' won't match 'skill')");
-		addComment("monitor_voice", "Whether to listen to microphone input");
-		addComment("monitor_chat", "Whether to monitor typed chat");
-		addComment("punishments", "List of enabled punishment options. Each entry is a table with its own settings.");
 	}
 }
