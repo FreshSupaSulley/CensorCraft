@@ -41,7 +41,7 @@ public class Dimension extends PunishmentOption<Dimension> {
 	}
 	
 	@Override
-	public void punish(ServerPlayer player)
+	public void executePunishment(ServerPlayer player)
 	{
 		VanillaDimensions desiredDimension = config.get("dimension");
 		ResourceKey<Level> playerDimension = player.level().dimension();
@@ -49,7 +49,9 @@ public class Dimension extends PunishmentOption<Dimension> {
 		// If we are already in the desired dimension
 		if(desiredDimension.toLevel() == playerDimension)
 		{
-			if(Boolean.valueOf(config.get("enable_fallback")))
+			boolean enableFallback = config.get("enable_fallback");
+			
+			if(enableFallback)
 			{
 				VanillaDimensions fallback = config.get("fallback");
 				
@@ -105,7 +107,9 @@ public class Dimension extends PunishmentOption<Dimension> {
 		BlockPos safePos = BlockPos.containing(colFree);
 		
 		// If nothing happened
-		if(Boolean.valueOf(config.get("safe_teleport")))// && colFree.equals(exitPos))
+		boolean safeTeleport = config.get("safe_teleport");
+		
+		if(safeTeleport)// && colFree.equals(exitPos))
 		{
 			// Heightmaps work fine elsewhere
 			Optional<Entry<Heightmap.Types, Heightmap>> hi = destLevel.getChunkAt(safePos).getHeightmaps().stream().filter(entry -> entry.getKey() == Types.MOTION_BLOCKING).findFirst();
@@ -121,7 +125,9 @@ public class Dimension extends PunishmentOption<Dimension> {
 				 */
 				if(destDimension == Level.NETHER)
 				{
-					if(Boolean.valueOf(config.get("avoid_nether_roof")))
+					boolean avoidNetherRoof = config.get("avoid_nether_roof");
+					
+					if(avoidNetherRoof)
 					{
 						for(BlockPos y = candidatePos.below(); y.getY() > destLevel.dimensionType().minY(); y = y.below())
 						{
@@ -146,7 +152,9 @@ public class Dimension extends PunishmentOption<Dimension> {
 			}
 			
 			// Check if we're about to fall
-			if(!destLevel.getBlockState(safePos).entityCanStandOn(destLevel, safePos, player) && Boolean.valueOf(config.get("summon_dirt")))
+			boolean summonDirt = config.get("summon_dirt_block");
+			
+			if(!destLevel.getBlockState(safePos).entityCanStandOn(destLevel, safePos, player) && summonDirt)
 			{
 				// Summon a dirt block to help
 				destLevel.setBlockAndUpdate(safePos, Blocks.DIRT.defaultBlockState());

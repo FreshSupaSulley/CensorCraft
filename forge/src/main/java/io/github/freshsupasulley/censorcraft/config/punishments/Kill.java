@@ -12,10 +12,12 @@ public class Kill extends PunishmentOption<Kill> {
 	}
 	
 	@Override
-	public void punish(ServerPlayer player)
+	public void executePunishment(ServerPlayer player)
 	{
+		boolean ignoreTotem = config.get("ignore_totem");
+		
 		// If we should ignore totems
-		if(Boolean.valueOf(config.get("ignore_totem")))
+		if(ignoreTotem)
 		{
 			// Generic kill ignores totems
 			player.kill(player.serverLevel());

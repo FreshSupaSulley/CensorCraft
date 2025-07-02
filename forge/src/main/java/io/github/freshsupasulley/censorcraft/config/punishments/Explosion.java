@@ -16,10 +16,10 @@ public class Explosion extends PunishmentOption<Explosion> {
 	}
 	
 	@Override
-	public void punish(ServerPlayer player)
+	public void executePunishment(ServerPlayer player)
 	{
 		Number radius = config.get("explosion_radius");
-		boolean createFires = config.get("created_fires");
+		boolean createFires = config.get("create_fires");
 		boolean griefing = config.get("explosion_griefing");
 		
 		Vec3 pos = player.position();

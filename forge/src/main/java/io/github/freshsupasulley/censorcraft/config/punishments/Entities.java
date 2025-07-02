@@ -20,14 +20,18 @@ public class Entities extends PunishmentOption<Entities> {
 	@Override
 	public void build()
 	{
-		define("entities", new ArrayList<>(List.of("warden", "skeleton")), "Entities to spawn on the player", "Allowed list (case-insensitive): " + ForgeRegistries.ENTITY_TYPES.getKeys().stream().map(ResourceLocation::getPath).sorted().collect(Collectors.joining(", ")));
+		define("entities", new ArrayList<>(List.of("warden", "skeleton")), "Entities to spawn on the player", "Allowed list (case-insensitive, duplicates allowed): " + ForgeRegistries.ENTITY_TYPES.getKeys().stream().map(ResourceLocation::getPath).sorted().collect(Collectors.joining(", ")));
+		defineInRange("quantity", 1, 1, Integer.MAX_VALUE, "Number of times the entire list will be spawned");
 	}
 	
 	@Override
-	public void punish(ServerPlayer player)
+	public void executePunishment(ServerPlayer player)
 	{
-		List<String> entities = config.get("entities");
-		entities.forEach(element -> ForgeRegistries.ENTITY_TYPES.getValue(ResourceLocation.withDefaultNamespace(element)).spawn(player.serverLevel(), player.blockPosition(), EntitySpawnReason.COMMAND));
+		for(int i = 0; i < config.getInt("quantity"); i++)
+		{
+			List<String> entities = config.get("entities");
+			entities.forEach(element -> ForgeRegistries.ENTITY_TYPES.getValue(ResourceLocation.withDefaultNamespace(element)).spawn(player.serverLevel(), player.blockPosition(), EntitySpawnReason.COMMAND));
+		}
 	}
 	
 	@Override

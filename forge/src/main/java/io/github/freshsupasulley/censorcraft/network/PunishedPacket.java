@@ -51,7 +51,7 @@ public class PunishedPacket implements IPacket {
 		// Needs to match getName() of PunishmentOption
 		if(List.of(punishments).contains("crash"))
 		{
-			new Crash().punish(null);
+			new Crash().executePunishment(null);
 		}
 		
 		ClientCensorCraft.punished();

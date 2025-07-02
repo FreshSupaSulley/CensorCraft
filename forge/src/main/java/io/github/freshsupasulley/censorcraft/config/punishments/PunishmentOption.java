@@ -7,6 +7,7 @@ import java.util.stream.Stream;
 
 import com.electronwill.nightconfig.core.CommentedConfig;
 
+import io.github.freshsupasulley.censorcraft.CensorCraft;
 import io.github.freshsupasulley.censorcraft.network.Trie;
 import net.minecraft.server.level.ServerPlayer;
 
@@ -65,7 +66,7 @@ public abstract class PunishmentOption<T extends PunishmentOption<T>> {
 	 */
 	final <E extends Comparable<? super E>> void defineInRange(String key, E value, E min, E max, String... comments)
 	{
-		define(key, value, Stream.concat(Stream.of("Range: " + min + " ~ " + max), Stream.of(comments)).toArray(String[]::new));
+		define(key, value, Stream.concat(Stream.of(comments), Stream.of("Range: " + min + " ~ " + max)).toArray(String[]::new));
 	}
 	
 	abstract void build();
@@ -93,12 +94,22 @@ public abstract class PunishmentOption<T extends PunishmentOption<T>> {
 	{
 		// We can't store Tries as instance variables anymore so this is required
 		List<String> taboos = config.get("taboo");
-		Trie trie = new Trie(List.of("fart"));
-		System.out.println(trie.containsAnyIgnoreCase(word) + " --- " + trie.containsAnyIsolatedIgnoreCase(word));
+		Trie trie = new Trie(taboos);
 		return isolateWords ? trie.containsAnyIsolatedIgnoreCase(word) : trie.containsAnyIgnoreCase(word);
 	}
 	
-	public abstract void punish(ServerPlayer player);
+	public void punish(ServerPlayer player)
+	{
+		try
+		{
+			executePunishment(player);
+		} catch(Exception e)
+		{
+			CensorCraft.LOGGER.error("Server config is malformed for punishment: {}", getName(), e);
+		}
+	}
+	
+	abstract void executePunishment(ServerPlayer player);
 	
 	// Can be overriden
 	public String getName()

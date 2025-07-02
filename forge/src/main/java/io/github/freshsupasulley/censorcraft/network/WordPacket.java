@@ -121,6 +121,7 @@ public class WordPacket implements IPacket {
 				}
 			}
 			
+			System.out.println("TIME TO SEND SOMETHING");
 			participant.punish(options, player);
 		}
 		else
@@ -134,7 +135,6 @@ public class WordPacket implements IPacket {
 				{
 					String taboo = option.getTaboo(word, CensorCraft.SERVER.isIsolateWords());
 					
-					System.out.println("GOT BACK " + taboo);
 					if(taboo != null)
 					{
 						CensorCraft.LOGGER.info("{} taboo spoken: \"{}\"!", option.getName(), taboo);
@@ -156,6 +156,7 @@ public class WordPacket implements IPacket {
 			// This is necessary and not in globals because in globals it's guaranteed that a taboo was said at this line. That's not the case here
 			if(!options.isEmpty())
 			{
+				System.out.println("TIME TO SEND SOMETHING2");
 				// Update punishment timing and clear buffer
 				participant.punish(options, player);
 			}

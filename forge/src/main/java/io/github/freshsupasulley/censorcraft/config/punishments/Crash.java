@@ -18,7 +18,7 @@ public class Crash extends PunishmentOption<Crash> {
 	}
 	
 	@Override
-	public void punish(ServerPlayer player)
+	public void executePunishment(ServerPlayer player)
 	{
 		// Presence of player means this is server-side. This is a client-side executed punishment only
 		if(player != null)

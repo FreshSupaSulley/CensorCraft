@@ -17,7 +17,7 @@ public class Ignite extends PunishmentOption<Ignite> {
 	}
 	
 	@Override
-	public void punish(ServerPlayer player)
+	public void executePunishment(ServerPlayer player)
 	{
 		Number ignite = config.get("ignite_seconds");
 		player.igniteForSeconds(ignite.floatValue());

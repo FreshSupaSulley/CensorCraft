@@ -14,7 +14,7 @@ public class Lightning extends PunishmentOption<Lightning> {
 	}
 	
 	@Override
-	public void punish(ServerPlayer player)
+	public void executePunishment(ServerPlayer player)
 	{
 		Vec3 pos = player.position();
 		

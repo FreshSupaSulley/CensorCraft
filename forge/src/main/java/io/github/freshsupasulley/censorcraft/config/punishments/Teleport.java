@@ -21,11 +21,11 @@ public class Teleport extends PunishmentOption<Teleport> {
 	}
 	
 	@Override
-	public void punish(ServerPlayer player)
+	public void executePunishment(ServerPlayer player)
 	{
 		Vec3 pos = player.position();
-		boolean coords = Boolean.valueOf(config.get("config"));
-		int x = config.getInt("x_coord"), y = config.getInt("y_coord"), z = config.getInt("z_coord");
+		boolean coords = config.get("coords");
+		double x = config.get("x_coord"), y = config.get("y_coord"), z = config.get("z_coord");
 		
 		if(coords)
 		{

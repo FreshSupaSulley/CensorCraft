@@ -22,12 +22,12 @@ public class MobEffects extends PunishmentOption<MobEffects> {
 	public void build()
 	{
 		define("effects", new ArrayList<>(List.of("")), "Potion effects to apply to the player", "Allowed list (case-insensitive): " + ForgeRegistries.MOB_EFFECTS.getKeys().stream().map(ResourceLocation::getPath).sorted().collect(Collectors.joining(", ")));
-		define("duration", 10, "Number of game ticks effects are active");
+		define("duration", 300, "Number of game ticks effects are active");
 		defineInRange("amplifier", 1, 0, 255);
 	}
 	
 	@Override
-	public void punish(ServerPlayer player)
+	public void executePunishment(ServerPlayer player)
 	{
 		List<String> effects = config.get("effects");
 		int ticks = config.getInt("duration");

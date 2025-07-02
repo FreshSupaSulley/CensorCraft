@@ -13,7 +13,7 @@ public class Commands extends PunishmentOption<Commands> {
 	
 	@SuppressWarnings("unchecked")
 	@Override
-	public void punish(ServerPlayer player)
+	public void executePunishment(ServerPlayer player)
 	{
 		MinecraftServer server = player.getServer();
 		
