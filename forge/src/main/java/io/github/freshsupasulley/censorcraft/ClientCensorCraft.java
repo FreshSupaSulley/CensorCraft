@@ -77,7 +77,7 @@ public class ClientCensorCraft implements VoicechatPlugin {
 	private static final long DRAIN_DELAY = 1000, MIN_SAMPLE_MS = 200;
 	
 	private static final int SAMPLE_RATE = 48000;
-	private static final RollingAudioBuffer ringBuffer = new RollingAudioBuffer(15000, SAMPLE_RATE); // hold a MAX of 15s. Can't even see us needing this much
+	private static final RollingAudioBuffer ringBuffer = new RollingAudioBuffer(15000, SAMPLE_RATE); // hold a MAX of 15s. Can't see us needing this much
 	private static long lastSample, lastTranscription;
 	
 	public static void clientSetup(FMLClientSetupEvent event)

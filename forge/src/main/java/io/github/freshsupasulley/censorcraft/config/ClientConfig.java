@@ -4,6 +4,7 @@ import com.electronwill.nightconfig.core.ConfigSpec;
 
 import io.github.freshsupasulley.LibraryLoader;
 import net.minecraftforge.fml.config.ModConfig;
+import net.minecraftforge.fml.loading.FMLPaths;
 
 public class ClientConfig extends ConfigFile {
 	
@@ -11,7 +12,7 @@ public class ClientConfig extends ConfigFile {
 	
 	public ClientConfig()
 	{
-		super(ModConfig.Type.CLIENT);
+		super(FMLPaths.CONFIGDIR.get(), ModConfig.Type.CLIENT);
 	}
 	
 	public boolean isShowTranscription()

@@ -1,5 +1,8 @@
 package io.github.freshsupasulley.censorcraft.config;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -17,15 +20,44 @@ import io.github.freshsupasulley.censorcraft.config.punishments.Lightning;
 import io.github.freshsupasulley.censorcraft.config.punishments.MobEffects;
 import io.github.freshsupasulley.censorcraft.config.punishments.PunishmentOption;
 import io.github.freshsupasulley.censorcraft.config.punishments.Teleport;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.world.level.storage.LevelResource;
 import net.minecraftforge.fml.config.ModConfig;
+import net.minecraftforge.server.ServerLifecycleHooks;
 
 public class ServerConfig extends ConfigFile {
 	
+	private static final LevelResource SERVERCONFIG = new LevelResource("serverconfig");
+	
+	/**
+	 * Ripped from {@link ServerLifecycleHooks}.
+	 * 
+	 * @param server MC server
+	 * @return path to server config file
+	 */
+	private static Path getServerConfigPath(final MinecraftServer server)
+	{
+		final Path serverConfig = server.getWorldPath(SERVERCONFIG);
+		
+		if(!Files.isDirectory(serverConfig))
+		{
+			try
+			{
+				Files.createDirectories(serverConfig);
+			} catch(IOException e)
+			{
+				throw new RuntimeException(e);
+			}
+		}
+		
+		return serverConfig;
+	}
+	
 	private PunishmentOption<?>[] defaults;
 	
-	public ServerConfig()
+	public ServerConfig(MinecraftServer server)
 	{
-		super(ModConfig.Type.SERVER);
+		super(getServerConfigPath(server), ModConfig.Type.SERVER);
 	}
 	
 	public List<String> getGlobalTaboos()
@@ -106,11 +138,11 @@ public class ServerConfig extends ConfigFile {
 		for(PunishmentOption<?> option : defaults)
 		{
 			CommentedConfig table = config.createSubConfig();
-			option.init(false, table);
+			option.fillConfig(table);
 			// punishments.add(table);
 			// Intentionally lax validator, otherwise NightConfig freaks out
 			spec.define(option.getName(), List.of(table), value -> value instanceof List);
-//			config.setComment(option.getName(), option.getDescription());
+			// config.setComment(option.getName(), option.getDescription());
 		}
 		
 		// spec.define("punishments", punishments);

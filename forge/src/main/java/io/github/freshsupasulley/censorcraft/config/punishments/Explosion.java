@@ -31,4 +31,10 @@ public class Explosion extends PunishmentOption<Explosion> {
 	{
 		return new Explosion();
 	}
+	
+	@Override
+	boolean initEnable()
+	{
+		return true;
+	}
 }

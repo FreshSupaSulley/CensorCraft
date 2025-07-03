@@ -14,7 +14,7 @@ public class Crash extends PunishmentOption<Crash> {
 	@Override
 	public void build()
 	{
-		defineInRange("seconds", 0, 3, Integer.MAX_VALUE, "Delay (in seconds) before Minecraft crashes (creates a \"Not Responding\" screen)");
+		defineInRange("seconds", 0, 0, Integer.MAX_VALUE, "Delay (in seconds) before Minecraft crashes (creates a \"Not Responding\" screen)");
 	}
 	
 	@Override

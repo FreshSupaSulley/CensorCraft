@@ -21,7 +21,6 @@ import com.electronwill.nightconfig.core.file.ConfigLoadFilter;
 import io.github.freshsupasulley.censorcraft.CensorCraft;
 import net.minecraftforge.fml.config.ConfigFileTypeHandler;
 import net.minecraftforge.fml.config.ModConfig;
-import net.minecraftforge.fml.loading.FMLPaths;
 
 /**
  * A custom config file handler, because Forge is lacking support for array of tables.
@@ -39,27 +38,25 @@ public abstract class ConfigFile {
 		Config.setInsertionOrderPreserved(true);
 	}
 	
-	protected final CommentedFileConfig config;
-	protected final ConfigSpec spec = new ConfigSpec();
-	
-	private Map<String, List<String>> comments = new HashMap<String, List<String>>();
-	
 	private static final CorrectionListener LISTENER = (action, path, incorrectValue, correctedValue) ->
 	{
 		String pathString = String.join(".", path);
 		CensorCraft.LOGGER.warn("Corrected '{}': was '{}', is now '{}'", pathString, incorrectValue, correctedValue);
 	};
 	
-	public ConfigFile(ModConfig.Type type)
+	protected final CommentedFileConfig config;
+	protected final ConfigSpec spec = new ConfigSpec();
+	
+	private Map<String, List<String>> comments = new HashMap<String, List<String>>();
+	
+	public ConfigFile(Path configFolder, ModConfig.Type type)
 	{
-		// System.out.println("SETTING UP" + FMLConfig.getConfigValue(FMLConfig.ConfigValue.DEFAULT_CONFIG_PATH));
-		Path file = FMLPaths.GAMEDIR.get().resolve(String.format(Locale.ROOT, "%s-%s.toml", CensorCraft.MODID, type.extension()));
-		
 		// Why is it called this lmao
-		boolean newFile = Files.notExists(file);
+		Path configFile = configFolder.resolve(String.format(Locale.ROOT, "%s-%s.toml", CensorCraft.MODID, type.extension()));
+		boolean newFile = Files.notExists(configFile);
 		
 		// This creates the file due to the default onFileNotFound
-		config = CommentedFileConfig.builder(file).autosave().autoreload().sync().preserveInsertionOrder().onLoadFilter(new ConfigLoadFilter()
+		config = CommentedFileConfig.builder(configFile).autosave().autoreload().sync().preserveInsertionOrder().onLoadFilter(new ConfigLoadFilter()
 		{
 			
 			@Override
@@ -67,7 +64,7 @@ public abstract class ConfigFile {
 			{
 				if(!spec.isCorrect(newConfig))
 				{
-					CensorCraft.LOGGER.warn("{} is not correct", file);
+					CensorCraft.LOGGER.warn("{} is not correct", configFile);
 					// Forge has a convenient way to store backups
 					ConfigFileTypeHandler.backUpConfig(config);
 					spec.correct(newConfig, LISTENER);
@@ -89,7 +86,7 @@ public abstract class ConfigFile {
 				config.load();
 			} catch(Exception e)
 			{
-				CensorCraft.LOGGER.error("Failed loading config file: {}", file.toAbsolutePath(), e);
+				CensorCraft.LOGGER.error("Failed loading config file: {}", configFile.toAbsolutePath(), e);
 				ConfigFileTypeHandler.backUpConfig(config);
 			}
 		}

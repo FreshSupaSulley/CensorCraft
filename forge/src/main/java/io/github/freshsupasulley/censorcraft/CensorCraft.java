@@ -11,6 +11,8 @@ import io.github.freshsupasulley.censorcraft.network.PunishedPacket;
 import io.github.freshsupasulley.censorcraft.network.SetupPacket;
 import io.github.freshsupasulley.censorcraft.network.WordPacket;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraftforge.event.server.ServerAboutToStartEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
@@ -20,6 +22,7 @@ import net.minecraftforge.network.NetworkDirection;
 import net.minecraftforge.network.SimpleChannel;
 
 @Mod(CensorCraft.MODID)
+@Mod.EventBusSubscriber(modid = CensorCraft.MODID)
 public class CensorCraft {
 	
 	public static final String MODID = "censorcraft";
@@ -36,7 +39,6 @@ public class CensorCraft {
 	{
 		// Forbidden words are defined at the server level
 		CLIENT = new ClientConfig();
-		SERVER = new ServerConfig();
 		
 		// Register ourselves for server and other game events we are interested in
 		// MinecraftForge.registerConfigScreen(null);.EVENT_BUS.register(this);
@@ -46,13 +48,15 @@ public class CensorCraft {
 		// context.getModEventBus().addListener(ClientCensorCraft::clientSetup);
 	}
 	
-	public void clientSetup(FMLClientSetupEvent event)
+	// Not an FML event
+	@SubscribeEvent
+	public static void serverSetup(ServerAboutToStartEvent event)
 	{
-		ClientCensorCraft.clientSetup(event);
+		SERVER = new ServerConfig(event.getServer());
 	}
 	
 	// Mod Event Bus events
-	public void commonSetup(FMLCommonSetupEvent event)
+	private void commonSetup(FMLCommonSetupEvent event)
 	{
 		final int protocolVersion = 1;
 		
@@ -73,6 +77,11 @@ public class CensorCraft {
 			// channel.messageBuilder(WordPacket.class,
 			// NetworkDirection.PLAY_TO_SERVER).encoder(WordPacket::encode).decoder(WordPacket::decode).consumerMainThread(WordPacket::consume).add();
 		});
+	}
+	
+	public void clientSetup(FMLClientSetupEvent event)
+	{
+		ClientCensorCraft.clientSetup(event);
 	}
 	
 	private <T extends IPacket> void register(SimpleChannel channel, NetworkDirection<? extends FriendlyByteBuf> direction, Class<T> clazz)

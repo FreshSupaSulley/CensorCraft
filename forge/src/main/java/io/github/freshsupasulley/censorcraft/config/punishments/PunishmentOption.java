@@ -15,11 +15,12 @@ public abstract class PunishmentOption<T extends PunishmentOption<T>> {
 	
 	protected CommentedConfig config;
 	
-	public void init(boolean initEnable, CommentedConfig config)
+	public void fillConfig(CommentedConfig config)
 	{
+		// Just for building
 		this.config = config;
 		
-		define("enable", initEnable);
+		define("enable", initEnable());
 		define("taboo", new ArrayList<>(List.of("")), "List of punishment-specific forbidden words and phrases (case-insensitive)");
 		define("ignore_global_taboos", false, "Global taboos don't trigger this punishment");
 		
@@ -67,6 +68,11 @@ public abstract class PunishmentOption<T extends PunishmentOption<T>> {
 	final <E extends Comparable<? super E>> void defineInRange(String key, E value, E min, E max, String... comments)
 	{
 		define(key, value, Stream.concat(Stream.of(comments), Stream.of("Range: " + min + " ~ " + max)).toArray(String[]::new));
+	}
+	
+	boolean initEnable()
+	{
+		return false;
 	}
 	
 	abstract void build();
