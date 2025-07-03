@@ -12,7 +12,7 @@ import io.github.freshsupasulley.censorcraft.network.SetupPacket;
 import io.github.freshsupasulley.censorcraft.network.WordPacket;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.event.server.ServerAboutToStartEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.eventbus.api.listener.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
@@ -20,6 +20,7 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.network.ChannelBuilder;
 import net.minecraftforge.network.NetworkDirection;
 import net.minecraftforge.network.SimpleChannel;
+import net.minecraftforge.network.simple.SimpleConnection;
 
 @Mod(CensorCraft.MODID)
 @Mod.EventBusSubscriber(modid = CensorCraft.MODID)
@@ -40,12 +41,9 @@ public class CensorCraft {
 		// Forbidden words are defined at the server level
 		CLIENT = new ClientConfig();
 		
-		// Register ourselves for server and other game events we are interested in
-		// MinecraftForge.registerConfigScreen(null);.EVENT_BUS.register(this);
-		context.getModEventBus().addListener(this::commonSetup);
-		context.getModEventBus().addListener(this::clientSetup);
-		// I cannot FUCKING believe this gets invoked on a dedicated server but this::clientSetup doesn't
-		// context.getModEventBus().addListener(ClientCensorCraft::clientSetup);
+		var modBusGroup = context.getModBusGroup();
+		FMLCommonSetupEvent.getBus(modBusGroup).addListener(this::commonSetup);
+		FMLClientSetupEvent.getBus(modBusGroup).addListener(this::clientSetup);
 	}
 	
 	// Not an FML event
@@ -71,9 +69,14 @@ public class CensorCraft {
 			// channel.messageBuilder(WordPacket.class,
 			// NetworkDirection.PLAY_TO_SERVER).encoder(WordPacket::encode).decoder(WordPacket::new).consumerMainThread(WordPacket::consume).add();
 			
-			register(channel, NetworkDirection.CONFIGURATION_TO_CLIENT, SetupPacket.class);
-			register(channel, NetworkDirection.PLAY_TO_SERVER, WordPacket.class);
-			register(channel, NetworkDirection.PLAY_TO_CLIENT, PunishedPacket.class);
+			channel.configuration().clientbound().add(SetupPacket.class, SetupPacket.CODEC, SetupPacket::consume);
+			// register(channel, NetworkDirection.CONFIGURATION_TO_CLIENT, SetupPacket.class);
+			
+			channel.play().serverbound().add(WordPacket.class, WordPacket.CODEC, WordPacket::consume);
+			// register(channel, NetworkDirection.PLAY_TO_SERVER, WordPacket.class);
+			
+			channel.play().clientbound().add(PunishedPacket.class, PunishedPacket.CODEC, PunishedPacket::consume);
+			// register(channel, NetworkDirection.PLAY_TO_CLIENT, PunishedPacket.class);
 			// channel.messageBuilder(WordPacket.class,
 			// NetworkDirection.PLAY_TO_SERVER).encoder(WordPacket::encode).decoder(WordPacket::decode).consumerMainThread(WordPacket::consume).add();
 		});
@@ -82,20 +85,5 @@ public class CensorCraft {
 	public void clientSetup(FMLClientSetupEvent event)
 	{
 		ClientCensorCraft.clientSetup(event);
-	}
-	
-	private <T extends IPacket> void register(SimpleChannel channel, NetworkDirection<? extends FriendlyByteBuf> direction, Class<T> clazz)
-	{
-		channel.messageBuilder(clazz, direction).encoder((packet, buffer) -> packet.encode(buffer)).decoder(buffer ->
-		{
-			try
-			{
-				return clazz.getDeclaredConstructor(FriendlyByteBuf.class).newInstance(buffer);
-			} catch(Exception e)
-			{
-				e.printStackTrace();
-			}
-			return null;
-		}).consumerMainThread((packet, context) -> packet.consume(context)).add();
 	}
 }

@@ -7,39 +7,47 @@ import java.util.List;
 import io.github.freshsupasulley.censorcraft.CensorCraft;
 import io.github.freshsupasulley.censorcraft.ClientCensorCraft;
 import io.github.freshsupasulley.censorcraft.config.punishments.Crash;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraftforge.event.network.CustomPayloadEvent.Context;
 
 public class PunishedPacket implements IPacket {
+	
+	public static final StreamCodec<RegistryFriendlyByteBuf, PunishedPacket> CODEC = new StreamCodec<RegistryFriendlyByteBuf, PunishedPacket>()
+	{
+		
+		@Override
+		public void encode(RegistryFriendlyByteBuf buffer, PunishedPacket packet)
+		{
+			buffer.writeInt(packet.punishments.length);
+			
+			for(String string : packet.punishments)
+			{
+				byte[] bytes = string.getBytes(Charset.defaultCharset());
+				buffer.writeInt(bytes.length);
+				buffer.writeBytes(bytes);
+			}
+		}
+		
+		@Override
+		public PunishedPacket decode(RegistryFriendlyByteBuf buffer)
+		{
+			String[] punishments = new String[buffer.readInt()];
+			
+			for(int i = 0; i < punishments.length; i++)
+			{
+				punishments[i] = buffer.readCharSequence(buffer.readInt(), Charset.defaultCharset()).toString();
+			}
+			
+			return new PunishedPacket(punishments);
+		}
+	};
 	
 	private String[] punishments;
 	
 	public PunishedPacket(String... punishments)
 	{
 		this.punishments = punishments;
-	}
-	
-	public PunishedPacket(FriendlyByteBuf buffer)
-	{
-		punishments = new String[buffer.readInt()];
-		
-		for(int i = 0; i < punishments.length; i++)
-		{
-			punishments[i] = buffer.readCharSequence(buffer.readInt(), Charset.defaultCharset()).toString();
-		}
-	}
-	
-	@Override
-	public void encode(FriendlyByteBuf buffer)
-	{
-		buffer.writeInt(punishments.length);
-		
-		for(String string : punishments)
-		{
-			byte[] bytes = string.getBytes(Charset.defaultCharset());
-			buffer.writeInt(bytes.length);
-			buffer.writeBytes(bytes);
-		}
 	}
 	
 	@Override

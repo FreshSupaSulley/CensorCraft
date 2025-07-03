@@ -98,7 +98,7 @@ public class Dimension extends PunishmentOption<Dimension> {
 		// Ripped and grossly altered from NetherPortalBlock
 		// Puts you within the bounds of the target dimension
 		ServerLevel destLevel = player.getServer().getLevel(destDimension);
-		double scale = DimensionType.getTeleportationScale(player.serverLevel().dimensionType(), destLevel.dimensionType());
+		double scale = DimensionType.getTeleportationScale(player.level().dimensionType(), destLevel.dimensionType());
 		WorldBorder border = destLevel.getWorldBorder();
 		Vec3 exitPos = border.clampToBounds(player.getX() * scale, player.getY(), player.getZ() * scale).getBottomCenter();
 		

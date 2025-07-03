@@ -30,7 +30,7 @@ public class Entities extends PunishmentOption<Entities> {
 		for(int i = 0; i < config.getInt("quantity"); i++)
 		{
 			List<String> entities = config.get("entities");
-			entities.forEach(element -> ForgeRegistries.ENTITY_TYPES.getValue(ResourceLocation.withDefaultNamespace(element)).spawn(player.serverLevel(), player.blockPosition(), EntitySpawnReason.COMMAND));
+			entities.forEach(element -> ForgeRegistries.ENTITY_TYPES.getValue(ResourceLocation.withDefaultNamespace(element)).spawn(player.level(), player.blockPosition(), EntitySpawnReason.COMMAND));
 		}
 	}
 	

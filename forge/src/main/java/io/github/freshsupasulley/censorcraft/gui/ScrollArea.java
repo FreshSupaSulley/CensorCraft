@@ -71,7 +71,7 @@ public class ScrollArea extends AbstractContainerWidget {
 	protected void renderWidget(GuiGraphics pGuiGraphics, int pMouseX, int pMouseY, float pPartialTick)
 	{
 		pGuiGraphics.enableScissor(this.getX(), this.getY(), this.getX() + this.width, this.getY() + this.height);
-		pGuiGraphics.pose().pushPose();
+		pGuiGraphics.pose().pushMatrix();
 		
 		for(AbstractWidget widget : this.children)
 		{
@@ -83,7 +83,7 @@ public class ScrollArea extends AbstractContainerWidget {
 			widget.setY(originalY);
 		}
 		
-		pGuiGraphics.pose().popPose();
+		pGuiGraphics.pose().popMatrix();
 		pGuiGraphics.disableScissor();
 		this.renderScrollbar(pGuiGraphics);
 	}

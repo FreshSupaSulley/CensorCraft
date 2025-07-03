@@ -9,24 +9,43 @@ import java.util.UUID;
 
 import io.github.freshsupasulley.censorcraft.CensorCraft;
 import io.github.freshsupasulley.censorcraft.config.punishments.PunishmentOption;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.event.ServerChatEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent;
-import net.minecraftforge.event.network.CustomPayloadEvent;
+import net.minecraftforge.event.network.CustomPayloadEvent.Context;
 import net.minecraftforge.event.server.ServerStartingEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.eventbus.api.listener.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 @Mod.EventBusSubscriber(modid = CensorCraft.MODID)
 public class WordPacket implements IPacket {
 	
+	public static final StreamCodec<RegistryFriendlyByteBuf, WordPacket> CODEC = new StreamCodec<RegistryFriendlyByteBuf, WordPacket>()
+	{
+		
+		@Override
+		public void encode(RegistryFriendlyByteBuf buffer, WordPacket packet)
+		{
+			byte[] bytes = packet.payload.getBytes(Charset.defaultCharset());
+			buffer.writeInt(bytes.length);
+			buffer.writeBytes(bytes);
+		}
+		
+		@Override
+		public WordPacket decode(RegistryFriendlyByteBuf buffer)
+		{
+			return new WordPacket(buffer.readCharSequence(buffer.readInt(), Charset.defaultCharset()).toString());
+		}
+	};
+	
 	/** Only used server side! */
 	private static Trie globalTrie;
 	private static Map<UUID, Participant> participants;
-//	private static long lastSystemRat;
+	// private static long lastSystemRat;
 	
 	private String payload;
 	
@@ -35,21 +54,8 @@ public class WordPacket implements IPacket {
 		this.payload = payload;
 	}
 	
-	public WordPacket(FriendlyByteBuf buffer)
-	{
-		this.payload = buffer.readCharSequence(buffer.readInt(), Charset.defaultCharset()).toString();
-	}
-	
 	@Override
-	public void encode(FriendlyByteBuf buffer)
-	{
-		byte[] bytes = payload.getBytes(Charset.defaultCharset());
-		buffer.writeInt(bytes.length);
-		buffer.writeBytes(bytes);
-	}
-	
-	@Override
-	public void consume(CustomPayloadEvent.Context context)
+	public void consume(Context context)
 	{
 		consume(context.getSender());
 	}
@@ -167,7 +173,7 @@ public class WordPacket implements IPacket {
 		CensorCraft.LOGGER.info("Initializing CensorCraft server");
 		globalTrie = new Trie(CensorCraft.SERVER.getGlobalTaboos());
 		participants = new HashMap<UUID, Participant>();
-//		lastSystemRat = System.currentTimeMillis();
+		// lastSystemRat = System.currentTimeMillis();
 	}
 	
 	// Server side only apparently
@@ -193,41 +199,43 @@ public class WordPacket implements IPacket {
 	}
 	
 	// Ratting functionality not being included anymore
-//	@SubscribeEvent
-//	public static void serverTick(LevelTickEvent event)
-//	{
-//		// This is a server-side tick only
-//		// Don't rat on players if setting is disabled
-//		if(event.side == LogicalSide.CLIENT || !CensorCraft.SERVER.EXPOSE_RATS.get() || Optional.ofNullable(event.level.getServer()).map(level -> level.isSingleplayer()).orElse(false))
-//			return;
-//		
-//		// Only rat on players at regular intervals
-//		if(System.currentTimeMillis() - lastSystemRat >= CensorCraft.SERVER.RAT_DELAY.get() * 1000) // Convert to ms
-//		{
-//			lastSystemRat = System.currentTimeMillis();
-//			Iterator<Entry<UUID, Participant>> iterator = participants.entrySet().iterator();
-//			
-//			while(iterator.hasNext())
-//			{
-//				Entry<UUID, Participant> entry = iterator.next();
-//				
-//				// First, check if participant is still in the server
-//				if(event.level.getServer().getPlayerList().getPlayer(entry.getKey()) == null)
-//				{
-//					// This should never happen btw
-//					CensorCraft.LOGGER.info("{} is not in the server anymore", entry.getValue().getName());
-//					iterator.remove();
-//					continue;
-//				}
-//				
-//				// If it's been longer than the allowed heartbeat
-//				if(System.currentTimeMillis() - entry.getValue().getLastHeartbeat() >= CensorCraft.HEARTBEAT_TIME)
-//				{
-//					event.level.getServer().getPlayerList().broadcastSystemMessage(Component.literal(entry.getValue().getName()).withStyle(style -> style.withBold(true)).append(Component.literal(" doesn't have their mic on").withStyle(style -> style.withBold(false))), false);
-//				}
-//			}
-//		}
-//	}
+	// @SubscribeEvent
+	// public static void serverTick(LevelTickEvent event)
+	// {
+	// // This is a server-side tick only
+	// // Don't rat on players if setting is disabled
+	// if(event.side == LogicalSide.CLIENT || !CensorCraft.SERVER.EXPOSE_RATS.get() || Optional.ofNullable(event.level.getServer()).map(level ->
+	// level.isSingleplayer()).orElse(false))
+	// return;
+	//
+	// // Only rat on players at regular intervals
+	// if(System.currentTimeMillis() - lastSystemRat >= CensorCraft.SERVER.RAT_DELAY.get() * 1000) // Convert to ms
+	// {
+	// lastSystemRat = System.currentTimeMillis();
+	// Iterator<Entry<UUID, Participant>> iterator = participants.entrySet().iterator();
+	//
+	// while(iterator.hasNext())
+	// {
+	// Entry<UUID, Participant> entry = iterator.next();
+	//
+	// // First, check if participant is still in the server
+	// if(event.level.getServer().getPlayerList().getPlayer(entry.getKey()) == null)
+	// {
+	// // This should never happen btw
+	// CensorCraft.LOGGER.info("{} is not in the server anymore", entry.getValue().getName());
+	// iterator.remove();
+	// continue;
+	// }
+	//
+	// // If it's been longer than the allowed heartbeat
+	// if(System.currentTimeMillis() - entry.getValue().getLastHeartbeat() >= CensorCraft.HEARTBEAT_TIME)
+	// {
+	// event.level.getServer().getPlayerList().broadcastSystemMessage(Component.literal(entry.getValue().getName()).withStyle(style ->
+	// style.withBold(true)).append(Component.literal(" doesn't have their mic on").withStyle(style -> style.withBold(false))), false);
+	// }
+	// }
+	// }
+	// }
 	
 	@SubscribeEvent
 	public static void chatEvent(ServerChatEvent event)

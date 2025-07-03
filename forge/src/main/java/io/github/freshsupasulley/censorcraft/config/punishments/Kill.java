@@ -20,12 +20,12 @@ public class Kill extends PunishmentOption<Kill> {
 		if(ignoreTotem)
 		{
 			// Generic kill ignores totems
-			player.kill(player.serverLevel());
+			player.kill(player.level());
 		}
 		else
 		{
 			// Generic will stop at totems
-			player.hurtServer(player.serverLevel(), player.level().damageSources().generic(), Float.MAX_VALUE);
+			player.hurtServer(player.level(), player.level().damageSources().generic(), Float.MAX_VALUE);
 		}
 	}
 	
