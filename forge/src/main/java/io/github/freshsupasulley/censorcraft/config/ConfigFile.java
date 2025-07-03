@@ -51,7 +51,6 @@ public abstract class ConfigFile {
 	
 	public ConfigFile(Path configFolder, ModConfig.Type type)
 	{
-		// Why is it called this lmao
 		Path configFile = configFolder.resolve(String.format(Locale.ROOT, "%s-%s.toml", CensorCraft.MODID, type.extension()));
 		boolean newFile = Files.notExists(configFile);
 		
