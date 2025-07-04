@@ -21,6 +21,8 @@ public class ModelDownloader {
 	private volatile boolean cancelled, done;
 	private long bytesRead, downloadSize;
 	
+	private Path destination;
+	
 	/**
 	 * Converts number of bytes to a human-readable string, such as "10 GB".
 	 * 
@@ -39,6 +41,8 @@ public class ModelDownloader {
 	
 	ModelDownloader(String modelName, Path destination, BiConsumer<Boolean, Throwable> onComplete)
 	{
+		this.destination = destination;
+		
 		String fileName = "ggml-" + modelName + ".bin";
 		String downloadUrl = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/" + fileName;
 		
@@ -145,5 +149,15 @@ public class ModelDownloader {
 	public long getDownloadSize()
 	{
 		return downloadSize;
+	}
+	
+	/**
+	 * Gets the {@link Path} to where the model is being downloaded to.
+	 * 
+	 * @return destination path
+	 */
+	public Path getDestination()
+	{
+		return destination;
 	}
 }
