@@ -184,13 +184,17 @@ dependencies {
     // If the group id is "net.minecraft" and the artifact id is one of ["client", "server", "joined"],
     // then special handling is done to allow a setup of a vanilla dependency without the use of an external repository.
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
-
+    
+    // JScribe
+    shade 'io.github.freshsupasulley:jscribe:0.0.14'
+    // implementation 'de.maxhenkel.rnnoise4j:rnnoise4j:2.0.2' // Helps remove white noise which libfvad appreciates
+	//implementation 'org.json:json:20250107' // Helps with parsing API responses for downloading models
+	
     // Forge 1.21.6+ uses EventBus 7, which shifts most of its runtime validation to compile-time via an annotation processor
     // to improve performance in production environments. This line is required to enable said compile-time validation
     // in your development environment, helping you catch issues early.
     annotationProcessor 'net.minecraftforge:eventbus-validator:7.0-beta.10'
     
-    shade 'io.github.freshsupasulley:jscribe:0.0.14'
     compileOnly "de.maxhenkel.voicechat:voicechat-api:${voicechat_api_version}"
 	runtimeOnly fg.deobf("maven.modrinth:simple-voice-chat:forge-${voicechat_version}")
 	

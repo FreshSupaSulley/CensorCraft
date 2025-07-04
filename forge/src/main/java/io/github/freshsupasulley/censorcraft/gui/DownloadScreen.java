@@ -1,5 +1,6 @@
 package io.github.freshsupasulley.censorcraft.gui;
 
+import java.util.List;
 import java.util.concurrent.CancellationException;
 
 import io.github.freshsupasulley.JScribe;
@@ -15,6 +16,7 @@ import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
+import net.minecraft.util.FormattedCharSequence;
 
 public class DownloadScreen extends Screen {
 	
@@ -92,6 +94,16 @@ public class DownloadScreen extends Screen {
 			graphics.fill(x, y, x + filled, y + barHeight, 0xFF00AA00); // Green fill
 			
 			graphics.drawCenteredString(this.font, String.format("%.1f%%", progress * 100), this.width / 2, y + 15, 0xFFFFFF);
+			
+			Component text = Component.empty().append(Component.literal("Saving to client config at ").withStyle(style -> style.withBold(true))).append(Component.literal(downloader.getDestination().toAbsolutePath().toString()).withStyle(Style.EMPTY));
+			List<FormattedCharSequence> lines = minecraft.font.split(text, width / 4 * 3);
+			
+			// Tell them where its being saved
+			for(int i = 0; i < lines.size(); i++)
+			{
+				// + 6 to give it a place to start below the progress bar
+				graphics.drawCenteredString(font, lines.get(i), this.width / 2, this.height / 2 + font.lineHeight * (i + 4), 0xFFFFFFFF);
+			}
 		}
 	}
 }

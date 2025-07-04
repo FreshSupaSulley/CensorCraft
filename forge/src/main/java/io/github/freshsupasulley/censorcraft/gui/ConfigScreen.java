@@ -1,7 +1,6 @@
 package io.github.freshsupasulley.censorcraft.gui;
 
 import io.github.freshsupasulley.LibraryLoader;
-import io.github.freshsupasulley.censorcraft.CensorCraft;
 import io.github.freshsupasulley.censorcraft.ClientCensorCraft;
 import io.github.freshsupasulley.censorcraft.config.ClientConfig;
 import net.minecraft.Util;
@@ -71,9 +70,9 @@ public class ConfigScreen extends Screen {
 		layout.defaultCellSetting().alignHorizontallyCenter();
 		
 		// Everything else is aligned to the left
-		layout.addChild(Checkbox.builder(Component.literal("Show speech"), font).tooltip(Tooltip.create(Component.literal("Displays live audio transcriptions"))).selected(CensorCraft.CLIENT.isShowTranscription()).onValueChange((button, value) ->
+		layout.addChild(Checkbox.builder(Component.literal("Show speech"), font).tooltip(Tooltip.create(Component.literal("Displays live audio transcriptions"))).selected(ClientConfig.get().isShowTranscription()).onValueChange((button, value) ->
 		{
-			CensorCraft.CLIENT.setShowTranscription(value);
+			ClientConfig.get().setShowTranscription(value);
 		}).build());
 		
 //		layout.addChild(Checkbox.builder(Component.literal("Indicate when transcribing"), font).tooltip(Tooltip.create(Component.literal("Text appears when voice is detected and audio meets input sensitivity"))).selected(ClientConfig.INDICATE_TRANSCRIBING.get()).onValueChange((button, value) ->
@@ -89,7 +88,7 @@ public class ConfigScreen extends Screen {
 				case ClientConfig.MAX_LATENCY -> Component.literal("Slow");
 				default -> Component.literal(value + "ms");
 			};
-		}, new OptionInstance.IntRange(ClientConfig.MIN_LATENCY, ClientConfig.MAX_LATENCY), CensorCraft.CLIENT.getLatency(), CensorCraft.CLIENT::setLatency).createButton(minecraft.options)); // no clue what minecraft.options is
+		}, new OptionInstance.IntRange(ClientConfig.MIN_LATENCY, ClientConfig.MAX_LATENCY), ClientConfig.get().getLatency(), ClientConfig.get()::setLatency).createButton(minecraft.options)); // no clue what minecraft.options is
 		
 		// I actually prefer the default width more
 		// slider.setWidth(optionsWidth - 10); // remove a bit so it doesnt intersect the slider
@@ -105,9 +104,9 @@ public class ConfigScreen extends Screen {
 		// Experimental
 		layout.addChild(new SpacerElement(optionsWidth, 12));
 		layout.addChild(new StringWidget(Component.literal("Experimental"), font));
-		layout.addChild(Checkbox.builder(Component.literal("Use GPU (Windows x64 only)"), font).tooltip(Tooltip.create(Component.literal("Use Vulkan for GPU acceleration. GPU driver must support Vulkan"))).selected(CensorCraft.CLIENT.isUseVulkan() && LibraryLoader.canUseVulkan()).onValueChange((button, value) ->
+		layout.addChild(Checkbox.builder(Component.literal("Use GPU (Windows x64 only)"), font).tooltip(Tooltip.create(Component.literal("Use Vulkan for GPU acceleration. GPU driver must support Vulkan"))).selected(ClientConfig.get().isUseVulkan() && LibraryLoader.canUseVulkan()).onValueChange((button, value) ->
 		{
-			CensorCraft.CLIENT.setUseVulkan(value);
+			ClientConfig.get().setUseVulkan(value);
 			
 			if(ClientCensorCraft.librariesLoaded)
 			{
@@ -115,12 +114,12 @@ public class ConfigScreen extends Screen {
 			}
 		}).build()).active = LibraryLoader.canUseVulkan();
 		
-		layout.addChild(Checkbox.builder(Component.literal("Debug"), font).tooltip(Tooltip.create(Component.literal("Displays useful debugging information"))).selected(CensorCraft.CLIENT.isDebug()).onValueChange((button, value) ->
+		layout.addChild(Checkbox.builder(Component.literal("Debug"), font).tooltip(Tooltip.create(Component.literal("Displays useful debugging information"))).selected(ClientConfig.get().isDebug()).onValueChange((button, value) ->
 		{
-			CensorCraft.CLIENT.setDebug(value);
+			ClientConfig.get().setDebug(value);
 		}).build());
 		
-		layout.addChild(Button.builder(Component.literal("Open config file"), pButton -> Util.getPlatform().openPath(CensorCraft.CLIENT.getFilePath())).build());//.active = ClientConfig.filePath != null;
+		layout.addChild(Button.builder(Component.literal("Open config file"), pButton -> Util.getPlatform().openPath(ClientConfig.get().getFilePath())).build());//.active = ClientConfig.filePath != null;
 		
 		LinearLayout buttonLayout = LinearLayout.horizontal().spacing(ClientCensorCraft.PADDING);
 		

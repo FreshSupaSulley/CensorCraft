@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import io.github.freshsupasulley.censorcraft.CensorCraft;
+import io.github.freshsupasulley.censorcraft.config.ServerConfig;
 import io.github.freshsupasulley.censorcraft.config.punishments.PunishmentOption;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -26,7 +27,6 @@ public class WordPacket implements IPacket {
 	
 	public static final StreamCodec<RegistryFriendlyByteBuf, WordPacket> CODEC = new StreamCodec<RegistryFriendlyByteBuf, WordPacket>()
 	{
-		
 		@Override
 		public void encode(RegistryFriendlyByteBuf buffer, WordPacket packet)
 		{
@@ -77,7 +77,7 @@ public class WordPacket implements IPacket {
 		// If we need to wait before the player is punished again
 		long lastPunishmentTime = System.currentTimeMillis() - participant.getLastPunishment();
 		
-		if(lastPunishmentTime < CensorCraft.SERVER.getPunishmentCooldown() * 1000) // Convert taboo cooldown to ms
+		if(lastPunishmentTime < ServerConfig.get().getPunishmentCooldown() * 1000) // Convert taboo cooldown to ms
 		{
 			CensorCraft.LOGGER.debug("Can't punish {} this frequently (last punishment was {}ms ago)", participant.getName(), lastPunishmentTime);
 			return;
@@ -93,10 +93,10 @@ public class WordPacket implements IPacket {
 		CensorCraft.LOGGER.info("Received \"{}\" from {}", payload, participant.getName());
 		
 		// Update trie in case the taboos did
-		globalTrie.update(CensorCraft.SERVER.getGlobalTaboos());
+		globalTrie.update(ServerConfig.get().getGlobalTaboos());
 		
 		String word = participant.appendWord(payload);
-		String globalTaboo = CensorCraft.SERVER.isIsolateWords() ? globalTrie.containsAnyIsolatedIgnoreCase(word) : globalTrie.containsAnyIgnoreCase(word);
+		String globalTaboo = ServerConfig.get().isIsolateWords() ? globalTrie.containsAnyIsolatedIgnoreCase(word) : globalTrie.containsAnyIgnoreCase(word);
 		
 		boolean announced = false;
 		
@@ -109,14 +109,14 @@ public class WordPacket implements IPacket {
 			List<PunishmentOption<?>> options = new ArrayList<PunishmentOption<?>>();
 			
 			// Notify all players of the sin
-			if(CensorCraft.SERVER.isChatTaboos())
+			if(ServerConfig.get().isChatTaboos())
 			{
 				announced = true;
 				player.level().players().forEach(sample -> sample.displayClientMessage(Component.literal(participant.getName()).withStyle(style -> style.withBold(true)).append(Component.literal(" said ").withStyle(style -> style.withBold(false))).append(Component.literal("\"" + globalTaboo + "\"")), false));
 			}
 			
 			// Go through all enabled punishments
-			for(PunishmentOption<?> option : CensorCraft.SERVER.getPunishments())
+			for(PunishmentOption<?> option : ServerConfig.get().getPunishments())
 			{
 				if(option.isEnabled() && !option.ignoresGlobalTaboos())
 				{
@@ -134,11 +134,11 @@ public class WordPacket implements IPacket {
 			List<PunishmentOption<?>> options = new ArrayList<PunishmentOption<?>>();
 			
 			// Check all punishments for particular taboos
-			for(PunishmentOption<?> option : CensorCraft.SERVER.getPunishments())
+			for(PunishmentOption<?> option : ServerConfig.get().getPunishments())
 			{
 				if(option.isEnabled())
 				{
-					String taboo = option.getTaboo(word, CensorCraft.SERVER.isIsolateWords());
+					String taboo = option.getTaboo(word, ServerConfig.get().isIsolateWords());
 					
 					if(taboo != null)
 					{
@@ -147,7 +147,7 @@ public class WordPacket implements IPacket {
 						options.add(option);
 						
 						// Notify all players of the sin
-						if(!announced && CensorCraft.SERVER.isChatTaboos())
+						if(!announced && ServerConfig.get().isChatTaboos())
 						{
 							announced = true;
 							player.level().players().forEach(sample -> sample.displayClientMessage(Component.literal(participant.getName()).withStyle(style -> style.withBold(true)).append(Component.literal(" said ").withStyle(style -> style.withBold(false))).append(Component.literal("\"" + taboo + "\"")), false));
@@ -171,7 +171,7 @@ public class WordPacket implements IPacket {
 	public static void serverSetup(ServerStartingEvent event)
 	{
 		CensorCraft.LOGGER.info("Initializing CensorCraft server");
-		globalTrie = new Trie(CensorCraft.SERVER.getGlobalTaboos());
+		globalTrie = new Trie(ServerConfig.get().getGlobalTaboos());
 		participants = new HashMap<UUID, Participant>();
 		// lastSystemRat = System.currentTimeMillis();
 	}
@@ -204,12 +204,12 @@ public class WordPacket implements IPacket {
 	// {
 	// // This is a server-side tick only
 	// // Don't rat on players if setting is disabled
-	// if(event.side == LogicalSide.CLIENT || !CensorCraft.SERVER.EXPOSE_RATS.get() || Optional.ofNullable(event.level.getServer()).map(level ->
+	// if(event.side == LogicalSide.CLIENT || !ServerConfig.get().EXPOSE_RATS.get() || Optional.ofNullable(event.level.getServer()).map(level ->
 	// level.isSingleplayer()).orElse(false))
 	// return;
 	//
 	// // Only rat on players at regular intervals
-	// if(System.currentTimeMillis() - lastSystemRat >= CensorCraft.SERVER.RAT_DELAY.get() * 1000) // Convert to ms
+	// if(System.currentTimeMillis() - lastSystemRat >= ServerConfig.get().RAT_DELAY.get() * 1000) // Convert to ms
 	// {
 	// lastSystemRat = System.currentTimeMillis();
 	// Iterator<Entry<UUID, Participant>> iterator = participants.entrySet().iterator();
@@ -240,7 +240,7 @@ public class WordPacket implements IPacket {
 	@SubscribeEvent
 	public static void chatEvent(ServerChatEvent event)
 	{
-		if(CensorCraft.SERVER.isMonitorChat())
+		if(ServerConfig.get().isMonitorChat())
 		{
 			new WordPacket(event.getRawText()).consume(event.getPlayer());
 		}

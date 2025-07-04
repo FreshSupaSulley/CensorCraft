@@ -3,12 +3,40 @@ package io.github.freshsupasulley.censorcraft.config;
 import com.electronwill.nightconfig.core.ConfigSpec;
 
 import io.github.freshsupasulley.LibraryLoader;
+import io.github.freshsupasulley.censorcraft.CensorCraft;
+import io.github.freshsupasulley.censorcraft.gui.ConfigScreen;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.eventbus.api.listener.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
+import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.loading.FMLPaths;
 
+// dist has to be client here, otherwise dedicated servers will try to load the ConfigScreen class and shit the bed
+@Mod.EventBusSubscriber(modid = CensorCraft.MODID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public class ClientConfig extends ConfigFile {
 	
 	public static final int MIN_LATENCY = 100, MAX_LATENCY = 5000;
+	
+	private static ClientConfig CLIENT;
+	
+	@SubscribeEvent
+	private static void clientSetup(FMLClientSetupEvent event)
+	{
+		MinecraftForge.registerConfigScreen((minecraft, screen) -> new ConfigScreen(minecraft, screen));
+		CLIENT = new ClientConfig();
+	}
+	
+	public static ClientConfig get()
+	{
+		if(CLIENT == null)
+		{
+			CensorCraft.LOGGER.error("Tried to access client config before it was initialized");
+		}
+		
+		return CLIENT;
+	}
 	
 	public ClientConfig()
 	{

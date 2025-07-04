@@ -12,8 +12,10 @@ import de.maxhenkel.voicechat.api.VoicechatPlugin;
 import de.maxhenkel.voicechat.api.events.ClientSoundEvent;
 import de.maxhenkel.voicechat.api.events.EventRegistration;
 import io.github.freshsupasulley.JScribe;
+import io.github.freshsupasulley.Model;
 import io.github.freshsupasulley.RollingAudioBuffer;
 import io.github.freshsupasulley.Transcriptions;
+import io.github.freshsupasulley.censorcraft.config.ClientConfig;
 import io.github.freshsupasulley.censorcraft.gui.ConfigScreen;
 import io.github.freshsupasulley.censorcraft.gui.DownloadScreen;
 import io.github.freshsupasulley.censorcraft.network.WordPacket;
@@ -31,12 +33,10 @@ import net.minecraft.network.chat.Style;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.client.event.ScreenEvent;
-import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent.LevelTickEvent;
 import net.minecraftforge.eventbus.api.listener.SubscribeEvent;
 import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.loading.FMLPaths;
 import net.minecraftforge.network.PacketDistributor;
 
@@ -78,11 +78,6 @@ public class ClientCensorCraft implements VoicechatPlugin {
 	private static final int SAMPLE_RATE = 48000;
 	private static final RollingAudioBuffer ringBuffer = new RollingAudioBuffer(15000, SAMPLE_RATE); // hold a MAX of 15s. Can't see us needing this much
 	private static long lastSample, lastTranscription;
-	
-	public static void clientSetup(FMLClientSetupEvent event)
-	{
-		MinecraftForge.registerConfigScreen((minecraft, screen) -> new ConfigScreen(minecraft, screen));
-	}
 	
 	@Override
 	public String getPluginId()
@@ -158,13 +153,13 @@ public class ClientCensorCraft implements VoicechatPlugin {
 		
 		JScribe.Builder builder = new JScribe.Builder(model);
 		builder.setLogger(CensorCraft.LOGGER);
-		// builder.denoise(CensorCraft.CLIENT.DENOISE.get());
-		// builder.enableVAD(CensorCraft.CLIENT.VAD_MODE.get());
-		// builder.setInputSensitivity(CensorCraft.CLIENT.INPUT_SENSITIVITY.get());
-		// builder.setPreferredMicrophone(CensorCraft.CLIENT.PREFERRED_MIC.get());
+		// builder.denoise(ClientConfig.get().DENOISE.get());
+		// builder.enableVAD(ClientConfig.get().VAD_MODE.get());
+		// builder.setInputSensitivity(ClientConfig.get().INPUT_SENSITIVITY.get());
+		// builder.setPreferredMicrophone(ClientConfig.get().PREFERRED_MIC.get());
 		builder.warmUpModel();
 		
-		if(CensorCraft.CLIENT.isUseVulkan())
+		if(ClientConfig.get().isUseVulkan())
 		{
 			CensorCraft.LOGGER.warn("Vulkan enabled in client config");
 			builder.useVulkan();
@@ -298,7 +293,7 @@ public class ClientCensorCraft implements VoicechatPlugin {
 		// There is nothing to do if monitorVoice is disabled
 		if(!monitorVoice)
 		{
-			if(CensorCraft.CLIENT.isDebug())
+			if(ClientConfig.get().isDebug())
 			{
 				setGUIText(Component.literal("Transcription is off\n"), true);
 			}
@@ -355,7 +350,7 @@ public class ClientCensorCraft implements VoicechatPlugin {
 			else
 			{
 				// How many samples we need for our target buffer size
-				long latency = CensorCraft.CLIENT.getLatency();
+				long latency = ClientConfig.get().getLatency();
 				
 				// If we’ve collected enough and latency says we want another sample
 				if(ringBuffer.getSize() >= msToSamples(MIN_SAMPLE_MS) && System.currentTimeMillis() - lastTranscription >= latency)
@@ -394,7 +389,7 @@ public class ClientCensorCraft implements VoicechatPlugin {
 			}
 			
 			// Show transcriptions only if necessary
-			if(CensorCraft.CLIENT.isShowTranscription())
+			if(ClientConfig.get().isShowTranscription())
 			{
 				if(transcription != null && !transcription.toString().isBlank())
 				{
@@ -402,10 +397,10 @@ public class ClientCensorCraft implements VoicechatPlugin {
 				}
 			}
 			
-			if(CensorCraft.CLIENT.isDebug())
+			if(ClientConfig.get().isDebug())
 			{
 				component.append(Component.literal(String.format("%.1f", controller.getTimeBehind() / 1000f) + "s behind\n").withColor(0xAAAAAA));
-				component.append(Component.literal("Latency: " + CensorCraft.CLIENT.getLatency() + "\n"));
+				component.append(Component.literal("Latency: " + ClientConfig.get().getLatency() + "\n"));
 				component.append(Component.literal("Last transcribed " + recordings + " recording" + (recordings != 1 ? "s" : "") + "\n")).withColor(0xAAAAAA);
 				component.append(Component.literal(controller.getTranscriptionBacklog() + " samples queued\n"));
 				component.append(Component.literal("Using " + model.getFileName() + " model\n"));
@@ -415,7 +410,7 @@ public class ClientCensorCraft implements VoicechatPlugin {
 			// setGUIText(Component.empty());
 			// }
 			
-			setGUIText(component, CensorCraft.CLIENT.isDebug());
+			setGUIText(component, ClientConfig.get().isDebug());
 		}
 		// If we're NOT supposed to be running
 		else

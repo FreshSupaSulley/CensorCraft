@@ -9,6 +9,7 @@ import java.util.List;
 import com.electronwill.nightconfig.core.CommentedConfig;
 import com.electronwill.nightconfig.core.ConfigSpec;
 
+import io.github.freshsupasulley.censorcraft.CensorCraft;
 import io.github.freshsupasulley.censorcraft.config.punishments.Commands;
 import io.github.freshsupasulley.censorcraft.config.punishments.Crash;
 import io.github.freshsupasulley.censorcraft.config.punishments.Dimension;
@@ -22,10 +23,32 @@ import io.github.freshsupasulley.censorcraft.config.punishments.PunishmentOption
 import io.github.freshsupasulley.censorcraft.config.punishments.Teleport;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.storage.LevelResource;
+import net.minecraftforge.event.server.ServerAboutToStartEvent;
+import net.minecraftforge.eventbus.api.listener.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.server.ServerLifecycleHooks;
 
+@Mod.EventBusSubscriber(modid = CensorCraft.MODID)
 public class ServerConfig extends ConfigFile {
+	
+	private static ServerConfig SERVER;
+	
+	@SubscribeEvent
+	private static void serverSetup(ServerAboutToStartEvent event)
+	{
+		SERVER = new ServerConfig(event.getServer());
+	}
+	
+	public static ServerConfig get()
+	{
+		if(SERVER == null)
+		{
+			CensorCraft.LOGGER.error("Tried to access server config before it was initialized");
+		}
+		
+		return SERVER;
+	}
 	
 	private static final LevelResource SERVERCONFIG = new LevelResource("serverconfig");
 	
