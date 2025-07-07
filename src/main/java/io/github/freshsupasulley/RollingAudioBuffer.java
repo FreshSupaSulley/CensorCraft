@@ -5,6 +5,9 @@ import java.nio.file.Path;
 
 import be.tarsos.dsp.resample.RateTransposer;
 
+/**
+ * Converts raw samples into the format whisper expects while maintaining a buffer of previous samples for context.
+ */
 public class RollingAudioBuffer {
 	
 	private final float[] buffer;
@@ -17,8 +20,8 @@ public class RollingAudioBuffer {
 	/**
 	 * Initializes a new rolling audio buffer.
 	 * 
-	 * @param maxBufferMs maximum size (in milliseconds) that the audio buffer can store
-	 * @param inputSampleRate  input sample rate
+	 * @param maxBufferMs     maximum size (in milliseconds) that the audio buffer can store
+	 * @param inputSampleRate input sample rate
 	 */
 	public RollingAudioBuffer(int maxBufferMs, int inputSampleRate)
 	{
@@ -30,13 +33,15 @@ public class RollingAudioBuffer {
 	
 	/**
 	 * Appends new samples, overwriting the oldest if the buffer is full.
+	 * 
+	 * @param rawSamples samples to append to the buffer
 	 */
 	public void append(short[] rawSamples)
 	{
 		float[] normalized = JScribe.pcmToFloat(rawSamples);
 		
-//		AudioEvent audioEvent = new AudioEvent(JScribe.FORMAT);
-//		audioEvent.setFloatBuffer(normalized);
+		// AudioEvent audioEvent = new AudioEvent(JScribe.FORMAT);
+		// audioEvent.setFloatBuffer(normalized);
 		
 		for(float sample : transposer.process(normalized))
 		{
@@ -52,6 +57,8 @@ public class RollingAudioBuffer {
 	
 	/**
 	 * Returns a copy of the current buffer contents in correct chronological order without clearing the buffer.
+	 * 
+	 * @return copy of buffer
 	 */
 	public float[] getSnapshot()
 	{
@@ -83,6 +90,8 @@ public class RollingAudioBuffer {
 	
 	/**
 	 * Returns a copy of the current buffer contents in correct chronological order, then clears the buffer.
+	 * 
+	 * @return copy of buffer
 	 */
 	public float[] drain()
 	{
@@ -119,16 +128,31 @@ public class RollingAudioBuffer {
 		JScribe.writeWavFile((int) JScribe.FORMAT.getSampleRate(), getSnapshot(), path);
 	}
 	
+	/**
+	 * Determines if this audio buffer is full and will roll over old data when new data is appended.
+	 * 
+	 * @return true if full
+	 */
 	public boolean isFull()
 	{
 		return filled;
 	}
 	
+	/**
+	 * Returns the <b>used</b> size of the audio buffer. If full, it will return the capacity.
+	 * 
+	 * @return currently used size of the audio buffer
+	 */
 	public int getSize()
 	{
 		return filled ? capacity : writeIndex;
 	}
 	
+	/**
+	 * Returns the total capacity of the audio buffer in number of samples.
+	 * 
+	 * @return number of samples the audio buffer can store
+	 */
 	public int getCapacity()
 	{
 		return capacity;

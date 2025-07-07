@@ -8,6 +8,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.github.freshsupasulley.Transcriptions.Transcription;
+import io.github.givimad.whisperjni.TokenData;
 import io.github.givimad.whisperjni.WhisperContext;
 import io.github.givimad.whisperjni.WhisperFullParams;
 import io.github.givimad.whisperjni.WhisperJNI;
@@ -61,17 +62,15 @@ class Transcriber extends Thread implements Runnable {
 		
 		try
 		{
-			if(useVulkan && LibraryLoader.canUseVulkan())
+			if(useVulkan && LibraryUtils.canUseVulkan())
 			{
-				LibraryLoader.loadVulkan();
+				LibraryUtils.loadVulkan(JScribe.logger);
 			}
 			else
 			{
 				JScribe.logger.info("Loading built-in whisper-jni natives");
 				
-				LibraryUtils.loadLibrary(JScribe.logger::debug);
-				// Then test loading whisper
-				WhisperJNI.setLibraryLogger(JScribe.logger::debug);
+				LibraryUtils.loadLibrary(JScribe.logger);
 			}
 		} catch(IOException | UnsatisfiedLinkError e)
 		{
@@ -191,16 +190,10 @@ class Transcriber extends Thread implements Runnable {
 					
 					for(int i = 0; i < numSegments; i++)
 					{
-						String text = whisper.fullGetSegmentTextFromState(state, i).trim();
-						// can suppress this in whisper context
-						// if(text.equals("."))
-						// continue;
-						// if(text.equals("[BLANK_AUDIO]"))
-						// continue;
+						TokenData[] tokens = whisper.getTokensFromState(ctx, state, i);
+						JScribe.logger.debug("Raw transcription ({} samples): {} tokens", numRecordings, tokens.length);
 						
-						JScribe.logger.debug("Raw transcription ({} samples): {}", numRecordings, text);
-						
-						transcriptions.add(new Transcription(text, numRecordings, System.currentTimeMillis() - startTime));
+						transcriptions.add(new Transcription(tokens, numRecordings, System.currentTimeMillis() - startTime));
 					}
 					
 					// because I want to add all transcriptions at the same time to not freak out the results

@@ -2,6 +2,7 @@ package io.github.freshsupasulley;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.Thread.UncaughtExceptionHandler;
@@ -38,13 +39,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.github.freshsupasulley.Transcriber.Recording;
+import io.github.givimad.whisperjni.internal.LibraryUtils;
 
 /**
  * The entry point of the JScribe library.
  */
 public class JScribe implements UncaughtExceptionHandler {
 	
-	// The format Whisper wants (wave file)
+	/** The format Whisper wants (wave file) */
 	public static final AudioFormat FORMAT = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 16000, 16, 1, 2, 16000, false);
 	// public static final TarsosDSPAudioFormat FORMAT = new TarsosDSPAudioFormat(16000, 16, 1, true, false);
 	
@@ -426,6 +428,8 @@ public class JScribe implements UncaughtExceptionHandler {
 		
 		/**
 		 * Creates a new JScribe Builder instance. All parameters in this constructor are the minimum required parameters to build a simple instance.
+		 * 
+		 * @param modelPath path to the GGML model
 		 */
 		public Builder(Path modelPath)
 		{
@@ -498,9 +502,9 @@ public class JScribe implements UncaughtExceptionHandler {
 		 */
 		public Builder useVulkan()
 		{
-			if(!LibraryLoader.canUseVulkan())
+			if(!LibraryUtils.canUseVulkan())
 			{
-				logger.error("Can't use Vulkan, wrong platform / arch ({}, {})", LibraryLoader.OS_NAME, LibraryLoader.OS_ARCH);
+				logger.error("Can't use Vulkan, wrong platform / arch ({}, {})", LibraryUtils.OS_NAME, LibraryUtils.OS_ARCH);
 				return this;
 			}
 			
@@ -550,6 +554,12 @@ public class JScribe implements UncaughtExceptionHandler {
 		return samples;
 	}
 	
+	/**
+	 * Converts a normalized float array into 16-bit PCM audio samples.
+	 * 
+	 * @param buffer normalized float array
+	 * @return 16-bit PCM audio samples
+	 */
 	public static byte[] floatToPCM(float[] buffer)
 	{
 		// Convert float[] to 16-bit little-endian PCM bytes
@@ -584,6 +594,14 @@ public class JScribe implements UncaughtExceptionHandler {
 		JScribe.logger.info("WAV file written to {}", path.toAbsolutePath());
 	}
 	
+	/**
+	 * Reads an audio input stream into a normalized float array.
+	 * 
+	 * @param stream input stream (like {@link FileInputStream} if reading from disk)
+	 * @return normalized float array
+	 * @throws IOException                   if something went wrong
+	 * @throws UnsupportedAudioFileException if the input stream doesn't represent a proper audio file
+	 */
 	public static float[] readWavToFloatSamples(InputStream stream) throws IOException, UnsupportedAudioFileException
 	{
 		// Decode WAV header and get PCM stream

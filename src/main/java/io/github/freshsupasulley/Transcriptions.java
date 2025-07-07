@@ -2,8 +2,11 @@ package io.github.freshsupasulley;
 
 import java.util.Iterator;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import io.github.freshsupasulley.Transcriptions.Transcription;
+import io.github.givimad.whisperjni.TokenData;
 
 /**
  * Represents a collection of {@link Transcription} records.
@@ -27,39 +30,6 @@ public class Transcriptions implements Iterable<Transcription> {
 	public boolean isEmpty()
 	{
 		return transcriptions.isEmpty();
-	}
-	
-	/**
-	 * Assembles all transcriptions into a string.
-	 * 
-	 * @param separator string used to separate each transcription
-	 * @return all transcriptions concatenated as a string
-	 */
-	public String getRawText(String separator)
-	{
-		if(transcriptions.isEmpty())
-		{
-			return "";
-		}
-		
-		StringBuffer buffer = new StringBuffer(transcriptions.getFirst().text());
-		
-		for(int i = 1; i < transcriptions.size(); i++)
-		{
-			buffer.append(separator + transcriptions.get(i).text());
-		}
-		
-		return buffer.toString();
-	}
-	
-	/**
-	 * Assembles all transcriptions into a string using space as the separator.
-	 * 
-	 * @return all transcriptions concatenated as a string
-	 */
-	public String getRawString()
-	{
-		return getRawText(" ");
 	}
 	
 	/**
@@ -91,11 +61,21 @@ public class Transcriptions implements Iterable<Transcription> {
 	 * the number of audio recordings that had to be spliced together.
 	 * </p>
 	 * 
-	 * @param text           raw text received from the model
+	 * @param tokens         raw tokens received from the model
 	 * @param recordings     amount of recordings concatenated together that compose this transcription
 	 * @param processingTime time it took to process these recordings, in milliseconds
 	 */
-	public static record Transcription(String text, int recordings, long processingTime) {
+	public static record Transcription(TokenData[] tokens, int recordings, long processingTime) {
+		
+		/**
+		 * Lazily assembles all tokens into a string.
+		 * 
+		 * @return combined string of tokens
+		 */
+		public String text()
+		{
+			return Stream.of(tokens).map(token -> token.token).collect(Collectors.joining());
+		}
 	}
 	
 	@Override
