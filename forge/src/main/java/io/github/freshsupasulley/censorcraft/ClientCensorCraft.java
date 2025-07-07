@@ -4,7 +4,10 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import de.maxhenkel.voicechat.api.ForgeVoicechatPlugin;
 import de.maxhenkel.voicechat.api.VoicechatApi;
@@ -65,18 +68,18 @@ public class ClientCensorCraft implements VoicechatPlugin {
 	public static final int PADDING = 5;
 	private static final int MAX_TRANSCRIPTION_LENGTH = 60;
 	
-	public static MutableComponent GUI_TEXT;
+	public static MutableComponent GUI_TEXT, transcription;
 	public static boolean FORCE_GUI_REFRESH;
 	
 	// private static StringBuilder transcription = new StringBuilder(MAX_TRANSCRIPTION_LENGTH);
-	private static String transcription;
+	// private static String transcription;
 	private static int recordings;
 	
 	/** MS between samples before the rolling audio buffer is cleared */
 	private static final long DRAIN_DELAY = 1000, MIN_SAMPLE_MS = 200;
 	
 	private static final int SAMPLE_RATE = 48000;
-	private static final RollingAudioBuffer ringBuffer = new RollingAudioBuffer(15000, SAMPLE_RATE); // hold a MAX of 15s. Can't see us needing this much
+	private static final RollingAudioBuffer ringBuffer = new RollingAudioBuffer(5000, SAMPLE_RATE); // hold a MAX of 5s. Can't see us needing this much
 	private static long lastSample, lastTranscription;
 	
 	@Override
@@ -128,7 +131,6 @@ public class ClientCensorCraft implements VoicechatPlugin {
 		return getModelDir().resolve(modelName + ".bin");
 	}
 	
-	// needs to someday include tiny.en (built in model)
 	public static boolean hasModel(String modelName)
 	{
 		return getModelPath(modelName).toFile().exists();
@@ -153,10 +155,6 @@ public class ClientCensorCraft implements VoicechatPlugin {
 		
 		JScribe.Builder builder = new JScribe.Builder(model);
 		builder.setLogger(CensorCraft.LOGGER);
-		// builder.denoise(ClientConfig.get().DENOISE.get());
-		// builder.enableVAD(ClientConfig.get().VAD_MODE.get());
-		// builder.setInputSensitivity(ClientConfig.get().INPUT_SENSITIVITY.get());
-		// builder.setPreferredMicrophone(ClientConfig.get().PREFERRED_MIC.get());
 		builder.warmUpModel();
 		
 		if(ClientConfig.get().isUseVulkan())
@@ -168,9 +166,9 @@ public class ClientCensorCraft implements VoicechatPlugin {
 		controller = builder.build();
 		
 		// Reset debug params
+		transcription = null;
 		ringBuffer.drain();
 		recordings = 0;
-		transcription = "";
 		
 		// Model might have changed, might as well reinstantiate
 		try
@@ -360,6 +358,8 @@ public class ClientCensorCraft implements VoicechatPlugin {
 				}
 			}
 			
+			MutableComponent component = Component.empty();
+			
 			// Beyond this point, we need it to be running and actively transcribing
 			// If it's not blank, send it
 			// Send empty packet anyways if we need to keep up with the heartbeat
@@ -367,20 +367,62 @@ public class ClientCensorCraft implements VoicechatPlugin {
 			
 			if(!results.isEmpty())
 			{
-				String raw = results.getRawString();
+				// Start by clearing it
+				transcription = Component.empty();
 				
-				// Show end instead of front
-				String text = (raw.length() > MAX_TRANSCRIPTION_LENGTH) ? "... " + raw.substring(raw.length() - MAX_TRANSCRIPTION_LENGTH) : raw;
+				StringBuffer processBuffer = new StringBuffer();
+				List<MutableComponent> tokenList = new ArrayList<MutableComponent>();
 				
+				results.getTranscriptions().stream().forEach(t ->
+				{
+					Stream.of(t.tokens()).forEach(token ->
+					{
+						CensorCraft.LOGGER.debug("Token: {}, probability: {}", token.token, token.p);
+						processBuffer.append(token.token);
+						tokenList.add(Component.literal(token.token).withColor(ClientConfig.get().isDebug() ? probabilityColor(token.p) : 0xFFFFFF).withStyle(style -> style.withShadowColor(0xAAAAAAAA)));
+					});
+				});
+				
+				int length = 0;
+				boolean exceeded = false;
+				
+				// Now prepare the GUI and the processing string
+				// Go back to front
+				for(int i = tokenList.size() - 1; i >= 0; i--)
+				{
+					MutableComponent sample = tokenList.get(i);
+					String raw = sample.getString();
+					
+					length += raw.length();
+					
+					// If we still can add stuff to the GUI text
+					if(!exceeded)
+					{
+						if(length > MAX_TRANSCRIPTION_LENGTH)
+						{
+							exceeded = true;
+							raw = "..." + raw.substring(length - MAX_TRANSCRIPTION_LENGTH);
+							transcription = Component.literal(raw).withStyle(sample.getStyle()).append(transcription);
+						}
+						else if(i == 0)
+						{
+							transcription = Component.literal(raw.trim()).withStyle(sample.getStyle()).append(transcription);
+							// transcription.append(sample);
+						}
+						else
+						{
+							transcription = sample.append(transcription);
+						}
+					}
+				}
+				
+				String raw = processBuffer.toString();
 				CensorCraft.LOGGER.info("Sending \"{}\"", raw);
 				lastWordPacket = System.currentTimeMillis();
 				CensorCraft.channel.send(new WordPacket(raw), PacketDistributor.SERVER.noArg());
 				
-				transcription = text;
 				recordings = results.getTotalRecordings();
 			}
-			
-			MutableComponent component = Component.empty();
 			
 			// 15000 warning
 			if(controller.getTimeBehind() > 15000)
@@ -388,13 +430,9 @@ public class ClientCensorCraft implements VoicechatPlugin {
 				component.append(Component.literal("CensorCraft is far behind\n").withStyle(style -> style.withBold(true).withColor(0xFF0000)).append(Component.literal("Consider raising transcription latency\n").withStyle(style -> style.withBold(false).withColor(0xAAAAAA))));
 			}
 			
-			// Show transcriptions only if necessary
-			if(ClientConfig.get().isShowTranscription())
+			if(ClientConfig.get().isShowTranscription() && transcription != null)
 			{
-				if(transcription != null && !transcription.toString().isBlank())
-				{
-					component.append(Component.literal(transcription.toString() + "\n").withColor(0xFFFFFF));
-				}
+				component.append(transcription).append("\n");
 			}
 			
 			if(ClientConfig.get().isDebug())
@@ -436,6 +474,34 @@ public class ClientCensorCraft implements VoicechatPlugin {
 			CensorCraft.LOGGER.info("Sending heartbeat (paused: {})", paused);
 			lastWordPacket = System.currentTimeMillis();
 			CensorCraft.channel.send(new WordPacket(""), PacketDistributor.SERVER.noArg());
+		}
+	}
+	
+	/**
+	 * Returns RGB representing the probability of a token. Splits it into green (high probability), yellow (medium), and red (low).
+	 * 
+	 * @param p probability
+	 * @return RGb
+	 */
+	public static int probabilityColor(float p)
+	{
+		// clamp to [0, 1]
+		if(p < 0f)
+			p = 0f;
+		else if(p > 1f)
+			p = 1f;
+		
+		if(p < 1f / 3f)
+		{
+			return 0xFF0000;
+		}
+		else if(p < 2f / 3f)
+		{
+			return 0xFFFF00;
+		}
+		else
+		{
+			return 0x00FF00;
 		}
 	}
 	

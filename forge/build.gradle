@@ -186,7 +186,8 @@ dependencies {
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
     
     // JScribe
-    shade 'io.github.freshsupasulley:jscribe:0.0.14'
+    shade 'io.github.freshsupasulley:jscribe:0.1.0'
+    //shade 'io.github.givimad:whisper-jni:1.8.0'
     // implementation 'de.maxhenkel.rnnoise4j:rnnoise4j:2.0.2' // Helps remove white noise which libfvad appreciates
 	//implementation 'org.json:json:20250107' // Helps with parsing API responses for downloading models
 	
@@ -200,6 +201,9 @@ dependencies {
 	
 	// Apply Mixin AP to generate refmap
 	annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+	
+	testImplementation libs.junit.jupiter
+    testImplementation 'org.slf4j:slf4j-simple:2.0.17'
 }
 
 // This block of code expands all declared replace properties in the specified resource targets.
@@ -223,6 +227,10 @@ tasks.named('processResources', ProcessResources) {
 	filesMatching(['META-INF/mods.toml', 'pack.mcmeta']) {
 		expand project.properties + [project: project]
 	}
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
 }
 
 test {

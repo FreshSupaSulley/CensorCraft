@@ -1,5 +1,6 @@
 package io.github.freshsupasulley.censorcraft.mixins;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.spongepowered.asm.mixin.Mixin;
@@ -8,12 +9,15 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import io.github.freshsupasulley.censorcraft.ClientCensorCraft;
+import io.github.freshsupasulley.censorcraft.config.ClientConfig;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.util.FormattedCharSequence;
 
 @Mixin(Gui.class)
 public abstract class GUIMixin {
@@ -34,12 +38,12 @@ public abstract class GUIMixin {
 	private void renderHotbarAndDecorations(GuiGraphics graphics, DeltaTracker tracker, CallbackInfo info)
 	{
 		MutableComponent component = Component.empty();
-//		component.append(Component.literal(ClientConfig.UNWANTED.get().get(0).get("balls")));
+		// component.append(Component.literal(ClientConfig.UNWANTED.get().get(0).get("balls")));
 		
-//		if(ClientConfig.INDICATE_TRANSCRIBING.get() && ClientCensorCraft.TRANSCRIBING)
-//		{
-//			component.append(Component.literal("Transcribing\n").withColor(0xAAAAAA));
-//		}
+		// if(ClientConfig.INDICATE_TRANSCRIBING.get() && ClientCensorCraft.TRANSCRIBING)
+		// {
+		// component.append(Component.literal("Transcribing\n").withColor(0xAAAAAA));
+		// }
 		
 		// If there's text to display and we're not timed out for repetitive messages
 		if(ClientCensorCraft.GUI_TEXT != null)
@@ -61,8 +65,25 @@ public abstract class GUIMixin {
 		
 		Minecraft minecraft = Minecraft.getInstance();
 		
-		// Color is ARGB
-		graphics.drawWordWrap(minecraft.font, component, ClientCensorCraft.PADDING, ClientCensorCraft.PADDING, graphics.guiWidth() - ClientCensorCraft.PADDING * 2, 0xFFFFFFFF);
+		int xPos = ClientConfig.get().getGUIX();
+		drawAligned(graphics, minecraft.font, component, xPos, ClientCensorCraft.PADDING, graphics.guiWidth() - ClientCensorCraft.PADDING * 2, 0xFFFFFFFF);
+	}
+	
+	private static void drawAligned(GuiGraphics graphics, Font font, Component text, int xPos, int yPos, int wrapWidth, int colorARGB)
+	{
+		// Split the component into wrapped lines
+		List<FormattedCharSequence> lines = font.split(text, wrapWidth);
+		int y = yPos;
+		
+		for(FormattedCharSequence line : lines)
+		{
+			int lineWidth = font.width(line);
+			
+			// Positive = left, negative = right
+			int x = xPos >= 0 ? xPos : graphics.guiWidth() + xPos - lineWidth;
+			graphics.drawString(font, line, x, y, colorARGB, true);
+			y += font.lineHeight;
+		}
 	}
 	
 	// /**

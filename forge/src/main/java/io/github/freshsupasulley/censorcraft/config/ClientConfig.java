@@ -2,9 +2,10 @@ package io.github.freshsupasulley.censorcraft.config;
 
 import com.electronwill.nightconfig.core.ConfigSpec;
 
-import io.github.freshsupasulley.LibraryLoader;
 import io.github.freshsupasulley.censorcraft.CensorCraft;
+import io.github.freshsupasulley.censorcraft.ClientCensorCraft;
 import io.github.freshsupasulley.censorcraft.gui.ConfigScreen;
+import io.github.givimad.whisperjni.internal.LibraryUtils;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.listener.SubscribeEvent;
@@ -83,12 +84,25 @@ public class ClientConfig extends ConfigFile {
 		config.set("latency", val);
 	}
 	
+	public int getGUIX()
+	{
+		return config.get("gui_x");
+	}
+	
+	public void setGUIX(int val)
+	{
+		config.set("gui_x", val);
+	}
+	
 	@Override
 	void register(ConfigSpec spec)
 	{
 		define("show_transcription", false, "Display live transcriptions");
 		define("debug", false, "Shows helpful debugging information");
-		define("use_vulkan", LibraryLoader.canUseVulkan(), "Uses Vulkan-built libraries for Windows GPU support. Can break on some machines");
-		defineInRange("latency", 1000, MIN_LATENCY, MAX_LATENCY, "Transcription latency (in milliseconds). Internally represents the size of an individual audio sample");
+		define("use_vulkan", LibraryUtils.canUseVulkan(), "Uses Vulkan-built libraries for Windows GPU support. Can break on some machines");
+		defineInRange("latency", 1500, MIN_LATENCY, MAX_LATENCY, "Transcription latency (in milliseconds). Internally represents the size of an individual audio sample");
+		
+		// GUI positioning
+		define("gui_x", -ClientCensorCraft.PADDING, "GUI X position", "Negative values mean anchoring to the right instead");
 	}
 }
