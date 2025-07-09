@@ -13,12 +13,15 @@ import javax.sound.sampled.UnsupportedAudioFileException;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import io.github.givimad.whisperjni.internal.LibraryUtils;
+import io.github.freshsupasulley.whisperjni.internal.LibraryUtils;
 
 class JScribeTest {
 	
-	static Path testModel = Path.of("src/test/resources/base.en.bin");
+	private static Path testModel = Path.of("src/test/resources/base.en.bin");
+	private static Logger logger = LoggerFactory.getLogger(JScribeTest.class);
 	
 	// @Disabled
 	@BeforeAll
@@ -31,7 +34,7 @@ class JScribeTest {
 		// Don't download the model file if we already have it
 		if(testModel.toFile().exists())
 		{
-			System.out.println("Not downloading, already exists");
+			logger.info("Not downloading, already exists");
 			return;
 		}
 		
@@ -41,7 +44,7 @@ class JScribeTest {
 		
 		while(!downloader.isDone())
 		{
-			System.out.println(downloader.getBytesRead());
+			logger.info("Bytes: {}", downloader.getBytesRead());
 			
 			Thread.sleep(500);
 		}
@@ -51,7 +54,7 @@ class JScribeTest {
 	@Test
 	void testVulkan() throws Exception
 	{
-		if(!LibraryUtils.canUseVulkan()) return;
+		if(!LibraryUtils.canUseVulkan(logger)) return;
 		
 		JScribe.Builder builder = new JScribe.Builder(testModel).warmUpModel();
 		

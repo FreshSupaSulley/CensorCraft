@@ -34,7 +34,7 @@ dependencies {
     // Use macrophone for permissions
     //implementation project(':macrophone')
     // Expose this for end users to use things like LibraryUtils
-    api 'io.github.givimad:whisper-jni:1.8.0' // my custom fork (you need to publish it to maven local to use)
+    api 'io.github.freshsupasulley:whisper-jni:0.1.0' // my custom fork
     // implementation 'de.maxhenkel.rnnoise4j:rnnoise4j:2.0.2' // Helps remove white noise which libfvad appreciates
 	implementation 'org.json:json:20250107' // Helps with parsing API responses for downloading models
 	// https://mvnrepository.com/artifact/be.tarsos.dsp/jvm

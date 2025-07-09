@@ -6,7 +6,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import io.github.freshsupasulley.Transcriptions.Transcription;
-import io.github.givimad.whisperjni.TokenData;
+import io.github.freshsupasulley.whisperjni.TokenData;
 
 /**
  * Represents a collection of {@link Transcription} records.

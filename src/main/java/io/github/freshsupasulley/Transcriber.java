@@ -8,12 +8,12 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.github.freshsupasulley.Transcriptions.Transcription;
-import io.github.givimad.whisperjni.TokenData;
-import io.github.givimad.whisperjni.WhisperContext;
-import io.github.givimad.whisperjni.WhisperFullParams;
-import io.github.givimad.whisperjni.WhisperJNI;
-import io.github.givimad.whisperjni.WhisperState;
-import io.github.givimad.whisperjni.internal.LibraryUtils;
+import io.github.freshsupasulley.whisperjni.TokenData;
+import io.github.freshsupasulley.whisperjni.WhisperContext;
+import io.github.freshsupasulley.whisperjni.WhisperFullParams;
+import io.github.freshsupasulley.whisperjni.WhisperJNI;
+import io.github.freshsupasulley.whisperjni.WhisperState;
+import io.github.freshsupasulley.whisperjni.internal.LibraryUtils;
 
 /**
  * Transcriber waits for new audio samples and processes them into text segments using {@linkplain WhisperJNI}.
@@ -62,7 +62,7 @@ class Transcriber extends Thread implements Runnable {
 		
 		try
 		{
-			if(useVulkan && LibraryUtils.canUseVulkan())
+			if(useVulkan && LibraryUtils.canUseVulkan(JScribe.logger))
 			{
 				LibraryUtils.loadVulkan(JScribe.logger);
 			}

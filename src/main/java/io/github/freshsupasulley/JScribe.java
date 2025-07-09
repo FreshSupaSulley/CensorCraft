@@ -39,7 +39,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.github.freshsupasulley.Transcriber.Recording;
-import io.github.givimad.whisperjni.internal.LibraryUtils;
+import io.github.freshsupasulley.whisperjni.internal.LibraryUtils;
 
 /**
  * The entry point of the JScribe library.
@@ -502,7 +502,7 @@ public class JScribe implements UncaughtExceptionHandler {
 		 */
 		public Builder useVulkan()
 		{
-			if(!LibraryUtils.canUseVulkan())
+			if(!LibraryUtils.canUseVulkan(JScribe.logger))
 			{
 				logger.error("Can't use Vulkan, wrong platform / arch ({}, {})", LibraryUtils.OS_NAME, LibraryUtils.OS_ARCH);
 				return this;
