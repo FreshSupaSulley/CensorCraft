@@ -1,8 +1,9 @@
 package io.github.freshsupasulley.censorcraft.gui;
 
+import io.github.freshsupasulley.censorcraft.CensorCraft;
 import io.github.freshsupasulley.censorcraft.ClientCensorCraft;
 import io.github.freshsupasulley.censorcraft.config.ClientConfig;
-import io.github.givimad.whisperjni.internal.LibraryUtils;
+import io.github.freshsupasulley.whisperjni.LibraryUtils;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.OptionInstance;
@@ -104,7 +105,7 @@ public class ConfigScreen extends Screen {
 		// Experimental
 		layout.addChild(new SpacerElement(optionsWidth, 12));
 		layout.addChild(new StringWidget(Component.literal("Experimental"), font));
-		layout.addChild(Checkbox.builder(Component.literal("Use GPU (Windows x64 only)"), font).tooltip(Tooltip.create(Component.literal("Use Vulkan for GPU acceleration. GPU driver must support Vulkan"))).selected(ClientConfig.get().isUseVulkan() && LibraryUtils.canUseVulkan()).onValueChange((button, value) ->
+		layout.addChild(Checkbox.builder(Component.literal("Use GPU (Windows x64 only)"), font).tooltip(Tooltip.create(Component.literal("Use Vulkan for GPU acceleration. GPU driver must support Vulkan"))).selected(ClientConfig.get().isUseVulkan() && LibraryUtils.canUseVulkan(CensorCraft.LOGGER)).onValueChange((button, value) ->
 		{
 			ClientConfig.get().setUseVulkan(value);
 			
@@ -112,7 +113,7 @@ public class ConfigScreen extends Screen {
 			{
 				minecraft.setScreen(new PopupScreen.Builder(this, Component.literal("Requires restart")).setMessage(Component.literal("Libraries are already loaded. Restart Minecraft for changes to take effect.")).addButton(CommonComponents.GUI_OK, PopupScreen::onClose).build());
 			}
-		}).build()).active = LibraryUtils.canUseVulkan();
+		}).build()).active = LibraryUtils.canUseVulkan(CensorCraft.LOGGER);
 		
 		layout.addChild(Checkbox.builder(Component.literal("Debug"), font).tooltip(Tooltip.create(Component.literal("Displays useful debugging information"))).selected(ClientConfig.get().isDebug()).onValueChange((button, value) ->
 		{

@@ -1,2 +1,2 @@
 # jscribe
-Live audio transcription in Java for CensorCraft
+Processes live audio transcription in Java for CensorCraft

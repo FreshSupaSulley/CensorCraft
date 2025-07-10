@@ -22,6 +22,7 @@ import io.github.freshsupasulley.censorcraft.config.ClientConfig;
 import io.github.freshsupasulley.censorcraft.gui.ConfigScreen;
 import io.github.freshsupasulley.censorcraft.gui.DownloadScreen;
 import io.github.freshsupasulley.censorcraft.network.WordPacket;
+import io.github.freshsupasulley.whisperjni.WhisperFullParams;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.PopupScreen;
@@ -155,6 +156,17 @@ public class ClientCensorCraft implements VoicechatPlugin {
 		
 		JScribe.Builder builder = new JScribe.Builder(model);
 		builder.setLogger(CensorCraft.LOGGER);
+		// Build params with VAD properties of client
+		WhisperFullParams params = JScribe.createWhisperFullParams();
+		params.vad = true;
+		params.vad_model_path = "";
+		params.vadParams.threshold = ClientConfig.get().getVADThreshold();
+		params.vadParams.min_speech_duration_ms = ClientConfig.get().getVADMinSpeechDurationMS();
+		params.vadParams.min_silence_duration_ms = ClientConfig.get().getVADMinSilenceDurationMS();
+		params.vadParams.max_speech_duration_s = ClientConfig.get().getVADMaxSpeechDurationS();
+		params.vadParams.speech_pad_ms = ClientConfig.get().getVADSpeechPadMS();
+		params.vadParams.samples_overlap = ClientConfig.get().getVADSamplesOverlap();
+		builder.setWhisperFullParams(params);
 		builder.warmUpModel();
 		
 		if(ClientConfig.get().isUseVulkan())

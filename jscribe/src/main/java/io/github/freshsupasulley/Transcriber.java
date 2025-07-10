@@ -8,12 +8,12 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.github.freshsupasulley.Transcriptions.Transcription;
+import io.github.freshsupasulley.whisperjni.LibraryUtils;
 import io.github.freshsupasulley.whisperjni.TokenData;
 import io.github.freshsupasulley.whisperjni.WhisperContext;
 import io.github.freshsupasulley.whisperjni.WhisperFullParams;
 import io.github.freshsupasulley.whisperjni.WhisperJNI;
 import io.github.freshsupasulley.whisperjni.WhisperState;
-import io.github.freshsupasulley.whisperjni.internal.LibraryUtils;
 
 /**
  * Transcriber waits for new audio samples and processes them into text segments using {@linkplain WhisperJNI}.
@@ -27,8 +27,7 @@ class Transcriber extends Thread implements Runnable {
 	private final LinkedBlockingQueue<Recording> recordings = new LinkedBlockingQueue<Recording>();
 	private final List<Transcription> results = new ArrayList<Transcription>();
 	
-	private static final WhisperFullParams params;
-	
+	private final WhisperFullParams params;
 	private final Path modelPath;
 	
 	private boolean running = true;
@@ -36,19 +35,9 @@ class Transcriber extends Thread implements Runnable {
 	
 	private long lastTimestamp = System.currentTimeMillis();
 	
-	static
+	public Transcriber(Path modelPath, WhisperFullParams params, boolean useVulkan, boolean noLoadNatives)
 	{
-		// These params stay the same for each request
-		params = new WhisperFullParams();
-		params.singleSegment = true;
-		params.printProgress = false;
-		params.printTimestamps = false;
-		params.suppressNonSpeechTokens = true;
-		params.suppressBlank = true;
-	}
-	
-	public Transcriber(Path modelPath, boolean useVulkan, boolean noLoadNatives)
-	{
+		this.params = params;
 		this.modelPath = modelPath;
 		
 		setName("JScribe Transcriber");
@@ -142,7 +131,7 @@ class Transcriber extends Thread implements Runnable {
 				System.arraycopy(cumulativeFullWindow, 0, toProcess, 0, sampleIndex);
 				
 				// Trim it down to remove silence
-//				toProcess = trimWithTarsos(toProcess, -30);
+				// toProcess = trimWithTarsos(toProcess, -30);
 				
 				// Pad to 1000ms (refer to whisper.cpp in whisper in whisper-jni 1.7.1 [whisper btw])
 				final int minLength = (int) (JScribe.FORMAT.getSampleRate() * (1050f / 1000)); // because x1f somehow got 990
@@ -156,19 +145,19 @@ class Transcriber extends Thread implements Runnable {
 					toProcess = paddedWindow;
 				}
 				
-//				final float[] samples2 = toProcess;
-//				Thread thread = new Thread(() ->
-//				{
-//					try
-//					{
-//						JScribe.writeWavFile(16000, samples2, Path.of("src/test/resources/test" + ".wav"));
-//					} catch(IOException e)
-//					{
-//						// TODO Auto-generated catch block
-//						e.printStackTrace();
-//					}
-//				});
-//				thread.start();
+				// final float[] samples2 = toProcess;
+				// Thread thread = new Thread(() ->
+				// {
+				// try
+				// {
+				// JScribe.writeWavFile(16000, samples2, Path.of("src/test/resources/test" + ".wav"));
+				// } catch(IOException e)
+				// {
+				// // TODO Auto-generated catch block
+				// e.printStackTrace();
+				// }
+				// });
+				// thread.start();
 				
 				JScribe.logger.debug("Transcribing {} recordings (length {})", numRecordings, toProcess.length);
 				
@@ -220,69 +209,69 @@ class Transcriber extends Thread implements Runnable {
 		}
 	}
 	
-//	public static float[] trimWithTarsos(float[] samples, double silenceThresholdDb)
-//	{
-//		SilenceDetector detector = new SilenceDetector(silenceThresholdDb, false);
-//		
-//		// Convert your float[] samples to byte[] for the audio stream
-//		byte[] byteData = JScribe.floatToPCM(samples); // assumes PCM 16-bit little-endian
-//		UniversalAudioInputStream inputStream = new UniversalAudioInputStream(new ByteArrayInputStream(byteData), JScribe.FORMAT);
-//		
-//		// Create dispatcher: 1024 sample frames, 512 overlap
-//		AudioDispatcher dispatcher = new AudioDispatcher(inputStream, 1024, 512);
-//		
-//		AtomicInteger firstNonSilentFrame = new AtomicInteger(-1);
-//		AtomicInteger lastNonSilentFrame = new AtomicInteger(-1);
-//		AtomicInteger frameCount = new AtomicInteger(0);
-//		
-//		dispatcher.addAudioProcessor(detector);
-//		
-//		// Attach silence detection processor
-//		dispatcher.addAudioProcessor(new AudioProcessor()
-//		{
-//			@Override
-//			public boolean process(AudioEvent audioEvent)
-//			{
-//				double dB = detector.currentSPL();
-//				
-//				if(dB > silenceThresholdDb)
-//				{
-//					if(firstNonSilentFrame.get() == -1)
-//					{
-//						firstNonSilentFrame.set(frameCount.get());
-//					}
-//					
-//					lastNonSilentFrame.set(frameCount.get());
-//				}
-//				
-//				frameCount.incrementAndGet();
-//				return true;
-//			}
-//			
-//			@Override
-//			public void processingFinished()
-//			{
-//				// no-op
-//			}
-//		});
-//		
-//		// Run the dispatcher (blocking call)
-//		dispatcher.run();
-//		
-//		// If no non-silent audio found
-//		if(firstNonSilentFrame.get() == -1)
-//		{
-//			return new float[0];
-//		}
-//		
-//		// Compute sample range
-//		int frameSize = 1024;
-//		int startSample = firstNonSilentFrame.get() * frameSize;
-//		int endSample = Math.min(samples.length, (lastNonSilentFrame.get() + 1) * frameSize);
-//		
-//		// Return trimmed sample array
-//		return Arrays.copyOfRange(samples, startSample, endSample);
-//	}
+	// public static float[] trimWithTarsos(float[] samples, double silenceThresholdDb)
+	// {
+	// SilenceDetector detector = new SilenceDetector(silenceThresholdDb, false);
+	//
+	// // Convert your float[] samples to byte[] for the audio stream
+	// byte[] byteData = JScribe.floatToPCM(samples); // assumes PCM 16-bit little-endian
+	// UniversalAudioInputStream inputStream = new UniversalAudioInputStream(new ByteArrayInputStream(byteData), JScribe.FORMAT);
+	//
+	// // Create dispatcher: 1024 sample frames, 512 overlap
+	// AudioDispatcher dispatcher = new AudioDispatcher(inputStream, 1024, 512);
+	//
+	// AtomicInteger firstNonSilentFrame = new AtomicInteger(-1);
+	// AtomicInteger lastNonSilentFrame = new AtomicInteger(-1);
+	// AtomicInteger frameCount = new AtomicInteger(0);
+	//
+	// dispatcher.addAudioProcessor(detector);
+	//
+	// // Attach silence detection processor
+	// dispatcher.addAudioProcessor(new AudioProcessor()
+	// {
+	// @Override
+	// public boolean process(AudioEvent audioEvent)
+	// {
+	// double dB = detector.currentSPL();
+	//
+	// if(dB > silenceThresholdDb)
+	// {
+	// if(firstNonSilentFrame.get() == -1)
+	// {
+	// firstNonSilentFrame.set(frameCount.get());
+	// }
+	//
+	// lastNonSilentFrame.set(frameCount.get());
+	// }
+	//
+	// frameCount.incrementAndGet();
+	// return true;
+	// }
+	//
+	// @Override
+	// public void processingFinished()
+	// {
+	// // no-op
+	// }
+	// });
+	//
+	// // Run the dispatcher (blocking call)
+	// dispatcher.run();
+	//
+	// // If no non-silent audio found
+	// if(firstNonSilentFrame.get() == -1)
+	// {
+	// return new float[0];
+	// }
+	//
+	// // Compute sample range
+	// int frameSize = 1024;
+	// int startSample = firstNonSilentFrame.get() * frameSize;
+	// int endSample = Math.min(samples.length, (lastNonSilentFrame.get() + 1) * frameSize);
+	//
+	// // Return trimmed sample array
+	// return Arrays.copyOfRange(samples, startSample, endSample);
+	// }
 	
 	public void reset()
 	{

@@ -39,7 +39,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.github.freshsupasulley.Transcriber.Recording;
-import io.github.freshsupasulley.whisperjni.internal.LibraryUtils;
+import io.github.freshsupasulley.whisperjni.LibraryUtils;
+import io.github.freshsupasulley.whisperjni.WhisperFullParams;
 
 /**
  * The entry point of the JScribe library.
@@ -54,10 +55,27 @@ public class JScribe implements UncaughtExceptionHandler {
 	
 	// Required
 	private final Path modelPath;
+	private final WhisperFullParams params;
 	private final boolean useVulkan, warmUpModel, noLoadNatives;
 	private Transcriber transcriber;
 	
 	private volatile State state;
+	
+	/**
+	 * Creates a default whisper full params with the recommended settings.
+	 * 
+	 * @return {@link WhisperFullParams} instance
+	 */
+	public static WhisperFullParams createWhisperFullParams()
+	{
+		var params = new WhisperFullParams();
+		params.singleSegment = true;
+		params.printProgress = false;
+		params.printTimestamps = false;
+		params.suppressNonSpeechTokens = true;
+		params.suppressBlank = true;
+		return params;
+	}
 	
 	/**
 	 * Gets all available Whisper models in GGML format from Hugging Face. Useful to pass into {@link JScribe#downloadModel}.
@@ -131,10 +149,11 @@ public class JScribe implements UncaughtExceptionHandler {
 		return new ModelDownloader(modelName, destination, onComplete);
 	}
 	
-	private JScribe(Logger logger, Path modelPath, boolean useVulkan, boolean warmUpModel, boolean noLoadNatives)
+	private JScribe(Logger logger, WhisperFullParams params, Path modelPath, boolean useVulkan, boolean warmUpModel, boolean noLoadNatives)
 	{
 		JScribe.logger = logger;
 		this.modelPath = modelPath;
+		this.params = params;
 		this.useVulkan = useVulkan;
 		this.warmUpModel = warmUpModel;
 		this.noLoadNatives = noLoadNatives;
@@ -164,7 +183,7 @@ public class JScribe implements UncaughtExceptionHandler {
 			
 			logger.info("Starting JScribe");
 			
-			transcriber = new Transcriber(modelPath, useVulkan, noLoadNatives);
+			transcriber = new Transcriber(modelPath, params, useVulkan, noLoadNatives);
 			
 			// Report errors to this thread
 			transcriber.setUncaughtExceptionHandler(this);
@@ -426,6 +445,8 @@ public class JScribe implements UncaughtExceptionHandler {
 		private final Path modelPath;
 		private boolean vulkan, warmUpModel, noLoadNatives;
 		
+		private WhisperFullParams params = createWhisperFullParams();
+		
 		/**
 		 * Creates a new JScribe Builder instance. All parameters in this constructor are the minimum required parameters to build a simple instance.
 		 * 
@@ -465,6 +486,18 @@ public class JScribe implements UncaughtExceptionHandler {
 		{
 			Objects.requireNonNull(logger);
 			JScribe.logger = logger;
+			return this;
+		}
+		
+		/**
+		 * Sets the whisper params to be used for transcription. By default, uses {@link JScribe#createWhisperFullParams()}.
+		 * 
+		 * @param params {@link WhisperFullParams} params
+		 * @return this, for chaining
+		 */
+		public Builder setWhisperFullParams(WhisperFullParams params)
+		{
+			this.params = params;
 			return this;
 		}
 		
@@ -519,7 +552,7 @@ public class JScribe implements UncaughtExceptionHandler {
 		 */
 		public JScribe build()
 		{
-			return new JScribe(logger, modelPath, vulkan, warmUpModel, noLoadNatives);
+			return new JScribe(logger, params, modelPath, vulkan, warmUpModel, noLoadNatives);
 		}
 	}
 	

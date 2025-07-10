@@ -5,7 +5,7 @@ import com.electronwill.nightconfig.core.ConfigSpec;
 import io.github.freshsupasulley.censorcraft.CensorCraft;
 import io.github.freshsupasulley.censorcraft.ClientCensorCraft;
 import io.github.freshsupasulley.censorcraft.gui.ConfigScreen;
-import io.github.givimad.whisperjni.internal.LibraryUtils;
+import io.github.freshsupasulley.whisperjni.LibraryUtils;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.listener.SubscribeEvent;
@@ -94,15 +94,54 @@ public class ClientConfig extends ConfigFile {
 		config.set("gui_x", val);
 	}
 	
+	// Whisper JNI VAD settings
+	public float getVADThreshold()
+	{
+		return ((Number) config.get("vad.threshold")).floatValue();
+	}
+	
+	public int getVADMinSpeechDurationMS()
+	{
+		return config.getInt("vad.min_speech_duration_ms");
+	}
+	
+	public int getVADMinSilenceDurationMS()
+	{
+		return config.getInt("vad.min_silence_duration_ms");
+	}
+	
+	public float getVADMaxSpeechDurationS()
+	{
+		return ((Number) config.getByte("vad.max_speech_duration_s")).floatValue();
+	}
+	
+	public int getVADSpeechPadMS()
+	{
+		return config.getInt("vad.speech_pad_ms");
+	}
+	
+	public float getVADSamplesOverlap()
+	{
+		return ((Number) config.get("vad.samples_overlap")).floatValue();
+	}
+	
 	@Override
 	void register(ConfigSpec spec)
 	{
 		define("show_transcription", false, "Display live transcriptions");
 		define("debug", false, "Shows helpful debugging information");
-		define("use_vulkan", LibraryUtils.canUseVulkan(), "Uses Vulkan-built libraries for Windows GPU support. Can break on some machines");
+		define("use_vulkan", LibraryUtils.canUseVulkan(CensorCraft.LOGGER), "Uses Vulkan-built libraries for Windows GPU support. Can break on some machines");
 		defineInRange("latency", 1500, MIN_LATENCY, MAX_LATENCY, "Transcription latency (in milliseconds). Internally represents the size of an individual audio sample");
 		
 		// GUI positioning
 		define("gui_x", -ClientCensorCraft.PADDING, "GUI X position", "Negative values mean anchoring to the right instead");
+		
+		// VAD
+		defineInRange("vad.threshold", 0.5D, 0D, 1D, "Probability threshold to consider as speech");
+		defineInRange("vad.min_speech_duration_ms", 200, 100, 1000, "Min duration for a valid speech segment");
+		defineInRange("vad.min_silence_duration_ms", 100, 100, 1000, "Min silence duration to consider speech as ended");
+		defineInRange("vad.max_speech_duration_s", 10f, 10f, 30f, "Max duration of a speech segment before forcing a new segment");
+		defineInRange("vad.speech_pad_ms", 200, 0, 500, "Padding added before and after speech segments");
+		defineInRange("vad.samples_overlap", 0.1f, 0f, 1f, "Overlap in seconds when copying audio samples from speech segment");
 	}
 }

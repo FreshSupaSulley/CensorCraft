@@ -186,7 +186,7 @@ dependencies {
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
     
     // JScribe
-    shade 'io.github.freshsupasulley:jscribe:0.1.0'
+    shade project(':jscribe')// 'io.github.freshsupasulley:jscribe:0.1.0'
     //shade 'io.github.givimad:whisper-jni:1.8.0'
     // implementation 'de.maxhenkel.rnnoise4j:rnnoise4j:2.0.2' // Helps remove white noise which libfvad appreciates
 	//implementation 'org.json:json:20250107' // Helps with parsing API responses for downloading models
