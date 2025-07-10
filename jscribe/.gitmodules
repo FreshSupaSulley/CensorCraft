@@ -1,0 +1,6 @@
+[submodule "libs/whisper-jni"]
+	path = libs/whisper-jni
+	url = https://github.com/GiviMAD/whisper-jni.git
+[submodule "libs/libfvad-jni"]
+	path = libs/libfvad-jni
+	url = git@github.com:GiviMAD/libfvad-jni.git

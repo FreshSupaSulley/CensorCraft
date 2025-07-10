@@ -1,0 +1,149 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    id 'org.jreleaser' version '1.17.0'
+}
+
+group = 'io.github.freshsupasulley'
+version = '0.1.0'
+description = 'Audio speech-to-text in Java'
+
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+// Building for the same version as forge
+sourceCompatibility = JavaVersion.VERSION_21
+targetCompatibility = JavaVersion.VERSION_21
+
+repositories {
+    mavenLocal() // for my fork of whisper JNI
+    mavenCentral()
+    // maven {
+    //     name = "TarsosDSP"
+    //     url = 'https://mvn.0110.be/releases'
+    // }
+}
+
+dependencies {
+    // Use macrophone for permissions
+    //implementation project(':macrophone')
+    // Expose this for end users to use things like LibraryUtils
+    api 'io.github.freshsupasulley:whisper-jni:0.1.0' // my custom fork
+    // implementation 'de.maxhenkel.rnnoise4j:rnnoise4j:2.0.2' // Helps remove white noise which libfvad appreciates
+	implementation 'org.json:json:20250107' // Helps with parsing API responses for downloading models
+	// https://mvnrepository.com/artifact/be.tarsos.dsp/jvm
+	// implementation 'be.tarsos.dsp:jvm:2.5'
+    // Tarsos is NOT an option for CurseForge security standards. Uses cmd.exe
+	// https://mvnrepository.com/artifact/be.tarsos.dsp/core
+	// implementation 'be.tarsos.dsp:core:2.5'
+	
+    // Users need to know about these to configure JScribe
+    // api 'io.github.givimad:libfvad-jni:1.0.0-1' // VAD
+    api 'org.slf4j:slf4j-api:2.0.16'
+    
+    testImplementation libs.junit.jupiter
+    testImplementation 'org.slf4j:slf4j-simple:2.0.17'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+test {
+    testLogging.showStandardStreams = true
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from components.java
+            
+	        pom {
+	            name = 'jscribe'
+	            description = 'Live audio transcription in Java for CensorCraft'
+	            url = 'https://github.com/FreshSupaSulley/jscribe'
+	            
+	            licenses {
+	                license {
+	                    name = 'MIT License'
+	                    url = 'https://opensource.org/license/mit'
+	                }
+	            }
+	            
+	            developers {
+	                developer {
+	                    name = 'Erich Boschert'
+	                    email = 'erich.boschert10@gmail.com'
+	                }
+	            }
+	            
+	            scm {
+	                connection = 'scm:git:https://github.com/FreshSupaSulley/jscribe.git'
+	                developerConnection = 'scm:git:ssh://github.com/FreshSupaSulley/jscribe.git'
+	                url = 'https://github.com/FreshSupaSulley/jscribe'
+	            }
+	        }
+	    }
+    }
+    repositories {
+        maven {
+            url = layout.buildDirectory.dir('staging-deploy')
+        }
+    }
+}
+
+jreleaser {
+	environment {
+        variables = 'config.toml'
+    }
+    
+    signing {
+        active = 'ALWAYS'
+        armored = true
+    }
+    
+    deploy {
+        maven {
+            mavenCentral {
+                sonatype {
+                    active = 'ALWAYS'
+                    url = 'https://central.sonatype.com/api/v1/publisher'
+                    stagingRepository('build/staging-deploy')
+                    
+                    // Double the retry delay as publishing takes a long time
+                    // Alternatively you can set JRELEASER_MAVENCENTRAL_STAGE: UPLOAD and manually publish
+                    retryDelay = 40
+                }
+            }
+        }
+    }
+}
+
+// Custom tasks for ease of use
+task deployLocal {
+	group = 'jscribe'
+	description = 'Publishes to maven local'
+	
+	dependsOn 'clean', 'build', 'publish'
+	
+	build.mustRunAfter clean
+    publish.mustRunAfter build
+    
+    finalizedBy 'publishToMavenLocal'
+    
+    println "Published version ${version}"
+}
+
+task deployMaven {
+	group = 'jscribe'
+	description = 'Publishes to maven central'
+	
+	dependsOn deployLocal
+	finalizedBy 'jreleaserDeploy'
+}

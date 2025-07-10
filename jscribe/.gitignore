@@ -1,11 +1,13 @@
+# Don't include my test natives
+Src/main/resources/natives/*
+
 # Mac
-.DS_Store
+**/.DS_Store
 
 # Gradle
 .gradle
 build/
 bin/
-logs/
 
 # Ignore Gradle GUI config
 gradle-app.setting
@@ -27,6 +29,7 @@ gradle-app.setting
 .project
 .cproject
 .metadata
+bin/**
 tmp/**
 tmp/**/*
 *.tmp
