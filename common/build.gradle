@@ -1,0 +1,47 @@
+
+apply plugin: 'fabric-loom'
+
+group = 'io.github.freshsupasulley'
+version = '0.1.0'
+description = 'Audio speech-to-text in Java'
+
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+// Building for the same version as forge
+sourceCompatibility = JavaVersion.VERSION_21
+targetCompatibility = JavaVersion.VERSION_21
+
+repositories {
+    //mavenLocal() // for my fork of whisper JNI
+    mavenCentral()
+    maven { url = 'https://maven.shedaniel.me/' }
+    maven { url = 'https://maven.fabricmc.net/' }
+}
+
+dependencies {
+    // Expose this for end users to use things like LibraryUtils
+    api 'io.github.freshsupasulley:whisper-jni:0.1.0' // my custom fork
+    implementation project(":api")
+	implementation 'org.json:json:20250107' // Helps with parsing API responses for downloading models
+	
+	// Logging
+    api 'org.slf4j:slf4j-api:2.0.16'
+    
+    testImplementation libs.junit.jupiter
+    testImplementation 'org.slf4j:slf4j-simple:2.0.17'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+test {
+    testLogging.showStandardStreams = true
+}
