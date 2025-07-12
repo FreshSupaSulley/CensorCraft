@@ -22,6 +22,7 @@ import io.github.freshsupasulley.censorcraft.config.ClientConfig;
 import io.github.freshsupasulley.censorcraft.gui.ConfigScreen;
 import io.github.freshsupasulley.censorcraft.gui.DownloadScreen;
 import io.github.freshsupasulley.censorcraft.network.WordPacket;
+import io.github.freshsupasulley.whisperjni.LibraryUtils;
 import io.github.freshsupasulley.whisperjni.WhisperFullParams;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
@@ -55,7 +56,7 @@ public class ClientCensorCraft implements VoicechatPlugin {
 	private static Path model;
 	private static boolean monitorVoice;
 	
-	private static boolean loggedIn, paused, startJScribeAttempt;
+	private static boolean loggedIn, startJScribeAttempt;
 	
 	// Packets
 	public static final long HEARTBEAT_TIME = 30000, HEARTBEAT_SAFETY_NET = 5000;
@@ -82,6 +83,20 @@ public class ClientCensorCraft implements VoicechatPlugin {
 	private static final int SAMPLE_RATE = 48000;
 	private static final RollingAudioBuffer ringBuffer = new RollingAudioBuffer(5000, SAMPLE_RATE); // hold a MAX of 5s. Can't see us needing this much
 	private static long lastSample, lastTranscription;
+	
+	private static Path vadModel;
+	
+	static
+	{
+		try
+		{
+			vadModel = Files.createTempFile("vadModel", ".bin");
+			LibraryUtils.exportVADModel(CensorCraft.LOGGER, vadModel);
+		} catch(IOException e)
+		{
+			CensorCraft.LOGGER.error("Failed to extract VAD model", e);
+		}
+	}
 	
 	@Override
 	public String getPluginId()
@@ -158,8 +173,8 @@ public class ClientCensorCraft implements VoicechatPlugin {
 		builder.setLogger(CensorCraft.LOGGER);
 		// Build params with VAD properties of client
 		WhisperFullParams params = JScribe.createWhisperFullParams();
-		params.vad = true;
-		params.vad_model_path = "";
+		params.vad = ClientConfig.get().getVAD();
+		params.vad_model_path = vadModel.toAbsolutePath().toString();
 		params.vadParams.threshold = ClientConfig.get().getVADThreshold();
 		params.vadParams.min_speech_duration_ms = ClientConfig.get().getVADMinSpeechDurationMS();
 		params.vadParams.min_silence_duration_ms = ClientConfig.get().getVADMinSilenceDurationMS();
@@ -330,7 +345,7 @@ public class ClientCensorCraft implements VoicechatPlugin {
 		}
 		
 		// If we're supposed to be recording
-		if(loggedIn && !paused && playerAlive && !controller.isInitializing())
+		if(loggedIn && playerAlive && !controller.isInitializing())
 		{
 			// Only try to init one time so we can indicate if there's something wrong
 			if(!startJScribeAttempt)
@@ -467,23 +482,24 @@ public class ClientCensorCraft implements VoicechatPlugin {
 		{
 			if(controller.isInitializing())
 			{
-				setGUIText(Component.literal("Initializing..."));
+				// Always indicate we're initializing
+				setGUIText(Component.literal("Initializing...").withStyle(style -> style.withBold(true)), true);
 			}
 			// This is currently useless
 			else if(controller.isShuttingDown())
 			{
-				setGUIText(Component.literal("Stopping..."));
+				setGUIText(Component.literal("Stopping...").withStyle(style -> style.withBold(true)), true);
 			}
 			else if(!controller.isInUse())
 			{
-				setGUIText(Component.literal("Stopped"));
+				setGUIText(Component.literal("Stopped").withStyle(style -> style.withBold(true)));
 			}
 		}
 		
 		// Heartbeat
 		if(System.currentTimeMillis() - lastWordPacket >= HEARTBEAT_TIME - HEARTBEAT_SAFETY_NET)
 		{
-			CensorCraft.LOGGER.info("Sending heartbeat (paused: {})", paused);
+			CensorCraft.LOGGER.info("Sending heartbeat");
 			lastWordPacket = System.currentTimeMillis();
 			CensorCraft.channel.send(new WordPacket(""), PacketDistributor.SERVER.noArg());
 		}
