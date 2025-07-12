@@ -95,6 +95,11 @@ public class ClientConfig extends ConfigFile {
 	}
 	
 	// Whisper JNI VAD settings
+	public boolean getVAD()
+	{
+		return config.get("vad.enable");
+	}
+	
 	public float getVADThreshold()
 	{
 		return ((Number) config.get("vad.threshold")).floatValue();
@@ -128,20 +133,21 @@ public class ClientConfig extends ConfigFile {
 	@Override
 	void register(ConfigSpec spec)
 	{
-		define("show_transcription", false, "Display live transcriptions");
+		define("show_transcription", true, "Display live transcriptions");
 		define("debug", false, "Shows helpful debugging information");
 		define("use_vulkan", LibraryUtils.canUseVulkan(CensorCraft.LOGGER), "Uses Vulkan-built libraries for Windows GPU support. Can break on some machines");
-		defineInRange("latency", 1500, MIN_LATENCY, MAX_LATENCY, "Transcription latency (in milliseconds). Internally represents the size of an individual audio sample");
+		defineInRange("latency", 1000, MIN_LATENCY, MAX_LATENCY, "Transcription latency (in milliseconds). Internally represents the size of an individual audio sample");
 		
 		// GUI positioning
 		define("gui_x", -ClientCensorCraft.PADDING, "GUI X position", "Negative values mean anchoring to the right instead");
 		
 		// VAD
+		define("vad.enable", true, "Use voice activation detection filtering before processing transcription", "Changing these settings requires clicking the restart button in the mod config menu (or restarting the game)");
 		defineInRange("vad.threshold", 0.5D, 0D, 1D, "Probability threshold to consider as speech");
 		defineInRange("vad.min_speech_duration_ms", 200, 100, 1000, "Min duration for a valid speech segment");
 		defineInRange("vad.min_silence_duration_ms", 100, 100, 1000, "Min silence duration to consider speech as ended");
-		defineInRange("vad.max_speech_duration_s", 10f, 10f, 30f, "Max duration of a speech segment before forcing a new segment");
+		defineInRange("vad.max_speech_duration_s", 10D, 10D, 30D, "Max duration of a speech segment before forcing a new segment");
 		defineInRange("vad.speech_pad_ms", 200, 0, 500, "Padding added before and after speech segments");
-		defineInRange("vad.samples_overlap", 0.1f, 0f, 1f, "Overlap in seconds when copying audio samples from speech segment");
+		defineInRange("vad.samples_overlap", 0.1D, 0D, 1D, "Overlap in seconds when copying audio samples from speech segment");
 	}
 }
