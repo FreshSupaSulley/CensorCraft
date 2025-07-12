@@ -15,4 +15,4 @@ plugins {
 rootProject.name = "censorcraft"
 // Maybe one day add support for different mod loaders
 // JScribe handles live transcription processing (audio buffer schenanigans)
-include("forge", "jscribe");
+include("api", "forge", "common");

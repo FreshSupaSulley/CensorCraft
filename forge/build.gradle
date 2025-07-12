@@ -185,8 +185,8 @@ dependencies {
     // then special handling is done to allow a setup of a vanilla dependency without the use of an external repository.
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
     
-    // JScribe
-    shade project(':jscribe')// 'io.github.freshsupasulley:jscribe:0.1.0'
+    shade project(":common")
+    shade project(":api")
     //shade 'io.github.givimad:whisper-jni:1.8.0'
     // implementation 'de.maxhenkel.rnnoise4j:rnnoise4j:2.0.2' // Helps remove white noise which libfvad appreciates
 	//implementation 'org.json:json:20250107' // Helps with parsing API responses for downloading models
