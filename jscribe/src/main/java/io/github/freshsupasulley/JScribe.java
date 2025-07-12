@@ -183,7 +183,7 @@ public class JScribe implements UncaughtExceptionHandler {
 			
 			logger.info("Starting JScribe");
 			
-			transcriber = new Transcriber(modelPath, params, useVulkan, noLoadNatives);
+			transcriber = new Transcriber(logger, modelPath, params, useVulkan, noLoadNatives);
 			
 			// Report errors to this thread
 			transcriber.setUncaughtExceptionHandler(this);

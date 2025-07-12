@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.slf4j.Logger;
+
 import io.github.freshsupasulley.Transcriptions.Transcription;
 import io.github.freshsupasulley.whisperjni.LibraryUtils;
 import io.github.freshsupasulley.whisperjni.TokenData;
@@ -35,7 +37,7 @@ class Transcriber extends Thread implements Runnable {
 	
 	private long lastTimestamp = System.currentTimeMillis();
 	
-	public Transcriber(Path modelPath, WhisperFullParams params, boolean useVulkan, boolean noLoadNatives)
+	public Transcriber(Logger logger, Path modelPath, WhisperFullParams params, boolean useVulkan, boolean noLoadNatives)
 	{
 		this.params = params;
 		this.modelPath = modelPath;
@@ -61,6 +63,8 @@ class Transcriber extends Thread implements Runnable {
 				
 				LibraryUtils.loadLibrary(JScribe.logger);
 			}
+			
+			whisper.setWhisperLogger(logger);
 		} catch(IOException | UnsatisfiedLinkError e)
 		{
 			JScribe.logger.error("An error occurred loading natives (platform: {}, arch: {})", System.getProperty("os.name"), System.getProperty("os.arch"), e);
