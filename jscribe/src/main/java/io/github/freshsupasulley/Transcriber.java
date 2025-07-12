@@ -10,7 +10,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 
 import io.github.freshsupasulley.Transcriptions.Transcription;
-import io.github.freshsupasulley.whisperjni.LibraryUtils;
 import io.github.freshsupasulley.whisperjni.TokenData;
 import io.github.freshsupasulley.whisperjni.WhisperContext;
 import io.github.freshsupasulley.whisperjni.WhisperFullParams;
@@ -53,15 +52,15 @@ class Transcriber extends Thread implements Runnable {
 		
 		try
 		{
-			if(useVulkan && LibraryUtils.canUseVulkan(JScribe.logger))
+			if(useVulkan && WhisperJNI.canUseVulkan())
 			{
-				LibraryUtils.loadVulkan(JScribe.logger);
+				WhisperJNI.loadVulkan(JScribe.logger);
 			}
 			else
 			{
 				JScribe.logger.info("Loading built-in whisper-jni natives");
 				
-				LibraryUtils.loadLibrary(JScribe.logger);
+				WhisperJNI.loadLibrary(JScribe.logger);
 			}
 			
 			whisper.setWhisperLogger(logger);

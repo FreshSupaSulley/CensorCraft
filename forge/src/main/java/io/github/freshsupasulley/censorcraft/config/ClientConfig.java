@@ -5,7 +5,7 @@ import com.electronwill.nightconfig.core.ConfigSpec;
 import io.github.freshsupasulley.censorcraft.CensorCraft;
 import io.github.freshsupasulley.censorcraft.ClientCensorCraft;
 import io.github.freshsupasulley.censorcraft.gui.ConfigScreen;
-import io.github.freshsupasulley.whisperjni.LibraryUtils;
+import io.github.freshsupasulley.whisperjni.WhisperJNI;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.listener.SubscribeEvent;
@@ -135,7 +135,7 @@ public class ClientConfig extends ConfigFile {
 	{
 		define("show_transcription", true, "Display live transcriptions");
 		define("debug", false, "Shows helpful debugging information");
-		define("use_vulkan", LibraryUtils.canUseVulkan(CensorCraft.LOGGER), "Uses Vulkan-built libraries for Windows GPU support. Can break on some machines");
+		define("use_vulkan", WhisperJNI.canUseVulkan(), "Uses Vulkan-built libraries for Windows GPU support. Can break on some machines");
 		defineInRange("latency", 1000, MIN_LATENCY, MAX_LATENCY, "Transcription latency (in milliseconds). Internally represents the size of an individual audio sample");
 		
 		// GUI positioning

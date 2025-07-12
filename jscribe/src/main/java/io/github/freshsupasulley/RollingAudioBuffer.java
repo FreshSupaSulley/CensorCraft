@@ -12,8 +12,11 @@ public class RollingAudioBuffer {
 	
 	private final float[] buffer;
 	private final int capacity;
-	private int writeIndex = 0;
+	private int writeIndex;
 	private boolean filled;
+	
+	// Keeping track of last appended samples
+	private int lastAppendStart, lastAppendLength;
 	
 	private final RateTransposer transposer;
 	
@@ -39,11 +42,12 @@ public class RollingAudioBuffer {
 	public void append(short[] rawSamples)
 	{
 		float[] normalized = JScribe.pcmToFloat(rawSamples);
+		float[] processed = transposer.process(normalized);
 		
-		// AudioEvent audioEvent = new AudioEvent(JScribe.FORMAT);
-		// audioEvent.setFloatBuffer(normalized);
+		lastAppendStart = writeIndex; // where this append starts
+		lastAppendLength = processed.length; // how many samples were appended
 		
-		for(float sample : transposer.process(normalized))
+		for(float sample : processed)
 		{
 			buffer[writeIndex] = sample;
 			writeIndex = (writeIndex + 1) % capacity;
@@ -53,6 +57,36 @@ public class RollingAudioBuffer {
 				filled = true;
 			}
 		}
+	}
+	
+	/**
+	 * Returns a copy of the last samples appended to the audio buffer without clearing.
+	 * 
+	 * @return copy of the last samples appended
+	 */
+	public float[] getLastAppended()
+	{
+		float[] out = new float[lastAppendLength];
+		
+		if(lastAppendLength == 0)
+			return out;
+		
+		int end = (lastAppendStart + lastAppendLength) % capacity;
+		
+		if(lastAppendStart < end || !filled)
+		{
+			// Not filled and thus not wrapped around yet
+			System.arraycopy(buffer, lastAppendStart, out, 0, lastAppendLength);
+		}
+		else
+		{
+			// We are filled, handle the wrap around
+			int firstPart = capacity - lastAppendStart;
+			System.arraycopy(buffer, lastAppendStart, out, 0, firstPart);
+			System.arraycopy(buffer, 0, out, firstPart, end);
+		}
+		
+		return out;
 	}
 	
 	/**

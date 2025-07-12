@@ -5,6 +5,7 @@ package io.github.freshsupasulley;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.ExecutionException;
 
@@ -16,10 +17,12 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.github.freshsupasulley.whisperjni.LibraryUtils;
+import io.github.freshsupasulley.whisperjni.WhisperFullParams;
+import io.github.freshsupasulley.whisperjni.WhisperJNI;
 
 class JScribeTest {
 	
+	private static Path jfk = Path.of("src/main/resources/jfk.wav");
 	private static Path testModel = Path.of("src/test/resources/base.en.bin");
 	private static Logger logger = LoggerFactory.getLogger(JScribeTest.class);
 	
@@ -50,36 +53,16 @@ class JScribeTest {
 		}
 	}
 	
-//	@Disabled
+	// @Disabled
 	@Test
 	void testVulkan() throws Exception
 	{
-		if(!LibraryUtils.canUseVulkan(logger)) return;
+		if(!WhisperJNI.canUseVulkan())
+			return;
 		
-		JScribe.Builder builder = new JScribe.Builder(testModel).warmUpModel();
+		JScribe.Builder builder = new JScribe.Builder(testModel);//.warmUpModel();
 		
-		// Load custom Vulkan natives manually because we have to
-//		if(LibraryUtils.canUseVulkan())
-//		{
-//			builder.skipLoadingNatives();
-//			
-//			String vulkanPath = LibraryLoader.getVulkanDLL().toAbsolutePath().toString();
-//			System.load(vulkanPath);
-//			
-////			Path tempDir = Path.of("src", "main", "resources", "win-amd64-vulkan");
-////			System.load(tempDir.resolve("ggml.dll").toAbsolutePath().toString());
-////			System.load(tempDir.resolve("whisper.dll").toAbsolutePath().toString());
-////			System.load(tempDir.resolve("whisper-jni.dll").toAbsolutePath().toString());
-//			
-//			Path tempDir = Path.of("src", "main", "resources", "win-amd64-vulkan");
-//			System.load(tempDir.resolve("ggml-base.dll").toAbsolutePath().toString());
-//			System.load(tempDir.resolve("ggml-cpu.dll").toAbsolutePath().toString());
-//			System.load(tempDir.resolve("ggml-vulkan.dll").toAbsolutePath().toString());
-//			System.load(tempDir.resolve("ggml.dll").toAbsolutePath().toString());
-//			System.load(tempDir.resolve("whisper.dll").toAbsolutePath().toString());
-//			System.load(tempDir.resolve("whisper-jni.dll").toAbsolutePath().toString());
-//		}
-		LibraryUtils.loadVulkan();
+		WhisperJNI.loadVulkan();
 		
 		JScribe scribe = builder.build();
 		scribe.start();
@@ -90,13 +73,47 @@ class JScribeTest {
 			Thread.sleep(1000);
 		}
 		
-		time(scribe, "src/main/resources/jfk.wav");
+		time(scribe);
 	}
 	
-	private void time(JScribe scribe, String file) throws UnsupportedAudioFileException, IOException, InterruptedException
+	@Test
+	void testVAD() throws Exception
+	{
+		JScribe.Builder builder = new JScribe.Builder(testModel);
+		builder.setLogger(logger);
+		// Build params with VAD properties of client
+		WhisperFullParams params = JScribe.createWhisperFullParams();
+		
+		Path tempFile = Files.createTempFile("temp_model", ".bin");
+		WhisperJNI.exportVADModel(logger, tempFile);
+		
+		params.vad = true;
+		params.vad_model_path = tempFile.toAbsolutePath().toString();
+		params.vadParams.threshold = 0.5f;
+		params.vadParams.min_speech_duration_ms = 200;
+		params.vadParams.min_silence_duration_ms = 100;
+		params.vadParams.max_speech_duration_s = 10;
+		params.vadParams.speech_pad_ms = 200;
+		params.vadParams.samples_overlap = 0.1f;
+		builder.setWhisperFullParams(params);
+//		builder.warmUpModel();
+		
+		JScribe scribe = builder.build();
+		scribe.start();
+		
+		while(!scribe.isRunning())
+		{
+			System.out.println("Waiting to run");
+			Thread.sleep(1000);
+		}
+		
+		time(scribe);
+	}
+	
+	private void time(JScribe scribe) throws UnsupportedAudioFileException, IOException, InterruptedException
 	{
 		System.out.println("Backlog : " + scribe.getTranscriptionBacklog());
-		scribe.transcribe(JScribe.readWavToFloatSamples(new FileInputStream(file)));
+		scribe.transcribe(JScribe.readWavToFloatSamples(new FileInputStream(jfk.toFile())));
 		
 		Transcriptions t = null;
 		while((t = scribe.getTranscriptions()).isEmpty())
@@ -105,7 +122,8 @@ class JScribeTest {
 		}
 		
 		System.out.println("Transcriptions: " + t.getTranscriptions().size());
-		t.forEach(transcription -> {
+		t.forEach(transcription ->
+		{
 			System.out.println("Took " + transcription.processingTime() + " --- " + transcription.text());
 		});
 		System.out.println();
@@ -115,7 +133,7 @@ class JScribeTest {
 	@Test
 	void startStopTest() throws Exception
 	{
-		JScribe scribe = new JScribe.Builder(testModel).warmUpModel().build();
+		JScribe scribe = new JScribe.Builder(testModel).build();//.warmUpModel().build();
 		
 		long startTime = System.currentTimeMillis();
 		long testDuration = 20000;
@@ -131,7 +149,7 @@ class JScribeTest {
 			
 			// Constantly start and stop
 			scribe.start();
-//			Thread.sleep(5000);
+			// Thread.sleep(5000);
 			scribe.stop();
 		}
 	}

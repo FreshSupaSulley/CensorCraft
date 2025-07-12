@@ -22,8 +22,8 @@ import io.github.freshsupasulley.censorcraft.config.ClientConfig;
 import io.github.freshsupasulley.censorcraft.gui.ConfigScreen;
 import io.github.freshsupasulley.censorcraft.gui.DownloadScreen;
 import io.github.freshsupasulley.censorcraft.network.WordPacket;
-import io.github.freshsupasulley.whisperjni.LibraryUtils;
 import io.github.freshsupasulley.whisperjni.WhisperFullParams;
+import io.github.freshsupasulley.whisperjni.WhisperJNI;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.PopupScreen;
@@ -91,7 +91,7 @@ public class ClientCensorCraft implements VoicechatPlugin {
 		try
 		{
 			vadModel = Files.createTempFile("vadModel", ".bin");
-			LibraryUtils.exportVADModel(CensorCraft.LOGGER, vadModel);
+			WhisperJNI.exportVADModel(CensorCraft.LOGGER, vadModel);
 		} catch(IOException e)
 		{
 			CensorCraft.LOGGER.error("Failed to extract VAD model", e);
@@ -182,7 +182,7 @@ public class ClientCensorCraft implements VoicechatPlugin {
 		params.vadParams.speech_pad_ms = ClientConfig.get().getVADSpeechPadMS();
 		params.vadParams.samples_overlap = ClientConfig.get().getVADSamplesOverlap();
 		builder.setWhisperFullParams(params);
-		builder.warmUpModel();
+//		builder.warmUpModel();
 		
 		if(ClientConfig.get().isUseVulkan())
 		{
@@ -367,7 +367,7 @@ public class ClientCensorCraft implements VoicechatPlugin {
 				if(ringBuffer.getSize() >= msToSamples(MIN_SAMPLE_MS))
 				{
 					lastTranscription = System.currentTimeMillis();
-					controller.transcribe(ringBuffer.getSnapshot());
+					controller.transcribe(ringBuffer);
 				}
 				
 				ringBuffer.drain();
@@ -381,7 +381,7 @@ public class ClientCensorCraft implements VoicechatPlugin {
 				if(ringBuffer.getSize() >= msToSamples(MIN_SAMPLE_MS) && System.currentTimeMillis() - lastTranscription >= latency)
 				{
 					lastTranscription = System.currentTimeMillis();
-					controller.transcribe(ringBuffer.getSnapshot());
+					controller.transcribe(ringBuffer);
 				}
 			}
 			
