@@ -1,6 +1,7 @@
 plugins {
     id 'java-library'
     id 'maven-publish'
+    id 'org.jreleaser' version '1.17.0'
 }
 
 group = "io.github.freshsupasulley.censorcraft"
@@ -89,3 +90,13 @@ jreleaser {
         }
     }
 }
+
+// Because we're using a subproject, jreleaser freaks tf out and we need to call publish first
+task jreleaserDeployWrapper {
+	group = 'publishing'
+	description = 'Convenience method to publish to maven central'
+	
+	dependsOn publish
+	finalizedBy 'jreleaserDeploy'
+}
+
