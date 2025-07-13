@@ -22,7 +22,7 @@ import io.github.freshsupasulley.whisperjni.WhisperJNI;
 
 class JScribeTest {
 	
-	private static Path jfk = Path.of("src/test/resources/jfk.wav");
+	private static Path jfk = Path.of("src/main/resources/jfk.wav");
 	private static Path testModel = Path.of("src/test/resources/base.en.bin");
 	private static Logger logger = LoggerFactory.getLogger(JScribeTest.class);
 	

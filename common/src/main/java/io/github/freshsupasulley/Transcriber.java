@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 
 import org.slf4j.Logger;
 
@@ -32,23 +33,19 @@ class Transcriber extends Thread implements Runnable {
 	private final Path modelPath;
 	
 	private boolean running = true;
+	private Consumer<Boolean> onWarmedUp;
 	private AtomicBoolean abandonSample = new AtomicBoolean();
 	
 	private long lastTimestamp = System.currentTimeMillis();
 	
-	public Transcriber(Logger logger, Path modelPath, WhisperFullParams params, boolean useVulkan, boolean noLoadNatives)
+	public Transcriber(Logger logger, Path modelPath, WhisperFullParams params, boolean useVulkan, Consumer<Boolean> onWarmedUp)
 	{
 		this.params = params;
 		this.modelPath = modelPath;
+		this.onWarmedUp = onWarmedUp;
 		
 		setName("JScribe Transcriber");
 		setDaemon(true);
-		
-		if(noLoadNatives)
-		{
-			JScribe.logger.warn("Not loading built-in natives");
-			return;
-		}
 		
 		try
 		{
@@ -76,6 +73,34 @@ class Transcriber extends Thread implements Runnable {
 	{
 		try(WhisperContext ctx = whisper.initNoState(modelPath); WhisperState state = whisper.initState(ctx))
 		{
+			JScribe.logger.info("Warming up model");
+			
+			try
+			{
+				float[] samples = JScribe.readWavToFloatSamples(Transcriber.class.getClassLoader().getResourceAsStream("jfk.wav"));
+				
+				// Pass samples to whisper
+				int result = whisper.fullWithState(ctx, state, params, samples, samples.length);
+				
+				if(result != 0)
+				{
+					throw new IllegalStateException("Whisper failed with code " + result);
+				}
+				
+				for(int i = 0; i < whisper.fullNSegmentsFromState(state); i++)
+				{
+					TokenData[] tokens = whisper.getTokensFromState(ctx, state, i);
+					JScribe.logger.debug("Warm-up transcription: {} tokens", tokens.length);
+				}
+				
+				// Signals to JScribe we're done warming up
+				onWarmedUp.accept(true);
+			} catch(Exception e)
+			{
+				JScribe.logger.warn("Failed to warm up model", e);
+				onWarmedUp.accept(false);
+			}
+			
 			while(running)
 			{
 				abandonSample.set(false);

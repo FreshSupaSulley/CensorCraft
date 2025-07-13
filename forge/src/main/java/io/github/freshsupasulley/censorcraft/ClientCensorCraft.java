@@ -10,7 +10,6 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 import de.maxhenkel.voicechat.api.ForgeVoicechatPlugin;
-import de.maxhenkel.voicechat.api.VoicechatApi;
 import de.maxhenkel.voicechat.api.VoicechatPlugin;
 import de.maxhenkel.voicechat.api.events.ClientSoundEvent;
 import de.maxhenkel.voicechat.api.events.EventRegistration;
@@ -478,16 +477,16 @@ public class ClientCensorCraft implements VoicechatPlugin {
 			if(controller.isInitializing())
 			{
 				// Always indicate we're initializing
-				setGUIText(Component.literal("Initializing...").withStyle(style -> style.withBold(true)), true);
+				setGUIText(Component.literal("Starting CensorCraft...").withStyle(style -> style.withBold(true)), true);
 			}
 			// This is currently useless
 			else if(controller.isShuttingDown())
 			{
-				setGUIText(Component.literal("Stopping...").withStyle(style -> style.withBold(true)), true);
+				setGUIText(Component.literal("Stopping CensorCraft...").withStyle(style -> style.withBold(true)), true);
 			}
 			else if(!controller.isInUse())
 			{
-				setGUIText(Component.literal("Stopped").withStyle(style -> style.withBold(true)));
+				setGUIText(Component.literal("Stopped CensorCraft").withStyle(style -> style.withBold(true)));
 			}
 		}
 		

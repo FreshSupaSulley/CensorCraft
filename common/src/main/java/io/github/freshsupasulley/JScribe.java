@@ -20,7 +20,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CancellationException;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -48,14 +47,13 @@ public class JScribe implements UncaughtExceptionHandler {
 	
 	/** The format Whisper wants (wave file) */
 	public static final AudioFormat FORMAT = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 16000, 16, 1, 2, 16000, false);
-	// public static final TarsosDSPAudioFormat FORMAT = new TarsosDSPAudioFormat(16000, 16, 1, true, false);
 	
 	static Logger logger = LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
 	
 	// Required
 	private final Path modelPath;
 	private final WhisperFullParams params;
-	private final boolean useVulkan, noLoadNatives;
+	private final boolean useVulkan;
 	private Transcriber transcriber;
 	
 	private volatile State state;
@@ -148,14 +146,12 @@ public class JScribe implements UncaughtExceptionHandler {
 		return new ModelDownloader(modelName, destination, onComplete);
 	}
 	
-	private JScribe(Logger logger, WhisperFullParams params, Path modelPath, boolean useVulkan, boolean noLoadNatives)
+	private JScribe(Logger logger, WhisperFullParams params, Path modelPath, boolean useVulkan)
 	{
 		JScribe.logger = logger;
 		this.modelPath = modelPath;
 		this.params = params;
 		this.useVulkan = useVulkan;
-//		this.warmUpModel = warmUpModel;
-		this.noLoadNatives = noLoadNatives;
 	}
 	
 	/**
@@ -182,61 +178,14 @@ public class JScribe implements UncaughtExceptionHandler {
 			
 			logger.info("Starting JScribe");
 			
-			transcriber = new Transcriber(logger, modelPath, params, useVulkan, noLoadNatives);
+			transcriber = new Transcriber(logger, modelPath, params, useVulkan, (status) -> state = State.RUNNING);
 			
 			// Report errors to this thread
 			transcriber.setUncaughtExceptionHandler(this);
 			
 			// We need the transcriber to start first
+			// The transcriber now handles warming up
 			transcriber.start();
-			
-			CompletableFuture<Void> future = new CompletableFuture<Void>();
-			
-			// I'm giving up on warming up the model. I think somehow using "full" methods in whisper.cpp is maintaining the previous transcriptions and that makes the warm up audio leak over
-			// If we enabled warming up the model
-//			if(warmUpModel)
-//			{
-//				try
-//				{
-//					logger.info("Warming up transcriber");
-//					transcriber.reset(); // requests the sample recording to be abandoned
-//					transcriber.newRecording(new Recording(System.currentTimeMillis(), readWavToFloatSamples(JScribe.class.getClassLoader().getResourceAsStream("jfk.wav")), () ->
-//					{
-//						future.complete(null);
-//					}));
-//				} catch(IOException | UnsupportedAudioFileException e)
-//				{
-//					future.completeExceptionally(e);
-//				}
-//			}
-//			else
-			{
-				// No warm-up, skip it
-				future.complete(null);
-			}
-			
-			// Start recording AFTER we're warmed up
-			future/* .orTimeout(10, TimeUnit.SECONDS) */.exceptionally(e ->
-			{
-				logger.error("Failed to warm-up transcriber", e);
-				return null;
-			}).thenRun(() ->
-			{
-				// synchronized(this)
-				{
-					// If the transcriber somehow died
-					if(!transcriber.isRunning())
-					{
-						logger.warn("JScribe was stopped during warm-up");
-						return;
-					}
-					
-					logger.info("Done warming up");
-					// Empty the transcription array if warm-up succeeded
-					// getTranscriptions().forEach(t -> logger.info(t.text()));
-					state = State.RUNNING;
-				}
-			});
 		} catch(Exception e)
 		{
 			logger.error("Failed to start JScribe", e);
@@ -469,7 +418,7 @@ public class JScribe implements UncaughtExceptionHandler {
 		
 		// Required
 		private final Path modelPath;
-		private boolean vulkan, noLoadNatives;
+		private boolean vulkan;
 		
 		private WhisperFullParams params = createWhisperFullParams();
 		
@@ -482,25 +431,6 @@ public class JScribe implements UncaughtExceptionHandler {
 		{
 			this.modelPath = modelPath;
 		}
-		
-		// /**
-		// * Defines the minimum amount of audio (in milliseconds) the window must fill to before transcribing the entire window.
-		// *
-		// * <p>
-		// * To only transcribe a full window, set <code>minWindowContext</code> to match the latency.
-		// * </p>
-		// *
-		// * @param minWindowContext
-		// * @return
-		// */
-		// public Builder minimumWindowContext(long minWindowContext)
-		// {
-		// if(minWindowContext < latency)
-		// throw new IllegalArgumentException("Minimum window context must be >= latency");
-		//
-		// this.minWindowContext = minWindowContext;
-		// return this;
-		// }
 		
 		/**
 		 * Sets the logger all JScribe operations will use.
@@ -524,33 +454,6 @@ public class JScribe implements UncaughtExceptionHandler {
 		public Builder setWhisperFullParams(WhisperFullParams params)
 		{
 			this.params = params;
-			return this;
-		}
-		
-//		/**
-//		 * Passes dummy audio into transcriber to warm-up the model (considered part of initialization).
-//		 * 
-//		 * @return this, for chaining
-//		 */
-//		public Builder warmUpModel()
-//		{
-//			this.warmUpModel = true;
-//			return this;
-//		}
-		
-		/**
-		 * Prevents loading any built-in natives and therefore allows for customizing loading <code>whisper-jni</code> natives (and its dependencies), but the
-		 * implementor is responsible for ensuring it will work.
-		 * 
-		 * <p>
-		 * <b>Don't use unless you know what you're doing! </b>
-		 * </p>
-		 * 
-		 * @return this, for chaining
-		 */
-		public Builder skipLoadingNatives()
-		{
-			this.noLoadNatives = true;
 			return this;
 		}
 		
@@ -578,7 +481,7 @@ public class JScribe implements UncaughtExceptionHandler {
 		 */
 		public JScribe build()
 		{
-			return new JScribe(logger, params, modelPath, vulkan, noLoadNatives);
+			return new JScribe(logger, params, modelPath, vulkan);
 		}
 	}
 	
