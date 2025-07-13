@@ -1,10 +1,9 @@
 package io.github.freshsupasulley.censorcraft.config.punishments;
 
 import io.github.freshsupasulley.censorcraft.CensorCraft;
-import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
 import net.minecraft.server.level.ServerPlayer;
 
-public class Crash extends Punishment<Crash> {
+public class Crash extends ForgePunishment<Crash> {
 	
 	@Override
 	public void build()

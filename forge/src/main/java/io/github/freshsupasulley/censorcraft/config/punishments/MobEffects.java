@@ -5,13 +5,12 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import io.github.freshsupasulley.censorcraft.CensorCraft;
-import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraftforge.registries.ForgeRegistries;
 
-public class MobEffects extends Punishment<MobEffects> {
+public class MobEffects extends ForgePunishment<MobEffects> {
 	
 	@Override
 	public String getName()

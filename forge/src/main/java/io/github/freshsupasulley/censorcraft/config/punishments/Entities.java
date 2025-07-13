@@ -4,13 +4,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraftforge.registries.ForgeRegistries;
 
-public class Entities extends Punishment<Entities> {
+public class Entities extends ForgePunishment<Entities> {
 	
 	@Override
 	public void build()

@@ -1,12 +1,11 @@
 package io.github.freshsupasulley.censorcraft.config.punishments;
 
-import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.ExplosionDamageCalculator;
 import net.minecraft.world.level.Level.ExplosionInteraction;
 import net.minecraft.world.phys.Vec3;
 
-public class Explosion extends Punishment<Explosion> {
+public class Explosion extends ForgePunishment<Explosion> {
 	
 	@Override
 	public void build()

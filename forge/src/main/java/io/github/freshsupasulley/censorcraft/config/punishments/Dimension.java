@@ -4,7 +4,6 @@ import java.util.Map.Entry;
 import java.util.Optional;
 
 import io.github.freshsupasulley.censorcraft.CensorCraft;
-import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
@@ -21,7 +20,7 @@ import net.minecraft.world.level.portal.PortalShape;
 import net.minecraft.world.level.portal.TeleportTransition;
 import net.minecraft.world.phys.Vec3;
 
-public class Dimension extends Punishment<Dimension> {
+public class Dimension extends ForgePunishment<Dimension> {
 	
 	@Override
 	public void build()

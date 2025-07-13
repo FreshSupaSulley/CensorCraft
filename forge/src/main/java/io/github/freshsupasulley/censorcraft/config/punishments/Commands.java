@@ -3,14 +3,13 @@ package io.github.freshsupasulley.censorcraft.config.punishments;
 import java.util.ArrayList;
 import java.util.List;
 
-import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
 import net.minecraft.CrashReport;
 import net.minecraft.CrashReportCategory;
 import net.minecraft.ReportedException;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 
-public class Commands extends Punishment<Commands> {
+public class Commands extends ForgePunishment<Commands> {
 	
 	@SuppressWarnings("unchecked")
 	@Override

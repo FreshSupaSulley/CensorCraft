@@ -8,10 +8,6 @@ import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
 
-import com.electronwill.nightconfig.core.CommentedConfig;
-
-import net.minecraft.server.level.ServerPlayer;
-
 /**
  * Defines a punishment type.
  * 
@@ -19,14 +15,14 @@ import net.minecraft.server.level.ServerPlayer;
  */
 public abstract class Punishment<T extends Punishment<T>> {
 	
-	protected CommentedConfig config;
+	protected ConfigWrapper config;
 	
 	/**
 	 * Internally used to build the punishment's default parameters.
 	 * 
-	 * @param config {@link CommentedConfig} instance
+	 * @param config {@link ConfigWrapper} instance
 	 */
-	public final void fillConfig(CommentedConfig config)
+	public final void fillConfig(ConfigWrapper config)
 	{
 		// Just for building
 		this.config = config;
@@ -115,10 +111,10 @@ public abstract class Punishment<T extends Punishment<T>> {
 	/**
 	 * Deserializes this punishment type from the server config file.
 	 * 
-	 * @param config {@link CommentedConfig} instance
+	 * @param config {@link ConfigWrapper} instance
 	 * @return new punishment instance
 	 */
-	public final T deserialize(CommentedConfig config)
+	public final T deserialize(ConfigWrapper config)
 	{
 		T option = newInstance();
 		option.config = config;
@@ -164,9 +160,13 @@ public abstract class Punishment<T extends Punishment<T>> {
 	/**
 	 * Punishes the player for this punishment type.
 	 * 
-	 * @param player {@link ServerPlayer} server player instance
+	 * <p>
+	 * You'll need to get the server level yourself to change anything to the world!
+	 * </p>
+	 * 
+	 * @param player {@link UUID} UUID of the server player
 	 */
-	public abstract void punish(ServerPlayer player);
+	public abstract void punish(UUID player);
 	
 	/**
 	 * Used to write the name of the punishment to the server config file. By default, the name is derived from the class name.
