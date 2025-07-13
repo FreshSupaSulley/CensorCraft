@@ -71,12 +71,13 @@ class Transcriber extends Thread implements Runnable {
 	@Override
 	public void run()
 	{
-		try(WhisperContext ctx = whisper.initNoState(modelPath); WhisperState state = whisper.initState(ctx))
+		try(WhisperContext ctx = whisper.init(modelPath))
 		{
 			JScribe.logger.info("Warming up model");
 			
-			try
+			try(WhisperState state = whisper.initState(ctx))
 			{
+				// if this starts leaking over, just switch the warming up ONLY to state
 				float[] samples = JScribe.readWavToFloatSamples(Transcriber.class.getClassLoader().getResourceAsStream("jfk.wav"));
 				
 				// Pass samples to whisper
@@ -190,7 +191,7 @@ class Transcriber extends Thread implements Runnable {
 				JScribe.logger.debug("Transcribing {} recordings (length {})", numRecordings, toProcess.length);
 				
 				// Pass samples to whisper
-				int result = whisper.fullWithState(ctx, state, params, toProcess, toProcess.length);
+				int result = whisper.full(ctx, params, toProcess, toProcess.length);
 				
 				if(result != 0)
 				{
@@ -198,7 +199,7 @@ class Transcriber extends Thread implements Runnable {
 					continue;
 				}
 				
-				int numSegments = whisper.fullNSegmentsFromState(state);
+				int numSegments = whisper.fullNSegments(ctx);
 				
 				// does it need to be atomic?
 				if(!abandonSample.get())
@@ -207,7 +208,7 @@ class Transcriber extends Thread implements Runnable {
 					
 					for(int i = 0; i < numSegments; i++)
 					{
-						TokenData[] tokens = whisper.getTokensFromState(ctx, state, i);
+						TokenData[] tokens = whisper.getTokens(ctx, i);
 						JScribe.logger.debug("Raw transcription ({} samples): {} tokens", numRecordings, tokens.length);
 						
 						transcriptions.add(new Transcription(tokens, numRecordings, System.currentTimeMillis() - startTime));

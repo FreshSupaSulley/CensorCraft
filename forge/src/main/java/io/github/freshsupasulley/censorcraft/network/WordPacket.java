@@ -78,17 +78,18 @@ public class WordPacket implements IPacket {
 		
 		// If we need to wait before the player is punished again
 		long lastPunishmentTime = System.currentTimeMillis() - participant.getLastPunishment();
+		double cooldown = ServerConfig.get().getPunishmentCooldown();
 		
-		if(lastPunishmentTime < ServerConfig.get().getPunishmentCooldown() * 1000) // Convert taboo cooldown to ms
+		if(lastPunishmentTime < cooldown * 1000) // Convert taboo cooldown to ms
 		{
-			CensorCraft.LOGGER.debug("Can't punish {} this frequently (last punishment was {}ms ago)", participant.getName(), lastPunishmentTime);
+			CensorCraft.LOGGER.info("Can't punish {} this frequently while the cooldown is set to {}s (last punishment was {}ms ago)", participant.getName(), cooldown, lastPunishmentTime);
 			return;
 		}
 		
 		if(player.isDeadOrDying())
 		{
 			// Don't punish the player if they're dead or dying
-			CensorCraft.LOGGER.debug("Can't punish {}, player is dead or dying", participant.getName());
+			CensorCraft.LOGGER.info("Can't punish {}, player is dead or dying", participant.getName());
 			return;
 		}
 		

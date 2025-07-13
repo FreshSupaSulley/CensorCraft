@@ -44,9 +44,8 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.loading.FMLPaths;
 import net.minecraftforge.network.PacketDistributor;
 
-@ForgeVoicechatPlugin
 @Mod.EventBusSubscriber(modid = CensorCraft.MODID, value = Dist.CLIENT)
-public class ClientCensorCraft implements VoicechatPlugin {
+public class ClientCensorCraft {
 	
 	// JScribe
 	public static boolean librariesLoaded; // used for telling the player if we already loaded JScribe natives and they need to restart mc
@@ -97,20 +96,7 @@ public class ClientCensorCraft implements VoicechatPlugin {
 		}
 	}
 	
-	@Override
-	public String getPluginId()
-	{
-		return CensorCraft.MODID;
-	}
-	
-	@Override
-	public void registerEvents(EventRegistration registration)
-	{
-		CensorCraft.LOGGER.info("Registering SVC events");
-		registration.registerEvent(ClientSoundEvent.class, this::onClientSound);
-	}
-	
-	public void onClientSound(ClientSoundEvent event)
+	public static void onClientSound(ClientSoundEvent event)
 	{
 		lastSample = System.currentTimeMillis();
 		ringBuffer.append(event.getRawAudio());
@@ -176,7 +162,7 @@ public class ClientCensorCraft implements VoicechatPlugin {
 		params.vadParams.speech_pad_ms = ClientConfig.get().getVADSpeechPadMS();
 		params.vadParams.samples_overlap = ClientConfig.get().getVADSamplesOverlap();
 		builder.setWhisperFullParams(params);
-//		builder.warmUpModel();
+		// builder.warmUpModel();
 		
 		if(ClientConfig.get().isUseVulkan())
 		{

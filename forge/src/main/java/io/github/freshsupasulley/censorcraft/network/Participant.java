@@ -11,7 +11,7 @@ import net.minecraftforge.network.PacketDistributor;
 public class Participant {
 	
 	private String name;
-	private long lastHeartbeat = System.currentTimeMillis(), lastPunishment = System.currentTimeMillis();
+	private long lastHeartbeat = System.currentTimeMillis(), lastPunishment; // intentionally setting lastPunishment to nothing, so the cooldown doesn't apply on start
 	
 	// Hold 200 characters
 	private static final int BUFFER_SIZE = 200;
@@ -52,6 +52,7 @@ public class Participant {
 		CensorCraft.LOGGER.debug("Sending punishment packet");
 		CensorCraft.channel.send(new PunishedPacket(punishments.stream().map(Punishment::getName).collect(Collectors.toList()).toArray(String[]::new)), PacketDistributor.PLAYER.with(player));
 		buffer.setLength(0);
+		lastPunishment = System.currentTimeMillis();
 		heartbeat();
 	}
 	
