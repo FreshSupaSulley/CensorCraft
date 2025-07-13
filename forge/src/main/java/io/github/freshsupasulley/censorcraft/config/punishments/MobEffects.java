@@ -5,12 +5,13 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import io.github.freshsupasulley.censorcraft.CensorCraft;
+import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraftforge.registries.ForgeRegistries;
 
-public class MobEffects extends PunishmentOption<MobEffects> {
+public class MobEffects extends Punishment<MobEffects> {
 	
 	@Override
 	public String getName()
@@ -27,7 +28,7 @@ public class MobEffects extends PunishmentOption<MobEffects> {
 	}
 	
 	@Override
-	public void executePunishment(ServerPlayer player)
+	public void punish(ServerPlayer player)
 	{
 		List<String> effects = config.get("effects");
 		int ticks = config.getInt("duration");
@@ -43,7 +44,7 @@ public class MobEffects extends PunishmentOption<MobEffects> {
 	}
 	
 	@Override
-	MobEffects newInstance()
+	public MobEffects newInstance()
 	{
 		return new MobEffects();
 	}

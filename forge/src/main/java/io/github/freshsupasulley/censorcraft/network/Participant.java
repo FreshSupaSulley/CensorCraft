@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import io.github.freshsupasulley.censorcraft.CensorCraft;
-import io.github.freshsupasulley.censorcraft.config.punishments.PunishmentOption;
+import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.PacketDistributor;
 
@@ -47,10 +47,10 @@ public class Participant {
 		return buffer.toString();
 	}
 	
-	public void punish(List<PunishmentOption<?>> punishments, ServerPlayer player)
+	public void punish(List<Punishment<?>> punishments, ServerPlayer player)
 	{
 		CensorCraft.LOGGER.debug("Sending punishment packet");
-		CensorCraft.channel.send(new PunishedPacket(punishments.stream().map(PunishmentOption::getName).collect(Collectors.toList()).toArray(String[]::new)), PacketDistributor.PLAYER.with(player));
+		CensorCraft.channel.send(new PunishedPacket(punishments.stream().map(Punishment::getName).collect(Collectors.toList()).toArray(String[]::new)), PacketDistributor.PLAYER.with(player));
 		buffer.setLength(0);
 		heartbeat();
 	}

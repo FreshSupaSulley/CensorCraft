@@ -8,14 +8,30 @@
 plugins {
     // Apply the java-library plugin for API and implementation separation.
     id 'java-library'
+    id 'net.minecraftforge.gradle' version "${mcf_range}"
 }
 
 repositories {
     // Use Maven Central for resolving dependencies.
-    mavenCentral()
+    //mavenCentral()
+    maven {
+        name = 'Forge'
+        url = 'https://maven.minecraftforge.net'
+    }
+    maven {
+        name = 'Minecraft libraries'
+        url = 'https://libraries.minecraft.net'
+    }
+}
+
+minecraft {
+    mappings channel: mapping_channel, version: mapping_version
 }
 
 dependencies {
+    minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
+    
+    implementation 'com.google.code.findbugs:jsr305:3.0.2'
     // Use JUnit Jupiter for testing.
     //testImplementation libs.junit.jupiter
 

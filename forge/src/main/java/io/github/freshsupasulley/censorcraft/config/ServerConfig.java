@@ -5,11 +5,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 
 import com.electronwill.nightconfig.core.CommentedConfig;
 import com.electronwill.nightconfig.core.ConfigSpec;
 
 import io.github.freshsupasulley.censorcraft.CensorCraft;
+import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
 import io.github.freshsupasulley.censorcraft.config.punishments.Commands;
 import io.github.freshsupasulley.censorcraft.config.punishments.Crash;
 import io.github.freshsupasulley.censorcraft.config.punishments.Dimension;
@@ -19,7 +21,6 @@ import io.github.freshsupasulley.censorcraft.config.punishments.Ignite;
 import io.github.freshsupasulley.censorcraft.config.punishments.Kill;
 import io.github.freshsupasulley.censorcraft.config.punishments.Lightning;
 import io.github.freshsupasulley.censorcraft.config.punishments.MobEffects;
-import io.github.freshsupasulley.censorcraft.config.punishments.PunishmentOption;
 import io.github.freshsupasulley.censorcraft.config.punishments.Teleport;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.storage.LevelResource;
@@ -33,6 +34,12 @@ import net.minecraftforge.server.ServerLifecycleHooks;
 public class ServerConfig extends ConfigFile {
 	
 	private static ServerConfig SERVER;
+	private static final LevelResource SERVERCONFIG = new LevelResource("serverconfig");
+	
+	// Static because register will be called before an instance variable is available
+	private static List<Punishment<?>> pluginPunishments = new ArrayList<Punishment<?>>();
+	
+	private Punishment<?>[] allPunishments;
 	
 	@SubscribeEvent
 	private static void serverSetup(ServerAboutToStartEvent event)
@@ -49,8 +56,6 @@ public class ServerConfig extends ConfigFile {
 		
 		return SERVER;
 	}
-	
-	private static final LevelResource SERVERCONFIG = new LevelResource("serverconfig");
 	
 	/**
 	 * Ripped from {@link ServerLifecycleHooks}.
@@ -75,8 +80,6 @@ public class ServerConfig extends ConfigFile {
 		
 		return serverConfig;
 	}
-	
-	private PunishmentOption<?>[] defaults;
 	
 	public ServerConfig(MinecraftServer server)
 	{
@@ -123,12 +126,14 @@ public class ServerConfig extends ConfigFile {
 		return config.get("monitor_chat");
 	}
 	
-	public List<PunishmentOption<?>> getPunishments()
+	public List<Punishment<?>> getPunishments()
 	{
-		List<PunishmentOption<?>> options = new ArrayList<PunishmentOption<?>>();
+		List<Punishment<?>> options = new ArrayList<Punishment<?>>();
 		
 		// By fucking LAW each default option needs to be in the server config file
-		for(PunishmentOption<?> punishment : defaults)
+		// ^ why did i write this comment in such a demanding manner
+		// ^ ah i remember. because we're checking each punishment anyways and the data for at least one better be in there
+		for(Punishment<?> punishment : allPunishments)
 		{
 			// array of tables not attack on titan :(
 			List<CommentedConfig> aot = config.get(punishment.getName());
@@ -156,18 +161,39 @@ public class ServerConfig extends ConfigFile {
 		
 		// Punishments are special. They are an array of tables
 		// List<CommentedConfig> punishments = new ArrayList<>();
-		defaults = new PunishmentOption[] {new Commands(), new Crash(), new Dimension(), new Entities(), new Explosion(), new Ignite(), new Kill(), new Lightning(), new MobEffects(), new Teleport()};
 		
-		for(PunishmentOption<?> option : defaults)
+		Punishment<?>[] defaults = new Punishment[] {new Commands(), new Crash(), new Dimension(), new Entities(), new Explosion(), new Ignite(), new Kill(), new Lightning(), new MobEffects(), new Teleport()};
+		
+		System.out.println(pluginPunishments);
+		// Add the default punishments below the plugin-defined ones ig
+		Stream.of(defaults).forEach(punishment -> pluginPunishments.add(punishment));
+		
+		// Set all punishments
+		this.allPunishments = pluginPunishments.toArray(Punishment[]::new);
+		
+		for(Punishment<?> option : allPunishments)
 		{
-			CommentedConfig table = config.createSubConfig();
-			option.fillConfig(table);
-			// punishments.add(table);
-			// Intentionally lax validator, otherwise NightConfig freaks out
-			spec.define(option.getName(), List.of(table), value -> value instanceof List);
-			// config.setComment(option.getName(), option.getDescription());
+			try
+			{
+				CommentedConfig table = config.createSubConfig();
+				option.fillConfig(table);
+				// punishments.add(table);
+				// Intentionally lax validator, otherwise NightConfig freaks out
+				spec.define(option.getName(), List.of(table), value -> value instanceof List);
+				// Very sadly, we can't add comments to array of tables in night config :(
+				// might need to switch to new library one day
+				// config.setComment(option.getName(), option.getDescription());
+			} catch(Exception e)
+			{
+				CensorCraft.LOGGER.warn("An error occured defining the config for punishment type '{}'", option.getName(), e);
+			}
 		}
 		
 		// spec.define("punishments", punishments);
+	}
+	
+	public <T extends Punishment<T>> void registerPunishment(Punishment<T> punishment)
+	{
+		pluginPunishments.add(punishment);
 	}
 }

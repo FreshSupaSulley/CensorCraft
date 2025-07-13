@@ -15,7 +15,6 @@ public class PunishedPacket implements IPacket {
 	
 	public static final StreamCodec<RegistryFriendlyByteBuf, PunishedPacket> CODEC = new StreamCodec<RegistryFriendlyByteBuf, PunishedPacket>()
 	{
-		
 		@Override
 		public void encode(RegistryFriendlyByteBuf buffer, PunishedPacket packet)
 		{
@@ -55,11 +54,14 @@ public class PunishedPacket implements IPacket {
 	{
 		CensorCraft.LOGGER.info("Received punished packet: {}", Arrays.toString(punishments));
 		
+		// Notify any APIs that we're now in the client-side
+		CensorCraft.events.onClientReceivePunish(punishments);
+		
 		// Client is the only one (so far) that needs to be executed client side
 		// Needs to match getName() of PunishmentOption
 		if(List.of(punishments).contains("crash"))
 		{
-			new Crash().executePunishment(null);
+			new Crash().punish(null);
 		}
 		
 		ClientCensorCraft.punished();

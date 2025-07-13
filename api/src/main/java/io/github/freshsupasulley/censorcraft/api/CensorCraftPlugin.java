@@ -12,7 +12,20 @@ public interface CensorCraftPlugin {
 	/**
 	 * Called after loading the plugin.
 	 */
-	default void initialize(EventRegistration registration)
+	default void initialize(CensorCraftAPI api)
+	{
+	}
+	
+	/**
+	 * Register your events here.
+	 * 
+	 * <p>
+	 * See {@link EventRegistration} for a basic example.
+	 * </p>
+	 * 
+	 * @param registration {@link EventRegistration}
+	 */
+	default void registerEvents(EventRegistration registration)
 	{
 	}
 }

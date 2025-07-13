@@ -4,7 +4,7 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
-import io.github.freshsupasulley.censorcraft.network.Trie;
+import io.github.freshsupasulley.censorcraft.api.punishments.Trie;
 import io.github.freshsupasulley.whisperjni.WhisperJNI;
 
 public class SanityTests {

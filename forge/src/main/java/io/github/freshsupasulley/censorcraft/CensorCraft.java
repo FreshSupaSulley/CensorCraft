@@ -32,6 +32,7 @@ public class CensorCraft {
 	public static final long HEARTBEAT_TIME = 30000, HEARTBEAT_SAFETY_NET = 5000;
 	public static SimpleChannel channel;
 	
+	/** Used for the plugins! */
 	public static EventHandler events;
 	
 	public CensorCraft(FMLJavaModLoadingContext context)
@@ -61,7 +62,7 @@ public class CensorCraft {
 		// Plugin schenanigans
 		CensorCraft.LOGGER.info("Loading CensorCraft plugins");
 		var plugins = loadPlugins();
-		CensorCraft.LOGGER.info("Loaded {} plugins", plugins);
+		CensorCraft.LOGGER.info("Found {} plugins", plugins.size());
 		
 		EventHandlerBuilder eventBuilder = new EventHandlerBuilder(CensorCraft.LOGGER);
 		EventRegistration registration = eventBuilder::addEvent;
@@ -72,10 +73,17 @@ public class CensorCraft {
 			
 			try
 			{
-				plugin.initialize(registration);
+				plugin.initialize(CensorCraftAPIImpl.instance());
 			} catch(Exception e)
 			{
 				LOGGER.warn("Failed to initialize CensorCraft plugin '{}'", plugin.getPluginId(), e);
+			}
+			try
+			{
+				plugin.registerEvents(registration);
+			} catch(Exception e)
+			{
+				LOGGER.warn("Failed to register events for CensorCraft plugin '{}'", plugin.getPluginId(), e);
 			}
 		}
 		

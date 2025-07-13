@@ -1,5 +1,6 @@
-
-apply plugin: 'fabric-loom'
+plugins {
+    id 'java-library'
+}
 
 group = 'io.github.freshsupasulley'
 version = '0.1.0'
@@ -19,20 +20,16 @@ sourceCompatibility = JavaVersion.VERSION_21
 targetCompatibility = JavaVersion.VERSION_21
 
 repositories {
-    //mavenLocal() // for my fork of whisper JNI
     mavenCentral()
-    maven { url = 'https://maven.shedaniel.me/' }
-    maven { url = 'https://maven.fabricmc.net/' }
+    //mavenLocal() // for my fork of whisper JNI
 }
 
 dependencies {
-    // Expose this for end users to use things like LibraryUtils
-    api 'io.github.freshsupasulley:whisper-jni:0.1.0' // my custom fork
+    api 'io.github.freshsupasulley:whisper-jni:0.1.0' // my fucking radically awesome custom fork
+    api 'org.slf4j:slf4j-api:2.0.16'
+    
     implementation project(":api")
 	implementation 'org.json:json:20250107' // Helps with parsing API responses for downloading models
-	
-	// Logging
-    api 'org.slf4j:slf4j-api:2.0.16'
     
     testImplementation libs.junit.jupiter
     testImplementation 'org.slf4j:slf4j-simple:2.0.17'

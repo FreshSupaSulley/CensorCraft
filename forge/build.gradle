@@ -7,7 +7,7 @@ plugins {
 	// I keep getting unsupported major version 65 meaning it's probably an easy fix but idgaf
 	// id 'com.github.johnrengelman.shadow' version '8.1.1'
 	id 'com.gradleup.shadow' version '9.0.0-beta12'
-    id 'net.minecraftforge.gradle' version '[6.0.36,6.2)'
+    id 'net.minecraftforge.gradle' version "${mcf_range}"
 	id 'org.spongepowered.mixin' version '0.7.+'
 	//id 'org.parchmentmc.librarian.forgegradle' version '1.+'
 }
@@ -23,9 +23,10 @@ def rawVersion = System.getProperty('java.version')
 def majorVersion = rawVersion.tokenize('.')[0].toInteger()
 
 // Because mappings doesn't seem to cooperate when you're using a higher version (like 23). Probably due to a Gradle / Java mismatch problem
-if (majorVersion != 21) {
-    throw new GradleException("JVM version 21 is required because mappings won't download otherwise. Detected: ${rawVersion}")
-}
+// ^ i think i'm wrong. Building for 21 toolchain is enough
+//if (majorVersion != 21) {
+//    throw new GradleException("JVM version 21 is required because mappings won't download otherwise. Detected: ${rawVersion}")
+//}
 
 println "Java: ${System.getProperty 'java.version'}, JVM: ${System.getProperty 'java.vm.version'} (${System.getProperty 'java.vendor'}), Arch: ${System.getProperty 'os.arch'}"
 def runtime = Runtime.getRuntime()
@@ -131,9 +132,6 @@ minecraft {
 sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 repositories {
-    mavenLocal()
-    // Put repositories for dependencies here
-    //mavenCentral()
     maven {
         name = "henkelmax.public"
         url = 'https://maven.maxhenkel.de/repository/public'

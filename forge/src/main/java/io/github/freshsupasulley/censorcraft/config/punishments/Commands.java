@@ -3,17 +3,18 @@ package io.github.freshsupasulley.censorcraft.config.punishments;
 import java.util.ArrayList;
 import java.util.List;
 
+import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
 import net.minecraft.CrashReport;
 import net.minecraft.CrashReportCategory;
 import net.minecraft.ReportedException;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 
-public class Commands extends PunishmentOption<Commands> {
+public class Commands extends Punishment<Commands> {
 	
 	@SuppressWarnings("unchecked")
 	@Override
-	public void executePunishment(ServerPlayer player)
+	public void punish(ServerPlayer player)
 	{
 		MinecraftServer server = player.getServer();
 		
@@ -34,13 +35,13 @@ public class Commands extends PunishmentOption<Commands> {
 	}
 	
 	@Override
-	void build()
+	public void build()
 	{
 		define("commands", new ArrayList<>(List.of("")));
 	}
 	
 	@Override
-	Commands newInstance()
+	public Commands newInstance()
 	{
 		return new Commands();
 	}

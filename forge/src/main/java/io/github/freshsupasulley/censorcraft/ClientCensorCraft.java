@@ -10,7 +10,6 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 import de.maxhenkel.voicechat.api.ForgeVoicechatPlugin;
-import de.maxhenkel.voicechat.api.VoicechatApi;
 import de.maxhenkel.voicechat.api.VoicechatPlugin;
 import de.maxhenkel.voicechat.api.events.ClientSoundEvent;
 import de.maxhenkel.voicechat.api.events.EventRegistration;
@@ -105,14 +104,9 @@ public class ClientCensorCraft implements VoicechatPlugin {
 	}
 	
 	@Override
-	public void initialize(VoicechatApi api)
-	{
-		CensorCraft.LOGGER.info("INITIALIZED SIMPLE VOICE CHAT API!");
-	}
-	
-	@Override
 	public void registerEvents(EventRegistration registration)
 	{
+		CensorCraft.LOGGER.info("Registering SVC events");
 		registration.registerEvent(ClientSoundEvent.class, this::onClientSound);
 	}
 	

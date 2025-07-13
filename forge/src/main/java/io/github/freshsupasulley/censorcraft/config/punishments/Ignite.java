@@ -1,14 +1,9 @@
 package io.github.freshsupasulley.censorcraft.config.punishments;
 
+import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
 import net.minecraft.server.level.ServerPlayer;
 
-public class Ignite extends PunishmentOption<Ignite> {
-	
-	@Override
-	public String getDescription()
-	{
-		return "Sets the player on fire";
-	}
+public class Ignite extends Punishment<Ignite> {
 	
 	@Override
 	public void build()
@@ -17,14 +12,14 @@ public class Ignite extends PunishmentOption<Ignite> {
 	}
 	
 	@Override
-	public void executePunishment(ServerPlayer player)
+	public void punish(ServerPlayer player)
 	{
 		Number ignite = config.get("ignite_seconds");
 		player.igniteForSeconds(ignite.floatValue());
 	}
 	
 	@Override
-	Ignite newInstance()
+	public Ignite newInstance()
 	{
 		return new Ignite();
 	}

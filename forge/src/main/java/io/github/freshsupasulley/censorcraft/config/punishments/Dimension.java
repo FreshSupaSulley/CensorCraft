@@ -4,6 +4,7 @@ import java.util.Map.Entry;
 import java.util.Optional;
 
 import io.github.freshsupasulley.censorcraft.CensorCraft;
+import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
@@ -20,13 +21,7 @@ import net.minecraft.world.level.portal.PortalShape;
 import net.minecraft.world.level.portal.TeleportTransition;
 import net.minecraft.world.phys.Vec3;
 
-public class Dimension extends PunishmentOption<Dimension> {
-	
-	@Override
-	public String getDescription()
-	{
-		return "Sends the player to a dimension";
-	}
+public class Dimension extends Punishment<Dimension> {
 	
 	@Override
 	public void build()
@@ -41,7 +36,7 @@ public class Dimension extends PunishmentOption<Dimension> {
 	}
 	
 	@Override
-	public void executePunishment(ServerPlayer player)
+	public void punish(ServerPlayer player)
 	{
 		VanillaDimensions desiredDimension = config.getEnum("dimension", VanillaDimensions.class);
 		ResourceKey<Level> playerDimension = player.level().dimension();
@@ -183,7 +178,7 @@ public class Dimension extends PunishmentOption<Dimension> {
 	}
 	
 	@Override
-	Dimension newInstance()
+	public Dimension newInstance()
 	{
 		return new Dimension();
 	}

@@ -1,11 +1,12 @@
 package io.github.freshsupasulley.censorcraft.config.punishments;
 
+import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.ExplosionDamageCalculator;
 import net.minecraft.world.level.Level.ExplosionInteraction;
 import net.minecraft.world.phys.Vec3;
 
-public class Explosion extends PunishmentOption<Explosion> {
+public class Explosion extends Punishment<Explosion> {
 	
 	@Override
 	public void build()
@@ -16,7 +17,7 @@ public class Explosion extends PunishmentOption<Explosion> {
 	}
 	
 	@Override
-	public void executePunishment(ServerPlayer player)
+	public void punish(ServerPlayer player)
 	{
 		Number radius = config.get("explosion_radius");
 		boolean createFires = config.get("create_fires");
@@ -27,13 +28,13 @@ public class Explosion extends PunishmentOption<Explosion> {
 	}
 	
 	@Override
-	Explosion newInstance()
+	public Explosion newInstance()
 	{
 		return new Explosion();
 	}
 	
 	@Override
-	boolean initEnable()
+	public boolean initEnable()
 	{
 		return true;
 	}

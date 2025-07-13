@@ -1,15 +1,10 @@
 package io.github.freshsupasulley.censorcraft.config.punishments;
 
+import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
 
-public class Teleport extends PunishmentOption<Teleport> {
-	
-	@Override
-	public String getDescription()
-	{
-		return "Teleports the player relative to their position";
-	}
+public class Teleport extends Punishment<Teleport> {
 	
 	@Override
 	public void build()
@@ -21,7 +16,7 @@ public class Teleport extends PunishmentOption<Teleport> {
 	}
 	
 	@Override
-	public void executePunishment(ServerPlayer player)
+	public void punish(ServerPlayer player)
 	{
 		Vec3 pos = player.position();
 		boolean coords = config.get("coords");
@@ -38,7 +33,7 @@ public class Teleport extends PunishmentOption<Teleport> {
 	}
 	
 	@Override
-	Teleport newInstance()
+	public Teleport newInstance()
 	{
 		return new Teleport();
 	}

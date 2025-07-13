@@ -1,11 +1,12 @@
 package io.github.freshsupasulley.censorcraft.config.punishments;
 
+import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.world.phys.Vec3;
 
-public class Lightning extends PunishmentOption<Lightning> {
+public class Lightning extends Punishment<Lightning> {
 	
 	@Override
 	public void build()
@@ -14,7 +15,7 @@ public class Lightning extends PunishmentOption<Lightning> {
 	}
 	
 	@Override
-	public void executePunishment(ServerPlayer player)
+	public void punish(ServerPlayer player)
 	{
 		Vec3 pos = player.position();
 		
@@ -28,7 +29,7 @@ public class Lightning extends PunishmentOption<Lightning> {
 	}
 	
 	@Override
-	Lightning newInstance()
+	public Lightning newInstance()
 	{
 		return new Lightning();
 	}

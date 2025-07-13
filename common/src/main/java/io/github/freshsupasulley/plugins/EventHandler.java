@@ -4,14 +4,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.function.Consumer;
 
 import org.slf4j.Logger;
 
 import io.github.freshsupasulley.censorcraft.api.events.Event;
-import io.github.freshsupasulley.censorcraft.api.events.PunishEvent;
-import io.github.freshsupasulley.plugins.impl.PunishImpl;
+import io.github.freshsupasulley.censorcraft.api.events.client.ClientPunishedEvent;
+import io.github.freshsupasulley.plugins.impl.client.ClientPunishedEventImpl;
 
 public class EventHandler {
 	
@@ -24,9 +23,9 @@ public class EventHandler {
 		this.events = events;
 	}
 	
-	public void onPlayerPunish(UUID playerUUID, String taboo)
+	public void onClientReceivePunish(String... punishment)
 	{
-		dispatchEvent(PunishEvent.class, new PunishImpl(playerUUID, taboo));
+		dispatchEvent(ClientPunishedEvent.class, new ClientPunishedEventImpl(punishment));
 	}
 	
 	private <T extends Event> boolean dispatchEvent(Class<? extends T> eventClass, T event)

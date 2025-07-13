@@ -4,18 +4,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraftforge.registries.ForgeRegistries;
 
-public class Entities extends PunishmentOption<Entities> {
-	
-	@Override
-	public String getDescription()
-	{
-		return "Entities to spawn on the player";
-	}
+public class Entities extends Punishment<Entities> {
 	
 	@Override
 	public void build()
@@ -25,7 +20,7 @@ public class Entities extends PunishmentOption<Entities> {
 	}
 	
 	@Override
-	public void executePunishment(ServerPlayer player)
+	public void punish(ServerPlayer player)
 	{
 		for(int i = 0; i < config.getInt("quantity"); i++)
 		{
@@ -35,7 +30,7 @@ public class Entities extends PunishmentOption<Entities> {
 	}
 	
 	@Override
-	Entities newInstance()
+	public Entities newInstance()
 	{
 		return new Entities();
 	}

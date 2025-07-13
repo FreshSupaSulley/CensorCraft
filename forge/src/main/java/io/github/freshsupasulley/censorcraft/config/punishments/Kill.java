@@ -1,8 +1,9 @@
 package io.github.freshsupasulley.censorcraft.config.punishments;
 
+import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
 import net.minecraft.server.level.ServerPlayer;
 
-public class Kill extends PunishmentOption<Kill> {
+public class Kill extends Punishment<Kill> {
 	
 	@Override
 	public void build()
@@ -12,7 +13,7 @@ public class Kill extends PunishmentOption<Kill> {
 	}
 	
 	@Override
-	public void executePunishment(ServerPlayer player)
+	public void punish(ServerPlayer player)
 	{
 		boolean ignoreTotem = config.get("ignore_totem");
 		
@@ -30,7 +31,7 @@ public class Kill extends PunishmentOption<Kill> {
 	}
 	
 	@Override
-	Kill newInstance()
+	public Kill newInstance()
 	{
 		return new Kill();
 	}

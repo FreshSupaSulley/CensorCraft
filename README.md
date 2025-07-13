@@ -20,11 +20,15 @@ Punishments are set by the server admin. All punishment options are available in
 
 ## Project Structure
 
-This is a multi-project gradle build (but currently only has one subproject):
+This is a multi-project gradle build:
 
 - [forge](./forge)
-Forge mod source. Depends on [JScribe](https://github.com/FreshSupaSulley/jscribe) to transcribe speech-to-text using (technically a fork of) [whisper-jni](https://github.com/GiviMAD/whisper-jni).
+Forge mod source. Depends on all other subprojects.
+- [common](./common)
+The non-forge specific code of the mod. Mainly keeping it out of forge just in case that one day we want to support different mod loaders (unlikely).
+- [api](./api)
+The CensorCraft API code, allowing you to hook into CensorCraft to create your own punishment types.
 
 # Contributing
 
-Do whatever you want with this repository, such as porting to another mod loader or forking for a project of your own. Feel free to make pull requests or open issues.
+Do whatever you want with this repository, such as porting to another mod loader or forking for a project of your own. Open an issue if you're having trouble, but pull requests are encouraged!

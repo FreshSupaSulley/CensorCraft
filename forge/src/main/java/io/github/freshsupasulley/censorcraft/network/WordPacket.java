@@ -8,8 +8,9 @@ import java.util.Map;
 import java.util.UUID;
 
 import io.github.freshsupasulley.censorcraft.CensorCraft;
+import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
+import io.github.freshsupasulley.censorcraft.api.punishments.Trie;
 import io.github.freshsupasulley.censorcraft.config.ServerConfig;
-import io.github.freshsupasulley.censorcraft.config.punishments.PunishmentOption;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.StreamCodec;
@@ -27,6 +28,7 @@ public class WordPacket implements IPacket {
 	
 	public static final StreamCodec<RegistryFriendlyByteBuf, WordPacket> CODEC = new StreamCodec<RegistryFriendlyByteBuf, WordPacket>()
 	{
+		
 		@Override
 		public void encode(RegistryFriendlyByteBuf buffer, WordPacket packet)
 		{
@@ -106,7 +108,7 @@ public class WordPacket implements IPacket {
 			CensorCraft.LOGGER.info("Global taboo said by {}: \"{}\"!", participant.getName(), globalTaboo);
 			
 			// Update punishment timing and clear buffer
-			List<PunishmentOption<?>> options = new ArrayList<PunishmentOption<?>>();
+			List<Punishment<?>> options = new ArrayList<Punishment<?>>();
 			
 			// Notify all players of the sin
 			if(ServerConfig.get().isChatTaboos())
@@ -116,14 +118,12 @@ public class WordPacket implements IPacket {
 			}
 			
 			// Go through all enabled punishments
-			for(PunishmentOption<?> option : ServerConfig.get().getPunishments())
+			for(Punishment<?> option : ServerConfig.get().getPunishments())
 			{
 				if(option.isEnabled() && !option.ignoresGlobalTaboos())
 				{
 					options.add(option);
-					
-					CensorCraft.LOGGER.info("Invoking {} punishment", option.getName());
-					option.punish(player);
+					punish(option, player);
 				}
 			}
 			
@@ -131,10 +131,10 @@ public class WordPacket implements IPacket {
 		}
 		else
 		{
-			List<PunishmentOption<?>> options = new ArrayList<PunishmentOption<?>>();
+			List<Punishment<?>> options = new ArrayList<Punishment<?>>();
 			
 			// Check all punishments for particular taboos
-			for(PunishmentOption<?> option : ServerConfig.get().getPunishments())
+			for(Punishment<?> option : ServerConfig.get().getPunishments())
 			{
 				if(option.isEnabled())
 				{
@@ -153,7 +153,7 @@ public class WordPacket implements IPacket {
 							player.level().players().forEach(sample -> sample.displayClientMessage(Component.literal(participant.getName()).withStyle(style -> style.withBold(true)).append(Component.literal(" said ").withStyle(style -> style.withBold(false))).append(Component.literal("\"" + taboo + "\"")), false));
 						}
 						
-						option.punish(player);
+						punish(option, player);
 					}
 				}
 			}
@@ -164,6 +164,19 @@ public class WordPacket implements IPacket {
 				// Update punishment timing and clear buffer
 				participant.punish(options, player);
 			}
+		}
+	}
+	
+	private void punish(Punishment<?> option, ServerPlayer player)
+	{
+		CensorCraft.LOGGER.info("Invoking punishment '{}' onto player '{}'", option.getName(), player.getUUID());
+		
+		try
+		{
+			option.punish(player);
+		} catch(Exception e)
+		{
+			CensorCraft.LOGGER.warn("Something went wrong punishing the player for punishment '{}'", option.getName(), e);
 		}
 	}
 	

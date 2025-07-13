@@ -1,4 +1,4 @@
-package io.github.freshsupasulley.censorcraft.network;
+package io.github.freshsupasulley.censorcraft.api.punishments;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -7,6 +7,9 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+/**
+ * Represents a special data structure to efficiently find strings in a tree-like manner.
+ */
 public class Trie {
 	
 	private List<String> list;
