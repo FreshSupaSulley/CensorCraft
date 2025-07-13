@@ -1,4 +1,4 @@
-package be.tarsos.dsp.resample;
+package io.github.freshsupasulley.tarsos;
 
 public class RateTransposer {
 

@@ -5,7 +5,7 @@ package io.github.freshsupasulley.censorcraft.api.punishments;
  */
 public interface ConfigWrapper {
 	
-	public <T> T get(String string);
+	public <T> T get(String key);
 	
 	public <T> void set(String key, T value);
 	
@@ -13,5 +13,5 @@ public interface ConfigWrapper {
 	
 	public int getInt(String key);
 	
-	public <T extends Enum<T>> T getEnum(String path, Class<T> enumType);
+	public <T extends Enum<T>> T getEnum(String key, Class<T> enumType);
 }

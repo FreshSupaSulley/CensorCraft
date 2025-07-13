@@ -140,7 +140,7 @@ public class ServerConfig extends ConfigFile {
 			
 			aot.forEach(config ->
 			{
-				options.add(punishment.deserialize(config));
+				options.add(punishment.deserialize(new ConfigWrapperImpl(config)));
 			});
 		}
 		
@@ -176,7 +176,7 @@ public class ServerConfig extends ConfigFile {
 			try
 			{
 				CommentedConfig table = config.createSubConfig();
-				option.fillConfig(table);
+				option.fillConfig(new ConfigWrapperImpl(table));
 				// punishments.add(table);
 				// Intentionally lax validator, otherwise NightConfig freaks out
 				spec.define(option.getName(), List.of(table), value -> value instanceof List);

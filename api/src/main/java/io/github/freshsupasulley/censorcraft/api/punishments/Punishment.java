@@ -6,8 +6,6 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import javax.annotation.Nullable;
-
 /**
  * Defines a punishment type.
  * 
@@ -142,13 +140,12 @@ public abstract class Punishment<T extends Punishment<T>> {
 	}
 	
 	/**
-	 * Checks a sample word (what a player said) to the taboo trie and returns a taboo if the player said one.
+	 * Checks a sample word (what a player said) to the taboo trie and returns a taboo if the player said one. Can be null!
 	 * 
 	 * @param sample       word or phrase the player said
 	 * @param isolateWords if the server admin enabled isolate words in the config file
-	 * @return the taboo the player spoke, if any
+	 * @return the taboo the player spoke, or null if not found
 	 */
-	@Nullable
 	public final String getTaboo(String sample, boolean isolateWords)
 	{
 		// We can't store Tries as instance variables anymore so this is required
@@ -164,9 +161,9 @@ public abstract class Punishment<T extends Punishment<T>> {
 	 * You'll need to get the server level yourself to change anything to the world!
 	 * </p>
 	 * 
-	 * @param player {@link UUID} UUID of the server player
+	 * @param player the <code>net.minecraft.server.level.ServerPlayer</code> instance (you'll need to cast it)
 	 */
-	public abstract void punish(UUID player);
+	public abstract void punish(Object serverPlayer);
 	
 	/**
 	 * Used to write the name of the punishment to the server config file. By default, the name is derived from the class name.

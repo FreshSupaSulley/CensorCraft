@@ -33,7 +33,7 @@
  * License: LGPL -- see the file LICENSE.txt for more information
  *
  *****************************************************************************/
-package be.tarsos.dsp.resample;
+package io.github.freshsupasulley.tarsos;
 
 /**
  * Callback for producing and consuming samples. Enables on-the-fly conversion between sample types

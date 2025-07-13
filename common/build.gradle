@@ -2,10 +2,6 @@ plugins {
     id 'java-library'
 }
 
-group = 'io.github.freshsupasulley'
-version = '0.1.0'
-description = 'Audio speech-to-text in Java'
-
 java {
     withJavadocJar()
     withSourcesJar()
@@ -28,7 +24,7 @@ dependencies {
     api 'io.github.freshsupasulley:whisper-jni:0.1.0' // my fucking radically awesome custom fork
     api 'org.slf4j:slf4j-api:2.0.16'
     
-    implementation project(":api")
+    api project(":api")
 	implementation 'org.json:json:20250107' // Helps with parsing API responses for downloading models
     
     testImplementation libs.junit.jupiter

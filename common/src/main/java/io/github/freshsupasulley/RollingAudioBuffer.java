@@ -3,7 +3,7 @@ package io.github.freshsupasulley;
 import java.io.IOException;
 import java.nio.file.Path;
 
-import be.tarsos.dsp.resample.RateTransposer;
+import io.github.freshsupasulley.tarsos.RateTransposer;
 
 /**
  * Converts raw samples into the format whisper expects while maintaining a buffer of previous samples for context.

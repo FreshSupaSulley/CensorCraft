@@ -33,7 +33,7 @@
  * License: LGPL -- see the file LICENSE.txt for more information
  *
  *****************************************************************************/
-package be.tarsos.dsp.resample;
+package io.github.freshsupasulley.tarsos;
 
 import java.nio.FloatBuffer;
 

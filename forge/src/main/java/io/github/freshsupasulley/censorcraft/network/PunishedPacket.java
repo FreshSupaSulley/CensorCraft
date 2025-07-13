@@ -9,6 +9,7 @@ import io.github.freshsupasulley.censorcraft.ClientCensorCraft;
 import io.github.freshsupasulley.censorcraft.config.punishments.Crash;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.event.network.CustomPayloadEvent.Context;
 
 public class PunishedPacket implements IPacket {
@@ -61,7 +62,7 @@ public class PunishedPacket implements IPacket {
 		// Needs to match getName() of PunishmentOption
 		if(List.of(punishments).contains("crash"))
 		{
-			new Crash().punish(null);
+			new Crash().punish((ServerPlayer) null);
 		}
 		
 		ClientCensorCraft.punished();
