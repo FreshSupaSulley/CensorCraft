@@ -37,7 +37,55 @@ publishing {
 	            // Apparently you need to do this because it doesn't get autofilled (at least for description)
 	            name = project.name
 	            description = project.description
+	            url = 'https://github.com/FreshSupaSulley/CensorCraft'
+	            
+	            licenses {
+	                license {
+	                    name = 'MIT License'
+	                    url = 'https://opensource.org/license/mit'
+	                }
+	            }
+	            
+	            developers {
+	                developer {
+	                    name = 'Erich Boschert'
+	                }
+	            }
+	            
+	            scm {
+	                connection = 'scm:git:https://github.com/FreshSupaSulley/whisper-jni.git'
+	                developerConnection = 'scm:git:ssh://github.com/FreshSupaSulley/whisper-jni.git'
+	                url = 'https://github.com/FreshSupaSulley/whisper-jni'
+	            }
 	        }
 	    }
+    }
+    repositories {
+        maven {
+            url = layout.buildDirectory.dir('staging-deploy')
+        }
+    }
+}
+
+jreleaser {
+    signing {
+        active = 'ALWAYS'
+        armored = true
+    }
+    
+    deploy {
+        maven {
+            mavenCentral {
+                sonatype {
+                    active = 'ALWAYS'
+                    url = 'https://central.sonatype.com/api/v1/publisher'
+                    stagingRepository('build/staging-deploy')
+                    
+                    // Double the retry delay as publishing takes a long time
+                    // Alternatively you can set JRELEASER_MAVENCENTRAL_STAGE: UPLOAD and manually publish
+                    retryDelay = 40
+                }
+            }
+        }
     }
 }
