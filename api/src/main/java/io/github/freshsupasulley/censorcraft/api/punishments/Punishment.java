@@ -8,10 +8,8 @@ import java.util.stream.Stream;
 
 /**
  * Defines a punishment type.
- * 
- * @param <T> self-referential generic type (set the generic to the same class). Used to deserialize from the config file.
  */
-public abstract class Punishment<T extends Punishment<T>> {
+public abstract class Punishment {
 	
 	protected ConfigWrapper config;
 	
@@ -86,9 +84,7 @@ public abstract class Punishment<T extends Punishment<T>> {
 	}
 	
 	/**
-	 * Builds your punishment's section of the server config file. Use the parent's <code>define</code> methods to build it.
-	 * 
-	 * <h3>Example:</h3>
+	 * Builds your punishment's section of the server config file. Use the parent's <code>define</code> methods to build it. Example:
 	 * 
 	 * <pre>{@code
 	 * defineInRange("explosion_radius", 5D, 0D, Double.MAX_VALUE);
@@ -99,22 +95,21 @@ public abstract class Punishment<T extends Punishment<T>> {
 	 */
 	protected abstract void build();
 	
-	/**
-	 * Create a dummy punishment instance (used for deserialization).
-	 * 
-	 * @return new punishment instance of this type
-	 */
-	protected abstract T newInstance();
+	public final Punishment newInstance() throws Exception
+	{
+		return this.getClass().getDeclaredConstructor().newInstance();
+	}
 	
 	/**
 	 * Deserializes this punishment type from the server config file.
 	 * 
 	 * @param config {@link ConfigWrapper} instance
 	 * @return new punishment instance
+	 * @throws Exception if instantiating this class goes wrong
 	 */
-	public final T deserialize(ConfigWrapper config)
+	public final Punishment deserialize(ConfigWrapper config) throws Exception
 	{
-		T option = newInstance();
+		Punishment option = newInstance();
 		option.config = config;
 		return option;
 	}
@@ -157,11 +152,7 @@ public abstract class Punishment<T extends Punishment<T>> {
 	/**
 	 * Punishes the player for this punishment type.
 	 * 
-	 * <p>
-	 * You'll need to get the server level yourself to change anything to the world!
-	 * </p>
-	 * 
-	 * @param player the <code>net.minecraft.server.level.ServerPlayer</code> instance (you'll need to cast it)
+	 * @param serverPlayer the <code>net.minecraft.server.level.ServerPlayer</code> instance (you'll need to cast it)
 	 */
 	public abstract void punish(Object serverPlayer);
 	

@@ -9,7 +9,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraftforge.registries.ForgeRegistries;
 
-public class Entities extends ForgePunishment<Entities> {
+public class Entities extends ForgePunishment {
 	
 	@Override
 	public void build()
@@ -26,11 +26,5 @@ public class Entities extends ForgePunishment<Entities> {
 			List<String> entities = config.get("entities");
 			entities.forEach(element -> ForgeRegistries.ENTITY_TYPES.getValue(ResourceLocation.withDefaultNamespace(element)).spawn(player.level(), player.blockPosition(), EntitySpawnReason.COMMAND));
 		}
-	}
-	
-	@Override
-	public Entities newInstance()
-	{
-		return new Entities();
 	}
 }

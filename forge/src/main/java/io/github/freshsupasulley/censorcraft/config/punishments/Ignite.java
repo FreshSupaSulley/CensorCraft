@@ -2,7 +2,7 @@ package io.github.freshsupasulley.censorcraft.config.punishments;
 
 import net.minecraft.server.level.ServerPlayer;
 
-public class Ignite extends ForgePunishment<Ignite> {
+public class Ignite extends ForgePunishment {
 	
 	@Override
 	public void build()
@@ -15,11 +15,5 @@ public class Ignite extends ForgePunishment<Ignite> {
 	{
 		Number ignite = config.get("ignite_seconds");
 		player.igniteForSeconds(ignite.floatValue());
-	}
-	
-	@Override
-	public Ignite newInstance()
-	{
-		return new Ignite();
 	}
 }

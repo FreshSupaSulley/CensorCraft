@@ -37,9 +37,9 @@ public class ServerConfig extends ConfigFile {
 	private static final LevelResource SERVERCONFIG = new LevelResource("serverconfig");
 	
 	// Static because register will be called before an instance variable is available
-	private static List<Punishment<?>> pluginPunishments = new ArrayList<Punishment<?>>();
+	private static List<Punishment> pluginPunishments = new ArrayList<Punishment>();
 	
-	private Punishment<?>[] allPunishments;
+	private Punishment[] allPunishments;
 	
 	@SubscribeEvent
 	private static void serverSetup(ServerAboutToStartEvent event)
@@ -126,21 +126,27 @@ public class ServerConfig extends ConfigFile {
 		return config.get("monitor_chat");
 	}
 	
-	public List<Punishment<?>> getPunishments()
+	public List<Punishment> getPunishments()
 	{
-		List<Punishment<?>> options = new ArrayList<Punishment<?>>();
+		List<Punishment> options = new ArrayList<Punishment>();
 		
 		// By fucking LAW each default option needs to be in the server config file
 		// ^ why did i write this comment in such a demanding manner
 		// ^ ah i remember. because we're checking each punishment anyways and the data for at least one better be in there
-		for(Punishment<?> punishment : allPunishments)
+		for(Punishment punishment : allPunishments)
 		{
 			// array of tables not attack on titan :(
 			List<CommentedConfig> aot = config.get(punishment.getName());
 			
 			aot.forEach(config ->
 			{
-				options.add(punishment.deserialize(new ConfigWrapperImpl(config)));
+				try
+				{
+					options.add(punishment.deserialize(new ConfigWrapperImpl(config)));
+				} catch(Exception e)
+				{
+					CensorCraft.LOGGER.warn("Can't deserialize punishment '{}'. The punishment must have a default constructor with no args!", punishment.getName(), e);
+				}
 			});
 		}
 		
@@ -162,7 +168,7 @@ public class ServerConfig extends ConfigFile {
 		// Punishments are special. They are an array of tables
 		// List<CommentedConfig> punishments = new ArrayList<>();
 		
-		Punishment<?>[] defaults = new Punishment[] {new Commands(), new Crash(), new Dimension(), new Entities(), new Explosion(), new Ignite(), new Kill(), new Lightning(), new MobEffects(), new Teleport()};
+		Punishment[] defaults = new Punishment[] {new Commands(), new Crash(), new Dimension(), new Entities(), new Explosion(), new Ignite(), new Kill(), new Lightning(), new MobEffects(), new Teleport()};
 		
 		System.out.println(pluginPunishments);
 		// Add the default punishments below the plugin-defined ones ig
@@ -171,7 +177,7 @@ public class ServerConfig extends ConfigFile {
 		// Set all punishments
 		this.allPunishments = pluginPunishments.toArray(Punishment[]::new);
 		
-		for(Punishment<?> option : allPunishments)
+		for(Punishment option : allPunishments)
 		{
 			try
 			{
@@ -192,7 +198,7 @@ public class ServerConfig extends ConfigFile {
 		// spec.define("punishments", punishments);
 	}
 	
-	public <T extends Punishment<T>> void registerPunishment(Punishment<T> punishment)
+	public void registerPunishment(Punishment punishment)
 	{
 		pluginPunishments.add(punishment);
 	}

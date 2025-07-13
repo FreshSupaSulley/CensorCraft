@@ -5,7 +5,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.world.phys.Vec3;
 
-public class Lightning extends ForgePunishment<Lightning> {
+public class Lightning extends ForgePunishment {
 	
 	@Override
 	public void build()
@@ -25,11 +25,5 @@ public class Lightning extends ForgePunishment<Lightning> {
 			bolt.setPos(pos);
 			player.level().addFreshEntity(bolt);
 		}
-	}
-	
-	@Override
-	public Lightning newInstance()
-	{
-		return new Lightning();
 	}
 }

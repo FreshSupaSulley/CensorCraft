@@ -47,7 +47,7 @@ public class Participant {
 		return buffer.toString();
 	}
 	
-	public void punish(List<Punishment<?>> punishments, ServerPlayer player)
+	public void punish(List<Punishment> punishments, ServerPlayer player)
 	{
 		CensorCraft.LOGGER.debug("Sending punishment packet");
 		CensorCraft.channel.send(new PunishedPacket(punishments.stream().map(Punishment::getName).collect(Collectors.toList()).toArray(String[]::new)), PacketDistributor.PLAYER.with(player));

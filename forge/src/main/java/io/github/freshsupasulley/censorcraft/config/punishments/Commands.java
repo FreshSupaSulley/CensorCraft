@@ -9,7 +9,7 @@ import net.minecraft.ReportedException;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 
-public class Commands extends ForgePunishment<Commands> {
+public class Commands extends ForgePunishment {
 	
 	@SuppressWarnings("unchecked")
 	@Override
@@ -37,11 +37,5 @@ public class Commands extends ForgePunishment<Commands> {
 	public void build()
 	{
 		define("commands", new ArrayList<>(List.of("")));
-	}
-	
-	@Override
-	public Commands newInstance()
-	{
-		return new Commands();
 	}
 }

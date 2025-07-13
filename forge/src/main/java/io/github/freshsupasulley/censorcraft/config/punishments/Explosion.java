@@ -5,7 +5,7 @@ import net.minecraft.world.level.ExplosionDamageCalculator;
 import net.minecraft.world.level.Level.ExplosionInteraction;
 import net.minecraft.world.phys.Vec3;
 
-public class Explosion extends ForgePunishment<Explosion> {
+public class Explosion extends ForgePunishment {
 	
 	@Override
 	public void build()
@@ -24,12 +24,6 @@ public class Explosion extends ForgePunishment<Explosion> {
 		
 		Vec3 pos = player.position();
 		player.level().explode(null, player.level().damageSources().generic(), new ExplosionDamageCalculator(), pos.x, pos.y, pos.z, radius.floatValue(), createFires, griefing ? ExplosionInteraction.BLOCK : ExplosionInteraction.NONE);
-	}
-	
-	@Override
-	public Explosion newInstance()
-	{
-		return new Explosion();
 	}
 	
 	@Override

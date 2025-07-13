@@ -20,7 +20,7 @@ import net.minecraft.world.level.portal.PortalShape;
 import net.minecraft.world.level.portal.TeleportTransition;
 import net.minecraft.world.phys.Vec3;
 
-public class Dimension extends ForgePunishment<Dimension> {
+public class Dimension extends ForgePunishment {
 	
 	@Override
 	public void build()
@@ -174,11 +174,5 @@ public class Dimension extends ForgePunishment<Dimension> {
 		{
 			return level;
 		}
-	}
-	
-	@Override
-	public Dimension newInstance()
-	{
-		return new Dimension();
 	}
 }

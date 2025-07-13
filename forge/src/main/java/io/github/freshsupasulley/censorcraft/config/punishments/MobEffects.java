@@ -10,7 +10,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraftforge.registries.ForgeRegistries;
 
-public class MobEffects extends ForgePunishment<MobEffects> {
+public class MobEffects extends ForgePunishment {
 	
 	@Override
 	public String getName()
@@ -40,11 +40,5 @@ public class MobEffects extends ForgePunishment<MobEffects> {
 				CensorCraft.LOGGER.warn("Failed to find mob effect with name {}", effect);
 			});
 		}
-	}
-	
-	@Override
-	public MobEffects newInstance()
-	{
-		return new MobEffects();
 	}
 }

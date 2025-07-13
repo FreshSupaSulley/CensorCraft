@@ -1,7 +1,39 @@
 plugins {
     id 'java-library'
+    id 'maven-publish'
 }
+
+group = "io.github.freshsupasulley.censorcraft"
+version = api_version
+description = 'CensorCraft API'
 
 repositories {
     mavenCentral()
+}
+
+java {
+    withSourcesJar()
+    withJavadocJar()
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+tasks.withType(Javadoc) {
+    options.encoding = 'UTF-8'
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from components.java
+            
+	        pom {
+	            // Apparently you need to do this because it doesn't get autofilled (at least for description)
+	            name = project.name
+	            description = project.description
+	        }
+	    }
+    }
 }

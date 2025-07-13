@@ -3,7 +3,7 @@ package io.github.freshsupasulley.censorcraft.config.punishments;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
 
-public class Teleport extends ForgePunishment<Teleport> {
+public class Teleport extends ForgePunishment {
 	
 	@Override
 	public void build()
@@ -29,11 +29,5 @@ public class Teleport extends ForgePunishment<Teleport> {
 		{
 			player.teleportTo(x + pos.x, y + pos.y, z + pos.z);
 		}
-	}
-	
-	@Override
-	public Teleport newInstance()
-	{
-		return new Teleport();
 	}
 }

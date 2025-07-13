@@ -193,6 +193,7 @@ dependencies {
     // in your development environment, helping you catch issues early.
     annotationProcessor 'net.minecraftforge:eventbus-validator:7.0-beta.10'
     
+    // Simple voice chat + api
     compileOnly "de.maxhenkel.voicechat:voicechat-api:${voicechat_api_version}"
 	runtimeOnly fg.deobf("maven.modrinth:simple-voice-chat:forge-${voicechat_version}")
 	

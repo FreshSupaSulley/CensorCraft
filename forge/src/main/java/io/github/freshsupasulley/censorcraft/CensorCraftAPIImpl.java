@@ -20,7 +20,7 @@ public class CensorCraftAPIImpl implements CensorCraftAPI {
 	}
 	
 	@Override
-	public <T extends Punishment<T>> void registerPunishment(Punishment<T> punishment)
+	public void registerPunishment(Punishment punishment)
 	{
 		ServerConfig.get().registerPunishment(punishment);
 	}

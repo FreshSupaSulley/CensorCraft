@@ -2,7 +2,7 @@ package io.github.freshsupasulley.censorcraft.config.punishments;
 
 import net.minecraft.server.level.ServerPlayer;
 
-public class Kill extends ForgePunishment<Kill> {
+public class Kill extends ForgePunishment {
 	
 	@Override
 	public void build()
@@ -27,11 +27,5 @@ public class Kill extends ForgePunishment<Kill> {
 			// Generic will stop at totems
 			player.hurtServer(player.level(), player.level().damageSources().generic(), Float.MAX_VALUE);
 		}
-	}
-	
-	@Override
-	public Kill newInstance()
-	{
-		return new Kill();
 	}
 }

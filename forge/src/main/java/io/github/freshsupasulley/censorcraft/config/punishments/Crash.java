@@ -3,7 +3,7 @@ package io.github.freshsupasulley.censorcraft.config.punishments;
 import io.github.freshsupasulley.censorcraft.CensorCraft;
 import net.minecraft.server.level.ServerPlayer;
 
-public class Crash extends ForgePunishment<Crash> {
+public class Crash extends ForgePunishment {
 	
 	@Override
 	public void build()
@@ -29,11 +29,5 @@ public class Crash extends ForgePunishment<Crash> {
 			CensorCraft.LOGGER.info("Exiting Minecraft (get trolled)");
 			System.exit(0);
 		}
-	}
-	
-	@Override
-	public Crash newInstance()
-	{
-		return new Crash();
 	}
 }
