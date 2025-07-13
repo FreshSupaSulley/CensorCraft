@@ -12,7 +12,7 @@ import net.minecraftforge.registries.ForgeRegistries;
 public class Entities extends ForgePunishment {
 	
 	@Override
-	public void build()
+	public void buildConfig()
 	{
 		define("entities", new ArrayList<>(List.of("warden", "skeleton")), "Entities to spawn on the player", "Allowed list (case-insensitive, duplicates allowed): " + ForgeRegistries.ENTITY_TYPES.getKeys().stream().map(ResourceLocation::getPath).sorted().collect(Collectors.joining(", ")));
 		defineInRange("quantity", 1, 1, Integer.MAX_VALUE, "Number of times the entire list will be spawned");

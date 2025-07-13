@@ -5,7 +5,7 @@ import net.minecraft.server.level.ServerPlayer;
 public class Kill extends ForgePunishment {
 	
 	@Override
-	public void build()
+	public void buildConfig()
 	{
 		// General settings
 		define("ignore_totem", false, "Killing the player ignores totems (enable must be true)");

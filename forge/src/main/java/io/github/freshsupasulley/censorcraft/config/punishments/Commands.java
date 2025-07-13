@@ -34,7 +34,7 @@ public class Commands extends ForgePunishment {
 	}
 	
 	@Override
-	public void build()
+	public void buildConfig()
 	{
 		define("commands", new ArrayList<>(List.of("")));
 	}

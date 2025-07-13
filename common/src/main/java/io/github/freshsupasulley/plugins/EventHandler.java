@@ -10,7 +10,10 @@ import org.slf4j.Logger;
 
 import io.github.freshsupasulley.censorcraft.api.events.Event;
 import io.github.freshsupasulley.censorcraft.api.events.client.ClientPunishedEvent;
+import io.github.freshsupasulley.censorcraft.api.events.server.ServerConfigEvent;
+import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
 import io.github.freshsupasulley.plugins.impl.client.ClientPunishedEventImpl;
+import io.github.freshsupasulley.plugins.impl.server.ServerConfigEventImpl;
 
 public class EventHandler {
 	
@@ -21,6 +24,11 @@ public class EventHandler {
 	{
 		this.logger = logger;
 		this.events = events;
+	}
+	
+	public void onServerConfig(Consumer<Class<? extends Punishment>> consumer)
+	{
+		dispatchEvent(ServerConfigEvent.class, new ServerConfigEventImpl(consumer));
 	}
 	
 	public void onClientReceivePunish(String... punishment)

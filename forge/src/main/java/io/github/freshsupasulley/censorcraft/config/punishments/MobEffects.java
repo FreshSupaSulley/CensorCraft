@@ -19,7 +19,7 @@ public class MobEffects extends ForgePunishment {
 	}
 	
 	@Override
-	public void build()
+	public void buildConfig()
 	{
 		define("effects", new ArrayList<>(List.of("")), "Potion effects to apply to the player", "Allowed list (case-insensitive): " + ForgeRegistries.MOB_EFFECTS.getKeys().stream().map(ResourceLocation::getPath).sorted().collect(Collectors.joining(", ")));
 		define("duration", 300, "Number of game ticks effects are active");

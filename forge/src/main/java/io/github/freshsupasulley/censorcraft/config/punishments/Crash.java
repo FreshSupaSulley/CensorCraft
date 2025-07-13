@@ -6,7 +6,7 @@ import net.minecraft.server.level.ServerPlayer;
 public class Crash extends ForgePunishment {
 	
 	@Override
-	public void build()
+	public void buildConfig()
 	{
 		defineInRange("seconds", 0, 0, Integer.MAX_VALUE, "Delay (in seconds) before Minecraft crashes (creates a \"Not Responding\" screen)");
 	}

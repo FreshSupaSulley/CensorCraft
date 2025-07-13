@@ -6,7 +6,7 @@ import net.minecraft.world.phys.Vec3;
 public class Teleport extends ForgePunishment {
 	
 	@Override
-	public void build()
+	public void buildConfig()
 	{
 		define("x_coord", 0D);
 		define("y_coord", 50D);

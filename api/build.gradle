@@ -11,6 +11,10 @@ repositories {
     mavenCentral()
 }
 
+dependencies {
+    compileOnly 'com.electronwill.night-config:core:[1.0,)'
+}
+
 java {
     withSourcesJar()
     withJavadocJar()

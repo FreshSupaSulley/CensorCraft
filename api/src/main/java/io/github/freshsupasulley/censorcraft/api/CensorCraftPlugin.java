@@ -10,13 +10,6 @@ public interface CensorCraftPlugin {
 	String getPluginId();
 	
 	/**
-	 * Called after loading the plugin.
-	 */
-	default void initialize(CensorCraftAPI api)
-	{
-	}
-	
-	/**
 	 * Register your events here.
 	 * 
 	 * <p>
@@ -25,7 +18,5 @@ public interface CensorCraftPlugin {
 	 * 
 	 * @param registration {@link EventRegistration}
 	 */
-	default void registerEvents(EventRegistration registration)
-	{
-	}
+	void registerEvents(EventRegistration registration);
 }

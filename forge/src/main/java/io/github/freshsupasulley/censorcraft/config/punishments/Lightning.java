@@ -8,7 +8,7 @@ import net.minecraft.world.phys.Vec3;
 public class Lightning extends ForgePunishment {
 	
 	@Override
-	public void build()
+	public void buildConfig()
 	{
 		defineInRange("strikes", 1, 1, 1000, "Number of lightning bolts", "Successive lightning bolts doesn't seem to increase damage proportionately");
 	}

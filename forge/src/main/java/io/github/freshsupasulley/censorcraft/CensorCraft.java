@@ -69,15 +69,8 @@ public class CensorCraft {
 		
 		for(CensorCraftPlugin plugin : plugins)
 		{
-			LOGGER.info("Initializing CensorCraft plugin '{}'", plugin.getPluginId());
+			LOGGER.info("Registering events for CensorCraft plugin '{}'", plugin.getPluginId());
 			
-			try
-			{
-				plugin.initialize(CensorCraftAPIImpl.instance());
-			} catch(Exception e)
-			{
-				LOGGER.warn("Failed to initialize CensorCraft plugin '{}'", plugin.getPluginId(), e);
-			}
 			try
 			{
 				plugin.registerEvents(registration);

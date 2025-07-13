@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import com.electronwill.nightconfig.core.CommentedConfig;
@@ -35,9 +36,6 @@ public class ServerConfig extends ConfigFile {
 	
 	private static ServerConfig SERVER;
 	private static final LevelResource SERVERCONFIG = new LevelResource("serverconfig");
-	
-	// Static because register will be called before an instance variable is available
-	private static List<Punishment> pluginPunishments = new ArrayList<Punishment>();
 	
 	private Punishment[] allPunishments;
 	
@@ -140,19 +138,17 @@ public class ServerConfig extends ConfigFile {
 			
 			aot.forEach(config ->
 			{
-				try
+				safeInstantiation(punishment.getClass(), (p) ->
 				{
-					options.add(punishment.deserialize(new ConfigWrapperImpl(config)));
-				} catch(Exception e)
-				{
-					CensorCraft.LOGGER.warn("Can't deserialize punishment '{}'. The punishment must have a default constructor with no args!", punishment.getName(), e);
-				}
+					options.add(p.fillConfig(config));
+				});
 			});
 		}
 		
 		return options;
 	}
 	
+	@SuppressWarnings("unchecked")
 	@Override
 	void register(ConfigSpec spec)
 	{
@@ -166,24 +162,30 @@ public class ServerConfig extends ConfigFile {
 		define("monitor_chat", true, "Punish players for sending taboos to chat");
 		
 		// Punishments are special. They are an array of tables
-		// List<CommentedConfig> punishments = new ArrayList<>();
+		List<Punishment> totalPunishments = new ArrayList<Punishment>();
 		
-		Punishment[] defaults = new Punishment[] {new Commands(), new Crash(), new Dimension(), new Entities(), new Explosion(), new Ignite(), new Kill(), new Lightning(), new MobEffects(), new Teleport()};
+		// First assemble all plugin-defined punishments
+		// This fires an event to (all? test more than one) plugin(s)
+		CensorCraft.events.onServerConfig(sample -> safeInstantiation(sample, totalPunishments::add));
 		
-		System.out.println(pluginPunishments);
-		// Add the default punishments below the plugin-defined ones ig
-		Stream.of(defaults).forEach(punishment -> pluginPunishments.add(punishment));
+		// Now add the default punishments below the plugin-defined ones ig
+		// maybe this could be a cancellable event in the future?
+		// ... sadly can't have generic arrays in java
+		Class<?>[] defaults = new Class<?>[] {Commands.class, Crash.class, Dimension.class, Entities.class, Explosion.class, Ignite.class, Kill.class, Lightning.class, MobEffects.class, Teleport.class};
+		Stream.of(defaults).forEach(punishment -> safeInstantiation((Class<? extends Punishment>) punishment, totalPunishments::add));
 		
 		// Set all punishments
-		this.allPunishments = pluginPunishments.toArray(Punishment[]::new);
+		this.allPunishments = totalPunishments.toArray(Punishment[]::new);
 		
 		for(Punishment option : allPunishments)
 		{
+			CensorCraft.LOGGER.info("Defining config for punishemnt '{}'", option.getName());
+			
 			try
 			{
+				// Each punishment creates an array of tables with only one entry
 				CommentedConfig table = config.createSubConfig();
-				option.fillConfig(new ConfigWrapperImpl(table));
-				// punishments.add(table);
+				option.buildConfig(table);
 				// Intentionally lax validator, otherwise NightConfig freaks out
 				spec.define(option.getName(), List.of(table), value -> value instanceof List);
 				// Very sadly, we can't add comments to array of tables in night config :(
@@ -198,8 +200,15 @@ public class ServerConfig extends ConfigFile {
 		// spec.define("punishments", punishments);
 	}
 	
-	public void registerPunishment(Punishment punishment)
+	private static void safeInstantiation(Class<? extends Punishment> clazz, Consumer<Punishment> onSuccess)
 	{
-		pluginPunishments.add(punishment);
+		try
+		{
+			Punishment p = Punishment.newInstance(clazz);
+			onSuccess.accept(p);
+		} catch(Exception e)
+		{
+			CensorCraft.LOGGER.warn("Can't deserialize punishment '{}'. The punishment must have a default constructor with no args!", clazz.getName(), e);
+		}
 	}
 }

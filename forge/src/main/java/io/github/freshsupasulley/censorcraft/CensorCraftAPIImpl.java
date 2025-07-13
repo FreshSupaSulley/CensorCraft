@@ -1,12 +1,10 @@
 package io.github.freshsupasulley.censorcraft;
 
-import io.github.freshsupasulley.censorcraft.api.CensorCraftAPI;
-import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
-import io.github.freshsupasulley.censorcraft.config.ServerConfig;
+import io.github.freshsupasulley.censorcraft.api.CensorCraftServerAPI;
 
-public class CensorCraftAPIImpl implements CensorCraftAPI {
+public class CensorCraftAPIImpl implements CensorCraftServerAPI {
 	
-	public static final CensorCraftAPI INSTANCE = new CensorCraftAPIImpl();
+	public static final CensorCraftServerAPI INSTANCE = new CensorCraftAPIImpl();
 	
 	private CensorCraftAPIImpl()
 	{
@@ -14,14 +12,8 @@ public class CensorCraftAPIImpl implements CensorCraftAPI {
 	
 	// this does nothing but just look prettier than CensorCraft.INSTANCE
 	// im a fan :)
-	public static CensorCraftAPI instance()
+	public static CensorCraftServerAPI instance()
 	{
 		return INSTANCE;
-	}
-	
-	@Override
-	public void registerPunishment(Punishment punishment)
-	{
-		ServerConfig.get().registerPunishment(punishment);
 	}
 }

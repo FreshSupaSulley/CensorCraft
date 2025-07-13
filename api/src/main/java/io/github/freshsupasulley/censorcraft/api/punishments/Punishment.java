@@ -6,19 +6,33 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.electronwill.nightconfig.core.CommentedConfig;
+
 /**
  * Defines a punishment type.
  */
 public abstract class Punishment {
 	
-	protected ConfigWrapper config;
+	protected CommentedConfig config;
+	
+	/**
+	 * Interally used to set the config when loaded so it can be properly deserialized from the config file.
+	 * 
+	 * @param config {@link CommentedConfig} instance
+	 * @return this instance
+	 */
+	public final Punishment fillConfig(CommentedConfig config)
+	{
+		this.config = config;
+		return this;
+	}
 	
 	/**
 	 * Internally used to build the punishment's default parameters.
 	 * 
-	 * @param config {@link ConfigWrapper} instance
+	 * @param config {@link CommentedConfig} instance
 	 */
-	public final void fillConfig(ConfigWrapper config)
+	public final void buildConfig(CommentedConfig config)
 	{
 		// Just for building
 		this.config = config;
@@ -27,7 +41,33 @@ public abstract class Punishment {
 		define("taboo", new ArrayList<>(List.of("")), "List of punishment-specific forbidden words and phrases (case-insensitive)");
 		define("ignore_global_taboos", false, "Global taboos don't trigger this punishment");
 		
-		build();
+		buildConfig();
+	}
+	
+	/**
+	 * Builds your punishment's section of the server config file. Use the parent's <code>define</code> methods to build it. Example:
+	 * 
+	 * <pre>{@code
+	 * defineInRange("explosion_radius", 5D, 0D, Double.MAX_VALUE);
+	 * }</pre>
+	 * 
+	 * <p>
+	 * You may later use {@link #config} in {@link #punish(UUID)} to retrieve the server admin's settings of what you defined here.
+	 */
+	protected abstract void buildConfig();
+	
+	/**
+	 * Deserializes this punishment type from the server config file.
+	 * 
+	 * @param config {@link CommentedConfig} instance
+	 * @return new punishment instance
+	 * @throws Exception if instantiating this class goes wrong
+	 */
+	public final Punishment deserialize(CommentedConfig config) throws Exception
+	{
+		Punishment option = Punishment.newInstance(this.getClass());
+		option.config = config;
+		return option;
 	}
 	
 	/**
@@ -84,34 +124,19 @@ public abstract class Punishment {
 	}
 	
 	/**
-	 * Builds your punishment's section of the server config file. Use the parent's <code>define</code> methods to build it. Example:
-	 * 
-	 * <pre>{@code
-	 * defineInRange("explosion_radius", 5D, 0D, Double.MAX_VALUE);
-	 * }</pre>
+	 * Creates a new instance of the punishment.
 	 * 
 	 * <p>
-	 * You may later use {@link #config} in {@link #punish(UUID)} to retrieve the server admin's settings of what you defined here.
-	 */
-	protected abstract void build();
-	
-	public final Punishment newInstance() throws Exception
-	{
-		return this.getClass().getDeclaredConstructor().newInstance();
-	}
-	
-	/**
-	 * Deserializes this punishment type from the server config file.
+	 * All punishments <b>MUST</b> have a default, no-arg constructor.
+	 * </p>
 	 * 
-	 * @param config {@link ConfigWrapper} instance
-	 * @return new punishment instance
+	 * @param clazz punishment class
+	 * @return new {@link Punishment} instance
 	 * @throws Exception if instantiating this class goes wrong
 	 */
-	public final Punishment deserialize(ConfigWrapper config) throws Exception
+	public static Punishment newInstance(Class<? extends Punishment> clazz) throws Exception
 	{
-		Punishment option = newInstance();
-		option.config = config;
-		return option;
+		return clazz.getDeclaredConstructor().newInstance();
 	}
 	
 	/**
