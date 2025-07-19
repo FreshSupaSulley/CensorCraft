@@ -9,10 +9,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-import de.maxhenkel.voicechat.api.ForgeVoicechatPlugin;
-import de.maxhenkel.voicechat.api.VoicechatPlugin;
 import de.maxhenkel.voicechat.api.events.ClientSoundEvent;
-import de.maxhenkel.voicechat.api.events.EventRegistration;
 import io.github.freshsupasulley.JScribe;
 import io.github.freshsupasulley.Model;
 import io.github.freshsupasulley.RollingAudioBuffer;

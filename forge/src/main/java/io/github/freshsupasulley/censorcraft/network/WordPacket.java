@@ -124,7 +124,12 @@ public class WordPacket implements IPacket {
 				if(option.isEnabled() && !option.ignoresGlobalTaboos())
 				{
 					options.add(option);
-					punish(option, player);
+					
+					// If it wasn't cancelled
+					if(CensorCraft.events.onPunish(option))
+					{
+						punish(option, player);
+					}
 				}
 			}
 			
@@ -154,7 +159,11 @@ public class WordPacket implements IPacket {
 							player.level().players().forEach(sample -> sample.displayClientMessage(Component.literal(participant.getName()).withStyle(style -> style.withBold(true)).append(Component.literal(" said ").withStyle(style -> style.withBold(false))).append(Component.literal("\"" + taboo + "\"")), false));
 						}
 						
-						punish(option, player);
+						// If it wasn't cancelled
+						if(CensorCraft.events.onPunish(option))
+						{
+							punish(option, player);
+						}
 					}
 				}
 			}

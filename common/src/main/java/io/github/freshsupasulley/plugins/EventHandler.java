@@ -9,10 +9,12 @@ import java.util.function.Consumer;
 import org.slf4j.Logger;
 
 import io.github.freshsupasulley.censorcraft.api.events.Event;
-import io.github.freshsupasulley.censorcraft.api.events.client.ClientPunishedEvent;
+import io.github.freshsupasulley.censorcraft.api.events.client.ClientAcknowledgePunish;
+import io.github.freshsupasulley.censorcraft.api.events.server.PunishEvent;
 import io.github.freshsupasulley.censorcraft.api.events.server.ServerConfigEvent;
 import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
-import io.github.freshsupasulley.plugins.impl.client.ClientPunishedEventImpl;
+import io.github.freshsupasulley.plugins.impl.client.ClientAcknowledgePunishImpl;
+import io.github.freshsupasulley.plugins.impl.server.PunishEventImpl;
 import io.github.freshsupasulley.plugins.impl.server.ServerConfigEventImpl;
 
 public class EventHandler {
@@ -31,30 +33,45 @@ public class EventHandler {
 		dispatchEvent(ServerConfigEvent.class, new ServerConfigEventImpl(consumer));
 	}
 	
-	public void onClientReceivePunish(String... punishment)
+	public boolean onPunish(Punishment punishments)
 	{
-		dispatchEvent(ClientPunishedEvent.class, new ClientPunishedEventImpl(punishment));
+		return dispatchEvent(PunishEvent.class, new PunishEventImpl(punishments));
 	}
 	
+	public void onClientReceivePunish(String... punishment)
+	{
+		dispatchEvent(ClientAcknowledgePunish.class, new ClientAcknowledgePunishImpl(punishment));
+	}
+	
+	/**
+	 * Dispatches an event to all CensorCraft plugins.
+	 * 
+	 * @param <T>        event class
+	 * @param eventClass event class
+	 * @param event      event instance
+	 * @return true if the event was fired, false if cancelled
+	 */
 	private <T extends Event> boolean dispatchEvent(Class<? extends T> eventClass, T event)
 	{
 		List<Consumer<? extends Event>> events = this.events.get(eventClass);
 		
 		if(events == null)
 		{
-			return false;
+			// Event can't be cancelled
+			return true;
 		}
 		
-		for(Consumer<? extends Event> evt : events)
+		for(Consumer<? extends Event> sample : events)
 		{
 			try
 			{
 				@SuppressWarnings("unchecked")
-				Consumer<T> e = (Consumer<T>) evt;
+				Consumer<T> e = (Consumer<T>) sample;
 				e.accept(event);
 				
 				if(event.isCancelled())
 				{
+					logger.debug("'{}' event was cancelled", event.getClass().getSimpleName());
 					break;
 				}
 			} catch(Exception e)
@@ -63,7 +80,7 @@ public class EventHandler {
 			}
 		}
 		
-		return event.isCancelled();
+		return !event.isCancelled();
 	}
 	
 	public static class EventHandlerBuilder {

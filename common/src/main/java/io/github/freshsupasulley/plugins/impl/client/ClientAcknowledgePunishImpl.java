@@ -1,12 +1,12 @@
 package io.github.freshsupasulley.plugins.impl.client;
 
-import io.github.freshsupasulley.censorcraft.api.events.client.ClientPunishedEvent;
+import io.github.freshsupasulley.censorcraft.api.events.client.ClientAcknowledgePunish;
 
-public class ClientPunishedEventImpl extends ClientEventImpl implements ClientPunishedEvent {
+public class ClientAcknowledgePunishImpl extends ClientEventImpl implements ClientAcknowledgePunish {
 	
 	private String[] punishments;
 	
-	public ClientPunishedEventImpl(String... punishments)
+	public ClientAcknowledgePunishImpl(String... punishments)
 	{
 		this.punishments = punishments;
 	}

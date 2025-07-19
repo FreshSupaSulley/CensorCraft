@@ -15,6 +15,12 @@ public class ServerConfigEventImpl extends ServerEventImpl implements ServerConf
 	}
 	
 	@Override
+	public boolean isCancellable()
+	{
+		return false;
+	}
+	
+	@Override
 	public void registerPunishment(Class<? extends Punishment> punishment)
 	{
 		callback.accept(punishment);
