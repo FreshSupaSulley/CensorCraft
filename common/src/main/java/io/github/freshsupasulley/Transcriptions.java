@@ -13,8 +13,8 @@ import io.github.freshsupasulley.whisperjni.TokenData;
  */
 public class Transcriptions implements Iterable<Transcription> {
 	
-	private List<Transcription> transcriptions;
-	private int totalRecordings;
+	private final List<Transcription> transcriptions;
+	private final int totalRecordings;
 	
 	Transcriptions(List<Transcription> transcriptions)
 	{
@@ -24,7 +24,7 @@ public class Transcriptions implements Iterable<Transcription> {
 	
 	/**
 	 * Returns true if this doesn't have any transcriptions.
-	 * 
+	 *
 	 * @return true if no transcriptions exist yet
 	 */
 	public boolean isEmpty()
@@ -34,7 +34,7 @@ public class Transcriptions implements Iterable<Transcription> {
 	
 	/**
 	 * Returns the array of transcriptions composing this collection.
-	 * 
+	 *
 	 * @return list of transcriptions
 	 */
 	public List<Transcription> getTranscriptions()
@@ -44,7 +44,7 @@ public class Transcriptions implements Iterable<Transcription> {
 	
 	/**
 	 * Returns the sum of all audio recordings processed across each {@link Transcription}.
-	 * 
+	 *
 	 * @return number of audio recordings processed
 	 */
 	public int getTotalRecordings()
@@ -54,28 +54,20 @@ public class Transcriptions implements Iterable<Transcription> {
 	
 	/**
 	 * Represents a transcription of a variable number of recordings.
-	 * 
+	 *
 	 * <p>
-	 * When the transcription rate is fast enough to handle the incoming flow of new audio recordings (defined by latency), {@code recordings} will be kept down to
-	 * 1. However, if the transcription rate is slower, audio recordings will be concatenated together to form one larger recording. {@code recordings} represents
-	 * the number of audio recordings that had to be spliced together.
+	 * When the transcription rate is fast enough to handle the incoming flow of new audio recordings (defined by
+	 * latency), {@code recordings} will be kept down to 1. However, if the transcription rate is slower, audio
+	 * recordings will be concatenated together to form one larger recording. {@code recordings} represents the number
+	 * of audio recordings that had to be spliced together.
 	 * </p>
-	 * 
-	 * @param tokens         raw tokens received from the model
+	 *
+	 * @param text           raw text received from the model
 	 * @param recordings     amount of recordings concatenated together that compose this transcription
 	 * @param processingTime time it took to process these recordings, in milliseconds
 	 */
-	public static record Transcription(TokenData[] tokens, int recordings, long processingTime) {
-		
-		/**
-		 * Lazily assembles all tokens into a string.
-		 * 
-		 * @return combined string of tokens
-		 */
-		public String text()
-		{
-			return Stream.of(tokens).map(token -> token.token).collect(Collectors.joining());
-		}
+	public record Transcription(String text, int recordings, long processingTime) {
+	
 	}
 	
 	@Override

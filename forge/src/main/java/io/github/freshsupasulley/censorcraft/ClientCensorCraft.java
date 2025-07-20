@@ -371,59 +371,28 @@ public class ClientCensorCraft {
 			
 			if(!results.isEmpty())
 			{
-				// Start by clearing it
-				transcription = Component.empty();
-				
+				// Collect transcriptions
 				StringBuffer processBuffer = new StringBuffer();
-				List<MutableComponent> tokenList = new ArrayList<MutableComponent>();
 				
-				results.getTranscriptions().stream().forEach(t ->
+				results.getTranscriptions().forEach(t ->
 				{
-					Stream.of(t.tokens()).forEach(token ->
-					{
-						CensorCraft.LOGGER.debug("Token: {}, probability: {}", token.token, token.p);
-						processBuffer.append(token.token);
-						tokenList.add(Component.literal(token.token).withColor(ClientConfig.get().isDebug() ? probabilityColor(token.p) : 0xFFFFFF).withStyle(style -> style.withShadowColor(0xAAAAAAAA)));
-					});
+					processBuffer.append(t.text());
 				});
 				
-				int length = 0;
-				boolean exceeded = false;
-				
-				// Now prepare the GUI and the processing string
-				// Go back to front
-				for(int i = tokenList.size() - 1; i >= 0; i--)
-				{
-					MutableComponent sample = tokenList.get(i);
-					String raw = sample.getString();
-					
-					length += raw.length();
-					
-					// If we still can add stuff to the GUI text
-					if(!exceeded)
-					{
-						if(length > MAX_TRANSCRIPTION_LENGTH)
-						{
-							exceeded = true;
-							raw = "..." + raw.substring(length - MAX_TRANSCRIPTION_LENGTH);
-							transcription = Component.literal(raw).withStyle(sample.getStyle()).append(transcription);
-						}
-						else if(i == 0)
-						{
-							transcription = Component.literal(raw.trim()).withStyle(sample.getStyle()).append(transcription);
-							// transcription.append(sample);
-						}
-						else
-						{
-							transcription = sample.append(transcription);
-						}
-					}
-				}
-				
+				// Configure what to send
 				String raw = processBuffer.toString();
 				CensorCraft.LOGGER.info("Sending \"{}\"", raw);
 				lastWordPacket = System.currentTimeMillis();
 				CensorCraft.channel.send(new WordPacket(raw), PacketDistributor.SERVER.noArg());
+				
+				// Update GUI
+				// Prepend with ...
+				if(raw.length() > MAX_TRANSCRIPTION_LENGTH)
+				{
+					raw = "... " + raw.substring(raw.length() - MAX_TRANSCRIPTION_LENGTH);
+				}
+				
+				transcription = Component.literal(raw);
 				
 				recordings = results.getTotalRecordings();
 			}

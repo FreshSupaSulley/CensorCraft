@@ -8,14 +8,10 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
+import io.github.freshsupasulley.whisperjni.*;
 import org.slf4j.Logger;
 
 import io.github.freshsupasulley.Transcriptions.Transcription;
-import io.github.freshsupasulley.whisperjni.TokenData;
-import io.github.freshsupasulley.whisperjni.WhisperContext;
-import io.github.freshsupasulley.whisperjni.WhisperFullParams;
-import io.github.freshsupasulley.whisperjni.WhisperJNI;
-import io.github.freshsupasulley.whisperjni.WhisperState;
 
 /**
  * Transcriber waits for new audio samples and processes them into text segments using {@linkplain WhisperJNI}.
@@ -106,7 +102,7 @@ class Transcriber extends Thread implements Runnable {
 			{
 				abandonSample.set(false);
 				
-				if(recordings.size() == 0)
+				if(recordings.isEmpty())
 				{
 					lastTimestamp = System.currentTimeMillis();
 					continue;
@@ -190,43 +186,37 @@ class Transcriber extends Thread implements Runnable {
 				
 				JScribe.logger.debug("Transcribing {} recordings (length {})", numRecordings, toProcess.length);
 				
-				// Pass samples to whisper
-				int result = whisper.full(ctx, params, toProcess, toProcess.length);
-				
-				if(result != 0)
+				try(WhisperState state = whisper.initState(ctx))
 				{
-					JScribe.logger.error("Whisper failed with code {}", result);
-					continue;
-				}
-				
-				int numSegments = whisper.fullNSegments(ctx);
-				
-				// does it need to be atomic?
-				if(!abandonSample.get())
-				{
-					List<Transcription> transcriptions = new ArrayList<Transcription>(numSegments);
+					// Pass samples to whisper
+					//					int result = whisper.full(ctx, params, toProcess, toProcess.length);
+					//
+					//					if(result != 0)
+					//					{
+					//						JScribe.logger.error("Whisper failed with code {}", result);
+					//						continue;
+					//					}
+					//
+					//					int numSegments = whisper.fullNSegments(ctx);
+					String result = whisper.vadState(ctx, state, params, new WhisperVADContextParams(), toProcess, toProcess.length);
+					JScribe.logger.debug("Raw transcription ({} recordings): {}", numRecordings, result);
 					
-					for(int i = 0; i < numSegments; i++)
+					// does it need to be atomic?
+					if(!abandonSample.get())
 					{
-						TokenData[] tokens = whisper.getTokens(ctx, i);
-						JScribe.logger.debug("Raw transcription ({} samples): {} tokens", numRecordings, tokens.length);
-						
-						transcriptions.add(new Transcription(tokens, numRecordings, System.currentTimeMillis() - startTime));
+						results.add(new Transcription(result, numRecordings, System.currentTimeMillis() - startTime));
+					}
+					else
+					{
+						JScribe.logger.debug("Abandoning sample (size {}, {} recordings)", toProcess.length, numRecordings);
 					}
 					
-					// because I want to add all transcriptions at the same time to not freak out the results
-					results.addAll(transcriptions);
+					// Run all success runnables
+					runnables.forEach(Runnable::run);
+					
+					// Notify we're caught up
+					lastTimestamp = firstTimestamp;
 				}
-				else
-				{
-					JScribe.logger.debug("Abandoning sample (size {}, {} recordings)", toProcess.length, numRecordings);
-				}
-				
-				// Run all success runnables
-				runnables.forEach(Runnable::run);
-				
-				// Notify we're caught up
-				lastTimestamp = firstTimestamp;
 			}
 		} catch(IOException e)
 		{
