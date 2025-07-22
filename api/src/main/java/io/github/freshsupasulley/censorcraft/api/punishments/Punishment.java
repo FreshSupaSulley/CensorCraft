@@ -17,7 +17,7 @@ public abstract class Punishment {
 	
 	/**
 	 * Interally used to set the config when loaded so it can be properly deserialized from the config file.
-	 * 
+	 *
 	 * @param config {@link CommentedConfig} instance
 	 * @return this instance
 	 */
@@ -29,7 +29,7 @@ public abstract class Punishment {
 	
 	/**
 	 * Internally used to build the punishment's default parameters.
-	 * 
+	 *
 	 * @param config {@link CommentedConfig} instance
 	 */
 	public final void buildConfig(CommentedConfig config)
@@ -45,20 +45,22 @@ public abstract class Punishment {
 	}
 	
 	/**
-	 * Builds your punishment's section of the server config file. Use the parent's <code>define</code> methods to build it. Example:
-	 * 
+	 * Builds your punishment's section of the server config file. Use the parent's <code>define</code> methods to build
+	 * it. Example:
+	 *
 	 * <pre>{@code
 	 * defineInRange("explosion_radius", 5D, 0D, Double.MAX_VALUE);
 	 * }</pre>
-	 * 
+	 *
 	 * <p>
-	 * You may later use {@link #config} in {@link #punish(UUID)} to retrieve the server admin's settings of what you defined here.
+	 * You may later use {@link #config} in {@link #punish(UUID)} to retrieve the server admin's settings of what you
+	 * defined here.
 	 */
 	protected abstract void buildConfig();
 	
 	/**
 	 * Deserializes this punishment type from the server config file.
-	 * 
+	 *
 	 * @param config {@link CommentedConfig} instance
 	 * @return new punishment instance
 	 * @throws Exception if instantiating this class goes wrong
@@ -72,7 +74,7 @@ public abstract class Punishment {
 	
 	/**
 	 * Convenience method to bundle defining a value and a comment.
-	 * 
+	 *
 	 * @param <E>      value type
 	 * @param key      config key
 	 * @param value    initial value
@@ -86,7 +88,7 @@ public abstract class Punishment {
 	
 	/**
 	 * Convenience method to bundle defining a value and a comment for an enum.
-	 * 
+	 *
 	 * @param <E>      {@link Enum} type
 	 * @param key      config key
 	 * @param value    initial value (enum entry)
@@ -100,7 +102,7 @@ public abstract class Punishment {
 	
 	/**
 	 * Convenience method to define a value within a range. <b>There is no error checking!</b>
-	 * 
+	 *
 	 * @param <E>      {@link Comparable} type
 	 * @param key      config key
 	 * @param value    initial value (must be within the range)
@@ -115,7 +117,7 @@ public abstract class Punishment {
 	
 	/**
 	 * Whether the punishment will be enabled by default when written to the server config file.
-	 * 
+	 *
 	 * @return true if this punishment should be enabled by default
 	 */
 	protected boolean initEnable()
@@ -125,11 +127,11 @@ public abstract class Punishment {
 	
 	/**
 	 * Creates a new instance of the punishment.
-	 * 
+	 *
 	 * <p>
 	 * All punishments <b>MUST</b> have a default, no-arg constructor.
 	 * </p>
-	 * 
+	 *
 	 * @param clazz punishment class
 	 * @return new {@link Punishment} instance
 	 * @throws Exception if instantiating this class goes wrong
@@ -141,32 +143,35 @@ public abstract class Punishment {
 	
 	/**
 	 * Checks if this punishment type is enabled by the server admin.
-	 * 
+	 *
 	 * @return true if this punishment's <code>enabled</code> flag is set to true
 	 */
-	public final boolean isEnabled()
+	public boolean isEnabled()
 	{
 		return config.get("enable");
 	}
 	
 	/**
 	 * Checks if this punishment type ignores the <code>global_taboos</code> array.
-	 * 
+	 *
 	 * @return true if the punishment type ignores global taboos
 	 */
-	public final boolean ignoresGlobalTaboos()
+	public boolean ignoresGlobalTaboos()
 	{
 		return config.get("ignore_global_taboos");
 	}
 	
 	/**
-	 * Checks a sample word (what a player said) to the taboo trie and returns a taboo if the player said one. Can be null!
-	 * 
+	 * Checks a sample word (what a player said) to the taboo trie and returns a taboo if the player said one. Can be
+	 * null!
+	 *
+	 * <p>You can override this method to add customized taboos that can change at your whim.</p>
+	 *
 	 * @param sample       word or phrase the player said
 	 * @param isolateWords if the server admin enabled isolate words in the config file
 	 * @return the taboo the player spoke, or null if not found
 	 */
-	public final String getTaboo(String sample, boolean isolateWords)
+	public String getTaboo(String sample, boolean isolateWords)
 	{
 		// We can't store Tries as instance variables anymore so this is required
 		List<String> taboos = config.get("taboo");
@@ -176,14 +181,15 @@ public abstract class Punishment {
 	
 	/**
 	 * Punishes the player for this punishment type.
-	 * 
+	 *
 	 * @param serverPlayer the <code>net.minecraft.server.level.ServerPlayer</code> instance (you'll need to cast it)
 	 */
 	public abstract void punish(Object serverPlayer);
 	
 	/**
-	 * Used to write the name of the punishment to the server config file. By default, the name is derived from the class name.
-	 * 
+	 * Used to write the name of the punishment to the server config file. By default, the name is derived from the
+	 * class name.
+	 *
 	 * @return name of the punishment type
 	 */
 	public String getName()
