@@ -4,6 +4,12 @@ import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
 
 public interface ServerConfigEvent extends ServerEvent {
 	
+	@Override
+	default boolean isCancellable()
+	{
+		return false;
+	}
+	
 	/**
 	 * Registers a new punishment type that will be added to the server config file for the server admin to manage.
 	 * 

@@ -4,7 +4,7 @@ import io.github.freshsupasulley.censorcraft.api.events.client.ClientAcknowledge
 
 public class ClientAcknowledgePunishImpl extends ClientEventImpl implements ClientAcknowledgePunish {
 	
-	private String[] punishments;
+	private final String[] punishments;
 	
 	public ClientAcknowledgePunishImpl(String... punishments)
 	{

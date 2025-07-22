@@ -11,9 +11,9 @@ package io.github.freshsupasulley.censorcraft.api.events.client;
 public interface ClientAcknowledgePunish extends ClientEvent {
 	
 	/**
-	 * Gets the list of punishments that this player invoked.
+	 * Gets the array of punishments that this player invoked.
 	 * 
-	 * @return list of punishment names
+	 * @return array of punishment names
 	 */
 	String[] getPunishments();
 }

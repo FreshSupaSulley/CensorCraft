@@ -304,7 +304,6 @@ public class ClientCensorCraft {
 		}
 		
 		// no clue if .player can be null but im compensating for it anyways
-		@SuppressWarnings("resource")
 		boolean playerAlive = Optional.ofNullable(Minecraft.getInstance().player).map(LocalPlayer::isAlive).orElse(false);
 		
 		// If player is dead, don't run JScribe
@@ -381,9 +380,13 @@ public class ClientCensorCraft {
 				
 				// Configure what to send
 				String raw = processBuffer.toString();
-				CensorCraft.LOGGER.info("Sending \"{}\"", raw);
-				lastWordPacket = System.currentTimeMillis();
-				CensorCraft.channel.send(new WordPacket(raw), PacketDistributor.SERVER.noArg());
+				
+				if(CensorCraft.events.onTranscriptionSend(raw))
+				{
+					CensorCraft.LOGGER.info("Sending \"{}\"", raw);
+					lastWordPacket = System.currentTimeMillis();
+					CensorCraft.channel.send(new WordPacket(raw), PacketDistributor.SERVER.noArg());
+				}
 				
 				// Update GUI
 				// Prepend with ...
@@ -392,7 +395,7 @@ public class ClientCensorCraft {
 					raw = "... " + raw.substring(raw.length() - MAX_TRANSCRIPTION_LENGTH);
 				}
 				
-				transcription = Component.literal(raw);
+				transcription = Component.literal(raw).withColor(0xFFFFFF);
 				
 				recordings = results.getTotalRecordings();
 			}

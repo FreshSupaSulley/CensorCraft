@@ -7,15 +7,9 @@ public class EventImpl implements Event {
 	private boolean cancelled;
 	
 	@Override
-	public boolean isCancellable()
-	{
-		return true;
-	}
-	
-	@Override
 	public boolean cancel()
 	{
-		if(!isCancellable())
+		if(isCancellable())
 		{
 			return false;
 		}

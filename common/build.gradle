@@ -21,7 +21,7 @@ repositories {
 }
 
 dependencies {
-    api 'io.github.freshsupasulley:whisper-jni:0.2.0' // my fucking radically awesome custom fork
+    api 'io.github.freshsupasulley:whisper-jni:0.3.0' // my fucking radically awesome custom fork
     api 'org.slf4j:slf4j-api:2.0.16'
     
     api project(":api")

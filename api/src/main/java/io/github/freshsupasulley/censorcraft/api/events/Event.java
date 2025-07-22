@@ -5,7 +5,10 @@ public interface Event {
 	/**
 	 * @return if this event can be cancelled
 	 */
-	boolean isCancellable();
+	default boolean isCancellable()
+	{
+		return true;
+	}
 	
 	/**
 	 * Cancels this event. Does nothing if the event isn't cancellable.

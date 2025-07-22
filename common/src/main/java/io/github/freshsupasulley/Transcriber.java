@@ -29,8 +29,8 @@ class Transcriber extends Thread implements Runnable {
 	private final Path modelPath;
 	
 	private boolean running = true;
-	private Consumer<Boolean> onWarmedUp;
-	private AtomicBoolean abandonSample = new AtomicBoolean();
+	private final Consumer<Boolean> onWarmedUp;
+	private final AtomicBoolean abandonSample = new AtomicBoolean();
 	
 	private long lastTimestamp = System.currentTimeMillis();
 	
@@ -114,8 +114,6 @@ class Transcriber extends Thread implements Runnable {
 				int numRecordings = 0;
 				long firstTimestamp = 0;
 				
-				List<Runnable> runnables = new ArrayList<Runnable>();
-				
 				// Keep harvesting until there's no more recordings in the queue
 				for(Recording sample = null; (sample = recordings.poll()) != null; numRecordings++)
 				{
@@ -135,12 +133,6 @@ class Transcriber extends Thread implements Runnable {
 					// Copy samples from this recording into cumulative window
 					System.arraycopy(sample.samples(), 0, cumulativeFullWindow, sampleIndex, sampleLength);
 					sampleIndex += sampleLength;
-					
-					// Also keep track of any completables
-					if(sample.callback() != null)
-					{
-						runnables.add(sample.callback());
-					}
 				}
 				
 				// This can happen as recordings could get cleared at any time
@@ -199,20 +191,25 @@ class Transcriber extends Thread implements Runnable {
 					//
 					//					int numSegments = whisper.fullNSegments(ctx);
 					String result = whisper.vadState(ctx, state, params, new WhisperVADContextParams(), toProcess, toProcess.length);
-					JScribe.logger.debug("Raw transcription ({} recordings): {}", numRecordings, result);
 					
-					// does it need to be atomic?
-					if(!abandonSample.get())
+					if(result == null)
 					{
-						results.add(new Transcription(result, numRecordings, System.currentTimeMillis() - startTime));
+						JScribe.logger.debug("No voice activity detected");
 					}
 					else
 					{
-						JScribe.logger.debug("Abandoning sample (size {}, {} recordings)", toProcess.length, numRecordings);
+						JScribe.logger.debug("Raw transcription ({} recordings): {}", numRecordings, result);
+						
+						// does it need to be atomic?
+						if(!abandonSample.get())
+						{
+							results.add(new Transcription(result, numRecordings, System.currentTimeMillis() - startTime));
+						}
+						else
+						{
+							JScribe.logger.debug("Abandoning sample (size {}, {} recordings)", toProcess.length, numRecordings);
+						}
 					}
-					
-					// Run all success runnables
-					runnables.forEach(Runnable::run);
 					
 					// Notify we're caught up
 					lastTimestamp = firstTimestamp;
@@ -344,11 +341,11 @@ class Transcriber extends Thread implements Runnable {
 		recordings.add(recording);
 	}
 	
-	static record Recording(long timeReceived, float[] samples, Runnable callback) {
+	record Recording(long timeReceived, float[] samples) {
 		
 		public Recording(float[] samples)
 		{
-			this(System.currentTimeMillis(), samples, null);
+			this(System.currentTimeMillis(), samples);
 		}
 	}
 }

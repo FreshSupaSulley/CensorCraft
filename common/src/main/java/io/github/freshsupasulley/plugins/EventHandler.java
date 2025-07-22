@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
+import io.github.freshsupasulley.censorcraft.api.events.client.SendTranscriptionEvent;
+import io.github.freshsupasulley.plugins.impl.client.SendTranscriptionImpl;
 import org.slf4j.Logger;
 
 import io.github.freshsupasulley.censorcraft.api.events.Event;
@@ -26,6 +28,11 @@ public class EventHandler {
 	{
 		this.logger = logger;
 		this.events = events;
+	}
+	
+	public boolean onTranscriptionSend(String transcription)
+	{
+		return dispatchEvent(SendTranscriptionEvent.class, new SendTranscriptionImpl(transcription));
 	}
 	
 	public void onServerConfig(Consumer<Class<? extends Punishment>> consumer)

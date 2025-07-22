@@ -7,17 +7,11 @@ import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
 
 public class ServerConfigEventImpl extends ServerEventImpl implements ServerConfigEvent {
 	
-	private Consumer<Class<? extends Punishment>> callback;
+	private final Consumer<Class<? extends Punishment>> callback;
 	
 	public ServerConfigEventImpl(Consumer<Class<? extends Punishment>> callback)
 	{
 		this.callback = callback;
-	}
-	
-	@Override
-	public boolean isCancellable()
-	{
-		return false;
 	}
 	
 	@Override

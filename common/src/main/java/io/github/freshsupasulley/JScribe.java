@@ -251,7 +251,7 @@ public class JScribe implements UncaughtExceptionHandler {
 	{
 		if(thread != null && thread.getState() != Thread.State.NEW)
 		{
-			JScribe.logger.trace("Killing " + thread.getName());
+			JScribe.logger.trace("Killing {}", thread.getName());
 			
 			thread.join(millis);
 			
@@ -401,7 +401,7 @@ public class JScribe implements UncaughtExceptionHandler {
 	@Override
 	public void uncaughtException(Thread t, Throwable e)
 	{
-		JScribe.logger.error("JScribe ended early due to an unhandled error in thread " + t.getName(), e);
+		JScribe.logger.error("JScribe ended early due to an unhandled error in thread {}", t.getName(), e);
 		stop();
 	}
 	
@@ -485,9 +485,9 @@ public class JScribe implements UncaughtExceptionHandler {
 		}
 	}
 	
-	private static enum State
+	private enum State
 	{
-		INITIALIZING, RUNNING, STOPPING;
+		INITIALIZING, RUNNING, STOPPING
 	}
 	
 	/**

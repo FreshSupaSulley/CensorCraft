@@ -5,7 +5,7 @@ import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
 
 public class PunishEventImpl extends ServerEventImpl implements PunishEvent {
 	
-	private Punishment punishments;
+	private final Punishment punishments;
 	
 	public PunishEventImpl(Punishment punishments)
 	{
