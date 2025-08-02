@@ -262,7 +262,7 @@ shadowJar {
     archiveClassifier.set("")
     
     // Bundled Vulkan natives has this for git reasons but we don't need it in the jar
-    exclude "*.gitkeep"
+    exclude "**/.gitkeep"
     
     // Relocate external jars to limit conflictions
     relocate 'org.json', 'io.github.freshsupasulley.json'
