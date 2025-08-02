@@ -114,7 +114,7 @@ class Transcriber extends Thread implements Runnable {
 		// Now actually load the library
 		try
 		{
-			Path tempFolder = LibraryUtils.extractFolderToTemp(JScribe.logger, Transcriber.class.getClassLoader().getResource(resourceName + "-vulkan-natives").toURI());
+			Path tempFolder = LibraryUtils.extractFolderToTemp(JScribe.logger, Transcriber.class.getClassLoader().getResource("vulkan-natives/" + resourceName + "-vulkan-natives").toURI());
 			LibraryUtils.loadLibrary(JScribe.logger, tempFolder);
 			return true;
 		} catch(IOException | URISyntaxException e)
