@@ -4,10 +4,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
-import java.util.stream.Stream;
 
 import de.maxhenkel.voicechat.api.events.ClientSoundEvent;
 import io.github.freshsupasulley.JScribe;
@@ -18,8 +15,8 @@ import io.github.freshsupasulley.censorcraft.config.ClientConfig;
 import io.github.freshsupasulley.censorcraft.gui.ConfigScreen;
 import io.github.freshsupasulley.censorcraft.gui.DownloadScreen;
 import io.github.freshsupasulley.censorcraft.network.WordPacket;
+import io.github.freshsupasulley.whisperjni.LibraryUtils;
 import io.github.freshsupasulley.whisperjni.WhisperFullParams;
-import io.github.freshsupasulley.whisperjni.WhisperJNI;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.PopupScreen;
@@ -86,7 +83,7 @@ public class ClientCensorCraft {
 		try
 		{
 			vadModel = Files.createTempFile("vadModel", ".bin");
-			WhisperJNI.exportVADModel(CensorCraft.LOGGER, vadModel);
+			LibraryUtils.exportVADModel(vadModel);
 		} catch(IOException e)
 		{
 			CensorCraft.LOGGER.error("Failed to extract VAD model", e);
@@ -274,13 +271,6 @@ public class ClientCensorCraft {
 		stopJScribe();
 	}
 	
-	// @SubscribeEvent
-	// public static void onRespawn(PlayerEvent.PlayerRespawnEvent event)
-	// {
-	// CensorCraft.LOGGER.info("Player respawned");
-	// startJScribe();
-	// }
-	
 	/**
 	 * Every (client) tick, JScribe should be running. If it's not, we need to signal that to the user.
 	 * 
@@ -453,59 +443,6 @@ public class ClientCensorCraft {
 			CensorCraft.channel.send(new WordPacket(""), PacketDistributor.SERVER.noArg());
 		}
 	}
-	
-	/**
-	 * Returns RGB representing the probability of a token. Splits it into green (high probability), yellow (medium), and red (low).
-	 * 
-	 * @param p probability
-	 * @return RGb
-	 */
-	public static int probabilityColor(float p)
-	{
-		// clamp to [0, 1]
-		if(p < 0f)
-			p = 0f;
-		else if(p > 1f)
-			p = 1f;
-		
-		if(p < 1f / 3f)
-		{
-			return 0xFF0000;
-		}
-		else if(p < 2f / 3f)
-		{
-			return 0xFFFF00;
-		}
-		else
-		{
-			return 0x00FF00;
-		}
-	}
-	
-	// private static String appendResult(String word)
-	// {
-	// // Separate words with spaces
-	// String string = word + " ";
-	//
-	// if(string.length() >= transcription.capacity())
-	// {
-	// transcription.setLength(0);
-	// transcription.append(string.substring(string.length() - transcription.capacity()));
-	// }
-	// else
-	// {
-	// int overflow = transcription.length() + string.length() - transcription.capacity();
-	//
-	// if(overflow > 0)
-	// {
-	// transcription.delete(0, overflow);
-	// }
-	//
-	// transcription.append(string);
-	// }
-	//
-	// return transcription.toString();
-	// }
 	
 	private static void setGUIText(MutableComponent component, boolean forceRefresh)
 	{

@@ -1,0 +1,5 @@
+# Don't include the Vulkan natives
+src/main/resources/**/*.so
+src/main/resources/**/*.so.*
+src/main/resources/**/*.dylib
+src/main/resources/**/*.dll

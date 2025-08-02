@@ -3,13 +3,9 @@
  */
 package io.github.freshsupasulley;
 
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.ExecutionException;
-
-import javax.sound.sampled.UnsupportedAudioFileException;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
@@ -17,12 +13,8 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.github.freshsupasulley.whisperjni.WhisperFullParams;
-import io.github.freshsupasulley.whisperjni.WhisperJNI;
-
 class JScribeTest {
 	
-	private static Path jfk = Path.of("src/main/resources/jfk.wav");
 	private static Path testModel = Path.of("src/test/resources/base.en.bin");
 	private static Logger logger = LoggerFactory.getLogger(JScribeTest.class);
 	

@@ -1,6 +1,7 @@
 package io.github.freshsupasulley;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -8,10 +9,14 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
-import io.github.freshsupasulley.whisperjni.*;
-import org.slf4j.Logger;
-
 import io.github.freshsupasulley.Transcriptions.Transcription;
+import io.github.freshsupasulley.whisperjni.LibraryUtils;
+import io.github.freshsupasulley.whisperjni.TokenData;
+import io.github.freshsupasulley.whisperjni.WhisperContext;
+import io.github.freshsupasulley.whisperjni.WhisperFullParams;
+import io.github.freshsupasulley.whisperjni.WhisperJNI;
+import io.github.freshsupasulley.whisperjni.WhisperState;
+import io.github.freshsupasulley.whisperjni.WhisperVADContextParams;
 
 /**
  * Transcriber waits for new audio samples and processes them into text segments using {@linkplain WhisperJNI}.
@@ -34,7 +39,7 @@ class Transcriber extends Thread implements Runnable {
 	
 	private long lastTimestamp = System.currentTimeMillis();
 	
-	public Transcriber(Logger logger, Path modelPath, WhisperFullParams params, boolean useVulkan, Consumer<Boolean> onWarmedUp)
+	public Transcriber(Path modelPath, WhisperFullParams params, boolean useVulkan, Consumer<Boolean> onWarmedUp)
 	{
 		this.params = params;
 		this.modelPath = modelPath;
@@ -45,22 +50,77 @@ class Transcriber extends Thread implements Runnable {
 		
 		try
 		{
-			if(useVulkan && WhisperJNI.canUseVulkan())
+			// If we should use the standard natives OR we failed to load Vulkan
+			if(!useVulkan || !tryLoadVulkan())
 			{
-				WhisperJNI.loadVulkan(JScribe.logger);
-			}
-			else
-			{
-				JScribe.logger.info("Loading built-in whisper-jni natives");
-				
-				WhisperJNI.loadLibrary(JScribe.logger);
+				whisper.loadLibrary(JScribe.logger);
 			}
 			
-			whisper.setWhisperLogger(logger);
-		} catch(IOException | UnsatisfiedLinkError e)
+			var logger = new DebugLogger(JScribe.logger);
+			WhisperJNI.setLogger(logger); // use a logger wrapper because whisper logs are very verbose for VAD and idk how to configure logback from within a mod
+		} catch(IOException e) // unsatisfiedlink errors should be wrapped into IOException
 		{
-			JScribe.logger.error("An error occurred loading natives (platform: {}, arch: {})", System.getProperty("os.name"), System.getProperty("os.arch"), e);
+			JScribe.logger.error("An error occurred loading natives (platform: {}, arch: {})", LibraryUtils.OS_NAME, LibraryUtils.OS_ARCH, e);
 			throw new RuntimeException(e); // signals to JScribe to stop?
+		}
+	}
+	
+	private boolean tryLoadVulkan()
+	{
+		// Find the matching Vulkan natives folder name
+		String resourceName = null;
+		
+		// We are only bundling certain natives into the library. Mac is notably excluded because Metal is already very fast on Apple Silicon at least...
+		switch(LibraryUtils.getArchitecture())
+		{
+			case "x64":
+			{
+				if(LibraryUtils.isLinux())
+				{
+					resourceName = "linux-x64";
+				}
+				else if(LibraryUtils.isWindows())
+				{
+					resourceName = "windows-x64";
+				}
+				
+				break;
+			}
+			case "arm64":
+			{
+				if(LibraryUtils.isLinux())
+				{
+					resourceName = "linux-arm64";
+				}
+			}
+		}
+		
+		if(resourceName == null)
+		{
+			JScribe.logger.warn("Vulkan natives aren't available for this machine");
+			return false;
+		}
+		
+		if(LibraryUtils.findAndLoadVulkanRuntime())
+		{
+			JScribe.logger.info("Loaded the Vulkan runtime");
+		}
+		else
+		{
+			JScribe.logger.warn("Couldn't find a Vulkan runtime");
+			return false;
+		}
+		
+		// Now actually load the library
+		try
+		{
+			Path tempFolder = LibraryUtils.extractFolderToTemp(JScribe.logger, Transcriber.class.getClassLoader().getResource(resourceName + "-vulkan-natives").toURI());
+			LibraryUtils.loadLibrary(JScribe.logger, tempFolder);
+			return true;
+		} catch(IOException | URISyntaxException e)
+		{
+			JScribe.logger.error("Failed to load the Vulkan natives", e);
+			return false;
 		}
 	}
 	
@@ -181,15 +241,15 @@ class Transcriber extends Thread implements Runnable {
 				try(WhisperState state = whisper.initState(ctx))
 				{
 					// Pass samples to whisper
-					//					int result = whisper.full(ctx, params, toProcess, toProcess.length);
+					// int result = whisper.full(ctx, params, toProcess, toProcess.length);
 					//
-					//					if(result != 0)
-					//					{
-					//						JScribe.logger.error("Whisper failed with code {}", result);
-					//						continue;
-					//					}
+					// if(result != 0)
+					// {
+					// JScribe.logger.error("Whisper failed with code {}", result);
+					// continue;
+					// }
 					//
-					//					int numSegments = whisper.fullNSegments(ctx);
+					// int numSegments = whisper.fullNSegments(ctx);
 					String result = whisper.vadState(ctx, state, params, new WhisperVADContextParams(), toProcess, toProcess.length);
 					
 					if(result == null)

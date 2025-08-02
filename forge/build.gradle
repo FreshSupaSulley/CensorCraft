@@ -89,8 +89,8 @@ minecraft {
 
             // Recommended for development - enables more descriptive errors at the cost of slower startup and registration.
             property 'eventbus.api.strictRuntimeChecks', 'true'
-
-//            arg "-mixin.config=${mod_id}.mixins.json"
+            // does this even do anything
+            //arg "-mixin.config=${mod_id}.mixins.json"
         }
 
         client {
@@ -162,7 +162,7 @@ repositories {
             includeGroupAndSubgroups('org.spongepowered')
         }
     }
-
+    
     // If you have mod jar dependencies in ./libs, you can declare them as a repository like so.
     // See https://docs.gradle.org/current/userguide/declaring_repositories.html#sub:flat_dir_resolver
     // flatDir {
@@ -261,13 +261,11 @@ shadowJar {
 	// Set classifier to an empty string (final jar name)
     archiveClassifier.set("")
     
-    //exclude "*.md"
+    // Bundled Vulkan natives has this for git reasons but we don't need it in the jar
+    exclude "*.gitkeep"
     
     // Relocate external jars to limit conflictions
-    //relocate 'net.lingala.zip4j', 'io.github.freshsupasulley.zip4j'
     relocate 'org.json', 'io.github.freshsupasulley.json'
-    // I'm not relocating whisperjni because that would fuck up JNI. We're banking on this decision not breaking anything
-    //relocate 'io.github.givimad.whisperjni', 'com.supasulley.whisperjni'
     
     // Only shade dependencies go into fat jar
     configurations = [project.configurations.shade]

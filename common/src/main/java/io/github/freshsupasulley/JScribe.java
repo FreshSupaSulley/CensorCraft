@@ -38,7 +38,6 @@ import org.slf4j.LoggerFactory;
 
 import io.github.freshsupasulley.Transcriber.Recording;
 import io.github.freshsupasulley.whisperjni.WhisperFullParams;
-import io.github.freshsupasulley.whisperjni.WhisperJNI;
 
 /**
  * The entry point of the JScribe library.
@@ -178,7 +177,7 @@ public class JScribe implements UncaughtExceptionHandler {
 			
 			logger.info("Starting JScribe");
 			
-			transcriber = new Transcriber(logger, modelPath, params, useVulkan, (status) -> state = State.RUNNING);
+			transcriber = new Transcriber(modelPath, params, useVulkan, (status) -> state = State.RUNNING);
 			
 			// Report errors to this thread
 			transcriber.setUncaughtExceptionHandler(this);
@@ -458,18 +457,12 @@ public class JScribe implements UncaughtExceptionHandler {
 		}
 		
 		/**
-		 * Enables Vulkan support <b>only</b> if using Windows AMD 64.
+		 * Prefer the Vulkan natives.
 		 * 
 		 * @return this, for chaining
 		 */
 		public Builder useVulkan()
 		{
-			if(!WhisperJNI.canUseVulkan())
-			{
-				logger.error("Can't use Vulkan, wrong platform / arch");
-				return this;
-			}
-			
 			this.vulkan = true;
 			return this;
 		}
