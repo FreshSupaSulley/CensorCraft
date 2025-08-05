@@ -22,7 +22,7 @@ repositories {
 
 dependencies {
     //api files("whisper-jni-0.4.0-sources.jar")
-    api 'io.github.freshsupasulley:whisper-jni:0.5.2' // my fucking radically awesome custom fork
+    api 'io.github.freshsupasulley:whisper-jni:0.5.5' // my fucking radically awesome custom fork
     api 'org.slf4j:slf4j-api:2.0.16'
     
     api project(":api")

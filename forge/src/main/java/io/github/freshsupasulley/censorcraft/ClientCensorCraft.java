@@ -83,7 +83,7 @@ public class ClientCensorCraft {
 		try
 		{
 			vadModel = Files.createTempFile("vadModel", ".bin");
-			LibraryUtils.exportVADModel(vadModel);
+			LibraryUtils.exportVADModel(CensorCraft.LOGGER, vadModel);
 		} catch(IOException e)
 		{
 			CensorCraft.LOGGER.error("Failed to extract VAD model", e);
