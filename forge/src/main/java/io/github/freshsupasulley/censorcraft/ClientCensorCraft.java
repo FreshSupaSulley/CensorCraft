@@ -41,9 +41,6 @@ import net.minecraftforge.network.PacketDistributor;
 @Mod.EventBusSubscriber(modid = CensorCraft.MODID, value = Dist.CLIENT)
 public class ClientCensorCraft {
 	
-	// JScribe
-	public static boolean librariesLoaded; // used for telling the player if we already loaded JScribe natives and they need to restart mc
-	
 	private static JScribe controller;
 	private static Path model;
 	private static boolean monitorVoice;
@@ -174,7 +171,6 @@ public class ClientCensorCraft {
 		// Model might have changed, might as well reinstantiate
 		try
 		{
-			librariesLoaded = true;
 			controller.start();
 		} catch(Exception e)
 		{

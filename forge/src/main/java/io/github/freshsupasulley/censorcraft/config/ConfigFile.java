@@ -153,7 +153,7 @@ public abstract class ConfigFile {
 	void addComment(String key, String... comments)
 	{
 		// I like a space between the pound and the comment
-		this.comments.computeIfAbsent(key, list -> new ArrayList<String>(comments.length)).addAll(Stream.of(comments).map(comment -> " " + comment).toList());
+		this.comments.computeIfAbsent(key, list -> new ArrayList<>(comments.length)).addAll(Stream.of(comments).map(comment -> " " + comment).toList());
 	}
 	
 	abstract void register(ConfigSpec spec);

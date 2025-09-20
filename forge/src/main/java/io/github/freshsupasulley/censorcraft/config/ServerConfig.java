@@ -12,6 +12,7 @@ import com.electronwill.nightconfig.core.CommentedConfig;
 import com.electronwill.nightconfig.core.ConfigSpec;
 
 import io.github.freshsupasulley.censorcraft.CensorCraft;
+import io.github.freshsupasulley.censorcraft.api.events.server.ServerConfigEvent;
 import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
 import io.github.freshsupasulley.censorcraft.config.punishments.Commands;
 import io.github.freshsupasulley.censorcraft.config.punishments.Crash;
@@ -23,6 +24,8 @@ import io.github.freshsupasulley.censorcraft.config.punishments.Kill;
 import io.github.freshsupasulley.censorcraft.config.punishments.Lightning;
 import io.github.freshsupasulley.censorcraft.config.punishments.MobEffects;
 import io.github.freshsupasulley.censorcraft.config.punishments.Teleport;
+import io.github.freshsupasulley.plugins.impl.CensorCraftServerAPIImpl;
+import io.github.freshsupasulley.plugins.impl.server.ServerConfigEventImpl;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.storage.LevelResource;
 import net.minecraftforge.event.server.ServerAboutToStartEvent;
@@ -43,6 +46,9 @@ public class ServerConfig extends ConfigFile {
 	private static void serverSetup(ServerAboutToStartEvent event)
 	{
 		SERVER = new ServerConfig(event.getServer());
+		// Now the plugins can see the API impl
+		CensorCraftServerAPIImpl.INSTANCE = new CensorCraftServerAPIImpl(SERVER.config);
+		CensorCraft.events.dispatchEvent(ServerConfigEvent.class, new ServerConfigEventImpl());
 	}
 	
 	public static ServerConfig get()
@@ -57,7 +63,7 @@ public class ServerConfig extends ConfigFile {
 	
 	/**
 	 * Ripped from {@link ServerLifecycleHooks}.
-	 * 
+	 *
 	 * @param server MC server
 	 * @return path to server config file
 	 */
@@ -152,7 +158,7 @@ public class ServerConfig extends ConfigFile {
 	@Override
 	void register(ConfigSpec spec)
 	{
-		define("global_taboos", new ArrayList<>(List.of("boom")), "List of forbidden words and phrases (case-insensitive)", "All enabled punishments will fire when they are spoken");
+		define("global_taboos", List.of("boom"), "List of forbidden words and phrases (case-insensitive)", "All enabled punishments will fire when they are spoken");
 		define("preferred_model", "base.en", "Name of the transcription model players need to use (determines the language and accuracy)", "Better models have larger file sizes. Clients have tiny.en built-in. See https://github.com/ggml-org/whisper.cpp/blob/master/models/README.md#available-models for available models");
 		defineInRange("context_length", 3D, 0D, Double.MAX_VALUE, "Maximum amount of time (in seconds) an individual audio recording is. The higher the value, the more intensive on players PCs", "Enter a number to at least 1 decimal place!");
 		defineInRange("punishment_cooldown", 0D, 0D, Double.MAX_VALUE, "Delay (in seconds) before a player can be punished again", "Enter a number to at least 1 decimal place!");
@@ -162,11 +168,11 @@ public class ServerConfig extends ConfigFile {
 		define("monitor_chat", true, "Punish players for sending taboos to chat");
 		
 		// Punishments are special. They are an array of tables
-		List<Punishment> totalPunishments = new ArrayList<Punishment>();
+		List<Punishment> totalPunishments = new ArrayList<>();
 		
 		// First assemble all plugin-defined punishments
 		// This fires an event to (all? test more than one) plugin(s)
-		CensorCraft.events.onServerConfig(sample -> safeInstantiation(sample, totalPunishments::add));
+		CensorCraft.punishments.forEach(sample -> safeInstantiation(sample, totalPunishments::add));
 		
 		// Now add the default punishments below the plugin-defined ones ig
 		// maybe this could be a cancellable event in the future?

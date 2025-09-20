@@ -10,6 +10,6 @@ public class ServerEventImpl extends EventImpl implements ServerEvent {
 	@Override
 	public CensorCraftServerAPI getAPI()
 	{
-		return CensorCraftServerAPIImpl.instance();
+		return CensorCraftServerAPIImpl.INSTANCE;
 	}
 }

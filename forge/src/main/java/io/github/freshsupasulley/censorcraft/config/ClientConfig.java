@@ -5,6 +5,7 @@ import com.electronwill.nightconfig.core.ConfigSpec;
 import io.github.freshsupasulley.censorcraft.CensorCraft;
 import io.github.freshsupasulley.censorcraft.ClientCensorCraft;
 import io.github.freshsupasulley.censorcraft.gui.ConfigScreen;
+import io.github.freshsupasulley.plugins.impl.CensorCraftClientAPIImpl;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.listener.SubscribeEvent;
@@ -26,6 +27,7 @@ public class ClientConfig extends ConfigFile {
 	{
 		MinecraftForge.registerConfigScreen((minecraft, screen) -> new ConfigScreen(minecraft, screen));
 		CLIENT = new ClientConfig();
+		CensorCraftClientAPIImpl.INSTANCE = new CensorCraftClientAPIImpl(CLIENT.config);
 	}
 	
 	public static ClientConfig get()
@@ -86,11 +88,6 @@ public class ClientConfig extends ConfigFile {
 	public int getGUIX()
 	{
 		return config.get("gui_x");
-	}
-	
-	public void setGUIX(int val)
-	{
-		config.set("gui_x", val);
 	}
 	
 	// Whisper JNI VAD settings

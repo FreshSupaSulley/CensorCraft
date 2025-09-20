@@ -21,10 +21,11 @@ import io.github.freshsupasulley.whisperjni.WhisperVADContextParams;
 /**
  * Transcriber waits for new audio samples and processes them into text segments using {@linkplain WhisperJNI}.
  */
-class Transcriber extends Thread implements Runnable {
+public class Transcriber extends Thread implements Runnable {
 	
 	// Maximum length a single transcription request can be
 	private static final int MAX_LENGTH_MS = 30000;
+	public static boolean libraryLoaded = false;
 	
 	private final WhisperJNI whisper = new WhisperJNI();
 	private final LinkedBlockingQueue<Recording> recordings = new LinkedBlockingQueue<Recording>();
@@ -48,6 +49,12 @@ class Transcriber extends Thread implements Runnable {
 		setName("JScribe Transcriber");
 		setDaemon(true);
 		
+		if(libraryLoaded)
+		{
+			JScribe.logger.info("whisper-jni already loaded");
+			return;
+		}
+		
 		try
 		{
 			// If we should use the standard natives OR we failed to load Vulkan
@@ -58,6 +65,7 @@ class Transcriber extends Thread implements Runnable {
 			
 			var logger = new DebugLogger(JScribe.logger);
 			WhisperJNI.setLogger(logger); // use a logger wrapper because whisper logs are very verbose for VAD and idk how to configure logback from within a mod
+			libraryLoaded = true;
 		} catch(IOException e) // unsatisfiedlink errors should be wrapped into IOException
 		{
 			JScribe.logger.error("An error occurred loading natives (platform: {}, arch: {})", LibraryUtils.OS_NAME, LibraryUtils.OS_ARCH, e);

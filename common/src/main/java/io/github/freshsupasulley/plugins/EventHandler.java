@@ -6,23 +6,26 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
+import io.github.freshsupasulley.censorcraft.api.CensorCraftServerAPI;
 import io.github.freshsupasulley.censorcraft.api.events.client.SendTranscriptionEvent;
+import io.github.freshsupasulley.censorcraft.api.events.server.ServerConfigEvent;
 import io.github.freshsupasulley.plugins.impl.client.SendTranscriptionImpl;
+import io.github.freshsupasulley.plugins.impl.server.ServerConfigEventImpl;
 import org.slf4j.Logger;
 
 import io.github.freshsupasulley.censorcraft.api.events.Event;
 import io.github.freshsupasulley.censorcraft.api.events.client.ClientAcknowledgePunish;
 import io.github.freshsupasulley.censorcraft.api.events.server.PunishEvent;
-import io.github.freshsupasulley.censorcraft.api.events.server.ServerConfigEvent;
 import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
 import io.github.freshsupasulley.plugins.impl.client.ClientAcknowledgePunishImpl;
 import io.github.freshsupasulley.plugins.impl.server.PunishEventImpl;
-import io.github.freshsupasulley.plugins.impl.server.ServerConfigEventImpl;
 
 public class EventHandler {
 	
 	private Logger logger;
 	private final Map<Class<? extends Event>, List<Consumer<? extends Event>>> events;
+	
+	public static CensorCraftServerAPI serverAPI;
 	
 	private EventHandler(Logger logger, Map<Class<? extends Event>, List<Consumer<? extends Event>>> events)
 	{
@@ -33,11 +36,6 @@ public class EventHandler {
 	public boolean onTranscriptionSend(String transcription)
 	{
 		return dispatchEvent(SendTranscriptionEvent.class, new SendTranscriptionImpl(transcription));
-	}
-	
-	public void onServerConfig(Consumer<Class<? extends Punishment>> consumer)
-	{
-		dispatchEvent(ServerConfigEvent.class, new ServerConfigEventImpl(consumer));
 	}
 	
 	public boolean onPunish(Punishment punishments)
@@ -58,7 +56,7 @@ public class EventHandler {
 	 * @param event      event instance
 	 * @return true if the event was fired, false if cancelled
 	 */
-	private <T extends Event> boolean dispatchEvent(Class<? extends T> eventClass, T event)
+	public <T extends Event> boolean dispatchEvent(Class<? extends T> eventClass, T event)
 	{
 		List<Consumer<? extends Event>> events = this.events.get(eventClass);
 		

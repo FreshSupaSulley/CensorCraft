@@ -10,6 +10,6 @@ public class ClientEventImpl extends EventImpl implements ClientEvent {
 	@Override
 	public CensorCraftClientAPI getAPI()
 	{
-		return CensorCraftClientAPIImpl.instance();
+		return CensorCraftClientAPIImpl.INSTANCE;
 	}
 }

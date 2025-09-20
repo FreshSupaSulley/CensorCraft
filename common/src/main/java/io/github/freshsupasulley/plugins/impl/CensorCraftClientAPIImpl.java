@@ -1,17 +1,24 @@
 package io.github.freshsupasulley.plugins.impl;
 
+import com.electronwill.nightconfig.core.file.CommentedFileConfig;
 import io.github.freshsupasulley.censorcraft.api.CensorCraftClientAPI;
 
 public class CensorCraftClientAPIImpl implements CensorCraftClientAPI {
 	
-	public static final CensorCraftClientAPI INSTANCE = new CensorCraftClientAPIImpl();
+	// Global instance
+	public static CensorCraftClientAPI INSTANCE;
 	
-	private CensorCraftClientAPIImpl()
+	// Begin instance variables
+	private final CommentedFileConfig config;
+	
+	public CensorCraftClientAPIImpl(CommentedFileConfig config)
 	{
+		this.config = config;
 	}
 	
-	public static CensorCraftClientAPI instance()
+	@Override
+	public CommentedFileConfig getClientConfig()
 	{
-		return INSTANCE;
+		return config;
 	}
 }

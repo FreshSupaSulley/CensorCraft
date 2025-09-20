@@ -1,5 +1,7 @@
 package io.github.freshsupasulley.censorcraft.gui;
 
+import io.github.freshsupasulley.JScribe;
+import io.github.freshsupasulley.Transcriber;
 import io.github.freshsupasulley.censorcraft.ClientCensorCraft;
 import io.github.freshsupasulley.censorcraft.config.ClientConfig;
 import net.minecraft.Util;
@@ -107,7 +109,7 @@ public class ConfigScreen extends Screen {
 		{
 			ClientConfig.get().setUseVulkan(value);
 			
-			if(ClientCensorCraft.librariesLoaded)
+			if(Transcriber.libraryLoaded)
 			{
 				minecraft.setScreen(new PopupScreen.Builder(this, Component.literal("Requires restart")).setMessage(Component.literal("Libraries are already loaded. Restart Minecraft for changes to take effect.")).addButton(CommonComponents.GUI_OK, PopupScreen::onClose).build());
 			}
