@@ -11,10 +11,12 @@ import io.github.freshsupasulley.JScribe;
 import io.github.freshsupasulley.Model;
 import io.github.freshsupasulley.RollingAudioBuffer;
 import io.github.freshsupasulley.Transcriptions;
+import io.github.freshsupasulley.censorcraft.api.events.client.SendTranscriptionEvent;
 import io.github.freshsupasulley.censorcraft.config.ClientConfig;
 import io.github.freshsupasulley.censorcraft.gui.ConfigScreen;
 import io.github.freshsupasulley.censorcraft.gui.DownloadScreen;
 import io.github.freshsupasulley.censorcraft.network.WordPacket;
+import io.github.freshsupasulley.plugins.impl.client.SendTranscriptionImpl;
 import io.github.freshsupasulley.whisperjni.LibraryUtils;
 import io.github.freshsupasulley.whisperjni.WhisperFullParams;
 import net.minecraft.Util;
@@ -269,7 +271,7 @@ public class ClientCensorCraft {
 	
 	/**
 	 * Every (client) tick, JScribe should be running. If it's not, we need to signal that to the user.
-	 * 
+	 *
 	 * @param event {@linkplain LevelTickEvent}
 	 */
 	@SubscribeEvent
@@ -367,7 +369,7 @@ public class ClientCensorCraft {
 				// Configure what to send
 				String raw = processBuffer.toString();
 				
-				if(CensorCraft.events.onTranscriptionSend(raw))
+				if(CensorCraft.events.dispatchEvent(SendTranscriptionEvent.class, new SendTranscriptionImpl(raw)))
 				{
 					CensorCraft.LOGGER.info("Sending \"{}\"", raw);
 					lastWordPacket = System.currentTimeMillis();
@@ -453,7 +455,7 @@ public class ClientCensorCraft {
 	
 	/**
 	 * Restarts JScribe. The model needs to exist!
-	 * 
+	 *
 	 * @param model name of model in model dir
 	 */
 	public static void setup(Path model, boolean monitorVoice, long audioContextLength)

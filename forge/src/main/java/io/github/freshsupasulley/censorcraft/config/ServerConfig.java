@@ -158,13 +158,13 @@ public class ServerConfig extends ConfigFile {
 	@Override
 	void register(ConfigSpec spec)
 	{
-		define("global_taboos", List.of("boom"), "List of forbidden words and phrases (case-insensitive)", "All enabled punishments will fire when they are spoken");
+		defineList("global_taboos", List.of("boom"), "List of forbidden words and phrases (case-insensitive)", "All enabled punishments will fire when they are spoken");
 		define("preferred_model", "base.en", "Name of the transcription model players need to use (determines the language and accuracy)", "Better models have larger file sizes. Clients have tiny.en built-in. See https://github.com/ggml-org/whisper.cpp/blob/master/models/README.md#available-models for available models");
 		defineInRange("context_length", 3D, 0D, Double.MAX_VALUE, "Maximum amount of time (in seconds) an individual audio recording is. The higher the value, the more intensive on players PCs", "Enter a number to at least 1 decimal place!");
 		defineInRange("punishment_cooldown", 0D, 0D, Double.MAX_VALUE, "Delay (in seconds) before a player can be punished again", "Enter a number to at least 1 decimal place!");
 		define("chat_taboos", true, "When someone is punished, send what the player said to chat");
 		define("isolate_words", true, "If true, only whole words are considered (surrounded by spaces or word boundaries). If false, partial matches are allowed (e.g., 'art' triggers punishment for 'start')");
-		define("monitor_voice", true, "Punish players for speaking taboos into their mic");
+		define("monitor_voice", true, "Punish players for speaking taboos into their mic", "You can disable this in favor of monitor_chat instead");
 		define("monitor_chat", true, "Punish players for sending taboos to chat");
 		
 		// Punishments are special. They are an array of tables

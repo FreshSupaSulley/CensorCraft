@@ -1,24 +1,14 @@
 package io.github.freshsupasulley.plugins;
 
+import io.github.freshsupasulley.censorcraft.api.CensorCraftServerAPI;
+import io.github.freshsupasulley.censorcraft.api.events.Event;
+import org.slf4j.Logger;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
-
-import io.github.freshsupasulley.censorcraft.api.CensorCraftServerAPI;
-import io.github.freshsupasulley.censorcraft.api.events.client.SendTranscriptionEvent;
-import io.github.freshsupasulley.censorcraft.api.events.server.ServerConfigEvent;
-import io.github.freshsupasulley.plugins.impl.client.SendTranscriptionImpl;
-import io.github.freshsupasulley.plugins.impl.server.ServerConfigEventImpl;
-import org.slf4j.Logger;
-
-import io.github.freshsupasulley.censorcraft.api.events.Event;
-import io.github.freshsupasulley.censorcraft.api.events.client.ClientAcknowledgePunish;
-import io.github.freshsupasulley.censorcraft.api.events.server.PunishEvent;
-import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
-import io.github.freshsupasulley.plugins.impl.client.ClientAcknowledgePunishImpl;
-import io.github.freshsupasulley.plugins.impl.server.PunishEventImpl;
 
 public class EventHandler {
 	
@@ -31,21 +21,6 @@ public class EventHandler {
 	{
 		this.logger = logger;
 		this.events = events;
-	}
-	
-	public boolean onTranscriptionSend(String transcription)
-	{
-		return dispatchEvent(SendTranscriptionEvent.class, new SendTranscriptionImpl(transcription));
-	}
-	
-	public boolean onPunish(Punishment punishments)
-	{
-		return dispatchEvent(PunishEvent.class, new PunishEventImpl(punishments));
-	}
-	
-	public void onClientReceivePunish(String... punishment)
-	{
-		dispatchEvent(ClientAcknowledgePunish.class, new ClientAcknowledgePunishImpl(punishment));
 	}
 	
 	/**

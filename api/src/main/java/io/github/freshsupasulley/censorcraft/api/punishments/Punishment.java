@@ -9,7 +9,10 @@ import java.util.stream.Stream;
 import com.electronwill.nightconfig.core.CommentedConfig;
 
 /**
- * Defines a punishment type.
+ * Defines a punishment.
+ *
+ * <p>Extend this class to define your own punishments. There are helper methods here to define options for your
+ * punishment that appear in the server config file.</p>
  */
 public abstract class Punishment {
 	

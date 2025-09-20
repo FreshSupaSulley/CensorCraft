@@ -24,10 +24,11 @@ import net.minecraftforge.fml.config.ModConfig;
 
 /**
  * A custom config file handler, because Forge is lacking support for array of tables.
- * 
+ *
  * <h1>KNOWN QUIRKS:</h1>
  * <p>
- * Pretty much exclusively use int and double, as that's what NightConfig likes. If not, the config will come back as incorrect every reload.
+ * Pretty much exclusively use int and double, as that's what NightConfig likes. If not, the config will come back as
+ * incorrect every reload.
  * </p>
  */
 public abstract class ConfigFile {
@@ -55,8 +56,7 @@ public abstract class ConfigFile {
 		boolean newFile = Files.notExists(configFile);
 		
 		// This creates the file due to the default onFileNotFound
-		config = CommentedFileConfig.builder(configFile).autosave().autoreload().sync().preserveInsertionOrder().onLoadFilter(new ConfigLoadFilter()
-		{
+		config = CommentedFileConfig.builder(configFile).autosave().autoreload().sync().preserveInsertionOrder().onLoadFilter(new ConfigLoadFilter() {
 			
 			@Override
 			public boolean acceptNewVersion(CommentedConfig newConfig)
@@ -102,7 +102,7 @@ public abstract class ConfigFile {
 	
 	/**
 	 * Convenience method to bundle defining a value and a comment.
-	 * 
+	 *
 	 * @param <E>      value type
 	 * @param key      config key
 	 * @param value    initial value
@@ -115,8 +115,22 @@ public abstract class ConfigFile {
 	}
 	
 	/**
+	 * Convenience method to bundle defining a list and a comment.
+	 *
+	 * @param key      config key
+	 * @param value    initial value
+	 * @param comments config comments
+	 * @param <E>      value type
+	 */
+	final <E> void defineList(String key, List<E> value, String... comments)
+	{
+		spec.defineList(key, value, predicate -> true);
+		addComment(key, comments);
+	}
+	
+	/**
 	 * Convenience method to define a value within a range.
-	 * 
+	 *
 	 * @param <T>          {@link Comparable} type
 	 * @param key          config key
 	 * @param defaultValue initial value (must be within the range)
@@ -146,7 +160,7 @@ public abstract class ConfigFile {
 	
 	/**
 	 * Convenience method to add a multi-line comment.
-	 * 
+	 *
 	 * @param key      key
 	 * @param comments list of comments
 	 */

@@ -8,9 +8,13 @@ import java.util.Map;
 import java.util.UUID;
 
 import io.github.freshsupasulley.censorcraft.CensorCraft;
+import io.github.freshsupasulley.censorcraft.api.events.server.PunishEvent;
+import io.github.freshsupasulley.censorcraft.api.events.server.ReceiveTranscription;
 import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
 import io.github.freshsupasulley.censorcraft.api.punishments.Trie;
 import io.github.freshsupasulley.censorcraft.config.ServerConfig;
+import io.github.freshsupasulley.plugins.impl.server.PunishEventImpl;
+import io.github.freshsupasulley.plugins.impl.server.ReceiveTranscriptionImpl;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.StreamCodec;
@@ -26,8 +30,7 @@ import net.minecraftforge.fml.common.Mod;
 @Mod.EventBusSubscriber(modid = CensorCraft.MODID)
 public class WordPacket implements IPacket {
 	
-	public static final StreamCodec<RegistryFriendlyByteBuf, WordPacket> CODEC = new StreamCodec<RegistryFriendlyByteBuf, WordPacket>()
-	{
+	public static final StreamCodec<RegistryFriendlyByteBuf, WordPacket> CODEC = new StreamCodec<RegistryFriendlyByteBuf, WordPacket>() {
 		
 		@Override
 		public void encode(RegistryFriendlyByteBuf buffer, WordPacket packet)
@@ -64,6 +67,12 @@ public class WordPacket implements IPacket {
 	
 	public void consume(ServerPlayer player)
 	{
+		if(!CensorCraft.events.dispatchEvent(ReceiveTranscription.class, new ReceiveTranscriptionImpl(player.getUUID(), payload)))
+		{
+			CensorCraft.LOGGER.debug("Receive transcription event was cancelled");
+			return;
+		}
+		
 		Participant participant = participants.get(player.getUUID());
 		
 		// Put into heartbeat map
@@ -123,10 +132,7 @@ public class WordPacket implements IPacket {
 					options.add(option);
 					
 					// If it wasn't cancelled
-					if(CensorCraft.events.onPunish(option))
-					{
-						punish(option, player);
-					}
+					punish(option, player);
 				}
 			}
 			
@@ -158,10 +164,7 @@ public class WordPacket implements IPacket {
 						}
 						
 						// If it wasn't cancelled
-						if(CensorCraft.events.onPunish(option))
-						{
-							punish(option, player);
-						}
+						punish(option, player);
 					}
 				}
 			}
@@ -177,6 +180,10 @@ public class WordPacket implements IPacket {
 	
 	private void punish(Punishment option, ServerPlayer player)
 	{
+		// If this was cancelled, don't punish the player
+		if(!CensorCraft.events.dispatchEvent(PunishEvent.class, new PunishEventImpl(player.getUUID(), option)))
+			return;
+		
 		CensorCraft.LOGGER.info("Invoking punishment '{}' onto player '{}'", option.getName(), player.getUUID());
 		
 		try

@@ -1,16 +1,18 @@
 package io.github.freshsupasulley.censorcraft.network;
 
-import java.nio.charset.Charset;
-import java.util.Arrays;
-import java.util.List;
-
 import io.github.freshsupasulley.censorcraft.CensorCraft;
 import io.github.freshsupasulley.censorcraft.ClientCensorCraft;
+import io.github.freshsupasulley.censorcraft.api.events.client.ClientAcknowledgePunish;
 import io.github.freshsupasulley.censorcraft.config.punishments.Crash;
+import io.github.freshsupasulley.plugins.impl.client.ClientAcknowledgePunishImpl;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.event.network.CustomPayloadEvent.Context;
+
+import java.nio.charset.Charset;
+import java.util.Arrays;
+import java.util.List;
 
 public class PunishedPacket implements IPacket {
 	
@@ -56,7 +58,7 @@ public class PunishedPacket implements IPacket {
 		CensorCraft.LOGGER.info("Received punished packet: {}", Arrays.toString(punishments));
 		
 		// Notify any APIs that we're now in the client-side
-		CensorCraft.events.onClientReceivePunish(punishments);
+		CensorCraft.events.dispatchEvent(ClientAcknowledgePunish.class, new ClientAcknowledgePunishImpl(punishments));
 		
 		// Client is the only one (so far) that needs to be executed client side
 		// Needs to match getName() of PunishmentOption
