@@ -125,7 +125,7 @@ public class Transcriber extends Thread implements Runnable {
 			Path tempFolder = LibraryUtils.extractResource(JScribe.logger, Transcriber.class.getClassLoader().getResource("vulkan-natives/" + resourceName + "-vulkan-natives").toURI());
 			LibraryUtils.loadLibrary(JScribe.logger, tempFolder);
 			return true;
-		} catch(IOException | URISyntaxException e)
+		} catch(Exception e)
 		{
 			JScribe.logger.error("Failed to load the Vulkan natives", e);
 			return false;
