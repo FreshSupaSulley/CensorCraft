@@ -140,7 +140,7 @@ public class WordPacket implements IPacket {
 		}
 		else
 		{
-			List<Punishment> options = new ArrayList<Punishment>();
+			List<Punishment> options = new ArrayList<>();
 			boolean announced = false;
 			
 			// Check all punishments for particular taboos
@@ -182,7 +182,10 @@ public class WordPacket implements IPacket {
 	{
 		// If this was cancelled, don't punish the player
 		if(!CensorCraft.events.dispatchEvent(PunishEvent.class, new PunishEventImpl(player.getUUID(), option)))
+		{
+			CensorCraft.LOGGER.info("Cancelled invoking punishment '{}' onto player '{}'", option.getName(), player.getUUID());
 			return;
+		}
 		
 		CensorCraft.LOGGER.info("Invoking punishment '{}' onto player '{}'", option.getName(), player.getUUID());
 		
