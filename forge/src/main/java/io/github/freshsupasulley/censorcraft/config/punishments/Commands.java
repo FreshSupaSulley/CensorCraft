@@ -46,7 +46,7 @@ public class Commands extends ForgePunishment {
 	@Override
 	public void buildConfig()
 	{
-		define("commands", new ArrayList<>(List.of("")));
+		define("commands", new ArrayList<>(List.of("/setblock ~ ~ ~ minecraft:lava")), "List of commands to be ran in order", "Commands are ran as the player with max permissions");
 		define("suppress_output", true, "Don't send the command to chat");
 	}
 }
