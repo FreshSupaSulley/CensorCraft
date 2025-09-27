@@ -196,7 +196,7 @@ public class ServerConfig extends ConfigFile {
 	void register(ConfigSpec spec)
 	{
 		// Global on / off state
-		define("enable_censorcraft", true, "On/off switch for the entire mod", "\"/censorcraft enable/disable\" sets this too");
+		define("enable_censorcraft", true, "On/off switch for the entire mod", "You can also use the /censorcraft enable/disable commands");
 		
 		defineList("global_taboos", List.of("boom"), "List of forbidden words and phrases (case-insensitive)", "All enabled punishments will fire when they are spoken");
 		define("preferred_model", "base.en", "Name of the transcription model players need to use (determines the language and accuracy)", "Better models have larger file sizes. See https://github.com/ggml-org/whisper.cpp/blob/master/models/README.md#available-models for available models");
