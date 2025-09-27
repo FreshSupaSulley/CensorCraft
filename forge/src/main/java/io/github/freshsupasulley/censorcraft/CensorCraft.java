@@ -30,7 +30,6 @@ public class CensorCraft {
 	public static final Logger LOGGER = LogUtils.getLogger();
 	
 	// Packets
-	public static final long HEARTBEAT_TIME = 30000, HEARTBEAT_SAFETY_NET = 5000;
 	public static SimpleChannel channel;
 	
 	/** Used for the plugins! */

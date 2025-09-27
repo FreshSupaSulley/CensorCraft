@@ -67,6 +67,10 @@ public class WordPacket implements IPacket {
 	
 	public void consume(ServerPlayer player)
 	{
+		// Do nothing if mod is disabled
+		if(!ServerConfig.get().isCensorCraftEnabled())
+			return;
+		
 		if(!CensorCraft.events.dispatchEvent(ReceiveTranscription.class, new ReceiveTranscriptionImpl(player.getUUID(), payload)))
 		{
 			CensorCraft.LOGGER.debug("Receive transcription event was cancelled");
@@ -140,7 +144,7 @@ public class WordPacket implements IPacket {
 		}
 		else
 		{
-			List<Punishment> options = new ArrayList<Punishment>();
+			List<Punishment> options = new ArrayList<>();
 			boolean announced = false;
 			
 			// Check all punishments for particular taboos

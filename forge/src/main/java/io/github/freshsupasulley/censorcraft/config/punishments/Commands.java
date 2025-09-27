@@ -27,7 +27,8 @@ public class Commands extends ForgePunishment {
 				var stack = player.createCommandSourceStack().withPermission(server.getOperatorUserPermissionLevel());
 				
 				// Suppress the output to not clog chat
-				if(config.get("suppress_output"))
+				// also check if not null here so I don't create incompatible configs prior to 2.2.1
+				if(!config.isNull("suppress_output") && (boolean) config.get("suppress_output"))
 				{
 					stack = stack.withSuppressedOutput();
 				}

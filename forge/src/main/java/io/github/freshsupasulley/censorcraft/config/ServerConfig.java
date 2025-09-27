@@ -1,5 +1,29 @@
 package io.github.freshsupasulley.censorcraft.config;
 
+import com.electronwill.nightconfig.core.CommentedConfig;
+import com.electronwill.nightconfig.core.ConfigSpec;
+import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
+import io.github.freshsupasulley.censorcraft.CensorCraft;
+import io.github.freshsupasulley.censorcraft.api.events.server.ServerConfigEvent;
+import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
+import io.github.freshsupasulley.censorcraft.config.punishments.*;
+import io.github.freshsupasulley.censorcraft.network.PunishedPacket;
+import io.github.freshsupasulley.plugins.impl.CensorCraftServerAPIImpl;
+import io.github.freshsupasulley.plugins.impl.server.ServerConfigEventImpl;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.storage.LevelResource;
+import net.minecraftforge.event.RegisterCommandsEvent;
+import net.minecraftforge.event.server.ServerAboutToStartEvent;
+import net.minecraftforge.eventbus.api.listener.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.config.ModConfig;
+import net.minecraftforge.network.PacketDistributor;
+import net.minecraftforge.server.ServerLifecycleHooks;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -8,31 +32,7 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
-import com.electronwill.nightconfig.core.CommentedConfig;
-import com.electronwill.nightconfig.core.ConfigSpec;
-
-import io.github.freshsupasulley.censorcraft.CensorCraft;
-import io.github.freshsupasulley.censorcraft.api.events.server.ServerConfigEvent;
-import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
-import io.github.freshsupasulley.censorcraft.config.punishments.Commands;
-import io.github.freshsupasulley.censorcraft.config.punishments.Crash;
-import io.github.freshsupasulley.censorcraft.config.punishments.Dimension;
-import io.github.freshsupasulley.censorcraft.config.punishments.Entities;
-import io.github.freshsupasulley.censorcraft.config.punishments.Explosion;
-import io.github.freshsupasulley.censorcraft.config.punishments.Ignite;
-import io.github.freshsupasulley.censorcraft.config.punishments.Kill;
-import io.github.freshsupasulley.censorcraft.config.punishments.Lightning;
-import io.github.freshsupasulley.censorcraft.config.punishments.MobEffects;
-import io.github.freshsupasulley.censorcraft.config.punishments.Teleport;
-import io.github.freshsupasulley.plugins.impl.CensorCraftServerAPIImpl;
-import io.github.freshsupasulley.plugins.impl.server.ServerConfigEventImpl;
-import net.minecraft.server.MinecraftServer;
-import net.minecraft.world.level.storage.LevelResource;
-import net.minecraftforge.event.server.ServerAboutToStartEvent;
-import net.minecraftforge.eventbus.api.listener.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.config.ModConfig;
-import net.minecraftforge.server.ServerLifecycleHooks;
+import static io.github.freshsupasulley.censorcraft.CensorCraft.punishments;
 
 @Mod.EventBusSubscriber(modid = CensorCraft.MODID)
 public class ServerConfig extends ConfigFile {
@@ -49,6 +49,43 @@ public class ServerConfig extends ConfigFile {
 		// Now the plugins can see the API impl
 		CensorCraftServerAPIImpl.INSTANCE = new CensorCraftServerAPIImpl(SERVER.config);
 		CensorCraft.events.dispatchEvent(ServerConfigEvent.class, new ServerConfigEventImpl());
+	}
+	
+	@SubscribeEvent
+	private static void registerCommands(RegisterCommandsEvent event)
+	{
+		// probably highest op level for this command? (4)
+		event.getDispatcher().register(Commands.literal("censorcraft").requires(source -> source.hasPermission(4))
+				.then(Commands.literal("enable").executes(ctx -> setEnabled(ctx.getSource(), true)))
+				.then(Commands.literal("disable").executes(ctx -> setEnabled(ctx.getSource(), false)))
+		);
+	}
+
+	private static int setEnabled(CommandSourceStack source, boolean enabled)
+	{
+		boolean state = get().isCensorCraftEnabled();
+
+		if(state == enabled)
+			new SimpleCommandExceptionType(Component.literal("CensorCraft is already " + (state ? "enabled" : "disabled")));
+
+		// If we just enabled it
+		if(enabled)
+		{
+			for(ServerPlayer player : source.getServer().getPlayerList().getPlayers())
+			{
+				// Signal to clients to reset their audio buffer
+				// (so if they spoke a taboo right as its enabled, they don't get punished)
+				// This could be paired with temporarily ignoring taboos for like 1s server side if required
+				CensorCraft.channel.send(new PunishedPacket(), PacketDistributor.PLAYER.with(player));
+			}
+		}
+		
+		// Let's also notify them that the mod is active
+		source.getLevel().players().forEach(sample -> sample.displayClientMessage(Component.literal("CensorCraft is now ").append(Component.literal(enabled ? "enabled" : "disabled").withStyle(style -> style.withBold(true))), false));
+		
+		CensorCraft.LOGGER.info("Setting CensorCraft enabled state: {}", enabled);
+		get().config.set("enable_censorcraft", enabled);
+		return 1;
 	}
 	
 	public static ServerConfig get()
@@ -95,6 +132,11 @@ public class ServerConfig extends ConfigFile {
 		return config.get("global_taboos");
 	}
 	
+	public boolean isCensorCraftEnabled()
+	{
+		return config.get("enable_censorcraft");
+	}
+	
 	public String getPreferredModel()
 	{
 		return config.get("preferred_model");
@@ -120,11 +162,6 @@ public class ServerConfig extends ConfigFile {
 		return config.get("isolate_words");
 	}
 	
-	public boolean isMonitorVoice()
-	{
-		return config.get("monitor_voice");
-	}
-	
 	public boolean isMonitorChat()
 	{
 		return config.get("monitor_chat");
@@ -132,7 +169,7 @@ public class ServerConfig extends ConfigFile {
 	
 	public List<Punishment> getPunishments()
 	{
-		List<Punishment> options = new ArrayList<Punishment>();
+		List<Punishment> options = new ArrayList<>();
 		
 		// By fucking LAW each default option needs to be in the server config file
 		// ^ why did i write this comment in such a demanding manner
@@ -158,13 +195,15 @@ public class ServerConfig extends ConfigFile {
 	@Override
 	void register(ConfigSpec spec)
 	{
+		// Global on / off state
+		define("enable_censorcraft", true, "On/off switch for the entire mod", "\"/censorcraft enable/disable\" sets this too");
+		
 		defineList("global_taboos", List.of("boom"), "List of forbidden words and phrases (case-insensitive)", "All enabled punishments will fire when they are spoken");
 		define("preferred_model", "base.en", "Name of the transcription model players need to use (determines the language and accuracy)", "Better models have larger file sizes. See https://github.com/ggml-org/whisper.cpp/blob/master/models/README.md#available-models for available models");
 		defineInRange("context_length", 3D, 0D, Double.MAX_VALUE, "Maximum amount of time (in seconds) an individual audio recording is. The higher the value, the more intensive on players PCs", "Enter a number to at least 1 decimal place!");
 		defineInRange("punishment_cooldown", 0D, 0D, Double.MAX_VALUE, "Delay (in seconds) before a player can be punished again", "Enter a number to at least 1 decimal place!");
 		define("chat_taboos", true, "When someone is punished, send what the player said to chat");
 		define("isolate_words", true, "If true, only whole words are considered (surrounded by spaces or word boundaries). If false, partial matches are allowed (e.g., 'art' triggers punishment for 'start')");
-		define("monitor_voice", true, "Punish players for speaking taboos into their mic", "You can disable this in favor of monitor_chat instead");
 		define("monitor_chat", true, "Punish players for sending taboos to chat");
 		
 		// Punishments are special. They are an array of tables
@@ -172,12 +211,12 @@ public class ServerConfig extends ConfigFile {
 		
 		// First assemble all plugin-defined punishments
 		// This fires an event to (all? test more than one) plugin(s)
-		CensorCraft.punishments.forEach(sample -> safeInstantiation(sample, totalPunishments::add));
+		punishments.forEach(sample -> safeInstantiation(sample, totalPunishments::add));
 		
 		// Now add the default punishments below the plugin-defined ones ig
 		// maybe this could be a cancellable event in the future?
 		// ... sadly can't have generic arrays in java
-		Class<?>[] defaults = new Class<?>[] {Commands.class, Crash.class, Dimension.class, Entities.class, Explosion.class, Ignite.class, Kill.class, Lightning.class, MobEffects.class, Teleport.class};
+		Class<?>[] defaults = new Class<?>[] {io.github.freshsupasulley.censorcraft.config.punishments.Commands.class, Crash.class, Dimension.class, Entities.class, Explosion.class, Ignite.class, Kill.class, Lightning.class, MobEffects.class, Teleport.class};
 		Stream.of(defaults).forEach(punishment -> safeInstantiation((Class<? extends Punishment>) punishment, totalPunishments::add));
 		
 		// Set all punishments
@@ -185,7 +224,7 @@ public class ServerConfig extends ConfigFile {
 		
 		for(Punishment option : allPunishments)
 		{
-			CensorCraft.LOGGER.info("Defining config for punishemnt '{}'", option.getName());
+			CensorCraft.LOGGER.info("Defining config for punishment '{}'", option.getName());
 			
 			try
 			{
@@ -199,7 +238,7 @@ public class ServerConfig extends ConfigFile {
 				// config.setComment(option.getName(), option.getDescription());
 			} catch(Exception e)
 			{
-				CensorCraft.LOGGER.warn("An error occured defining the config for punishment type '{}'", option.getName(), e);
+				CensorCraft.LOGGER.warn("An error occurred defining the config for punishment type '{}'", option.getName(), e);
 			}
 		}
 		

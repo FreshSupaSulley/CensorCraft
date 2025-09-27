@@ -45,7 +45,6 @@ public class ClientCensorCraft {
 	
 	private static JScribe controller;
 	private static Path model;
-	private static boolean monitorVoice;
 	
 	private static boolean loggedIn, startJScribeAttempt;
 	
@@ -72,10 +71,11 @@ public class ClientCensorCraft {
 	private static final long DRAIN_DELAY = 1000, MIN_SAMPLE_MS = 200;
 	
 	private static final int SAMPLE_RATE = 48000;
-	private static final RollingAudioBuffer ringBuffer = new RollingAudioBuffer(5000, SAMPLE_RATE); // hold a MAX of 5s. Can't see us needing this much
+	private static RollingAudioBuffer ringBuffer;
 	private static long lastSample, lastTranscription;
 	
 	private static Path vadModel;
+	private static long audioContextLength;
 	
 	static
 	{
@@ -92,7 +92,12 @@ public class ClientCensorCraft {
 	public static void onClientSound(ClientSoundEvent event)
 	{
 		lastSample = System.currentTimeMillis();
-		ringBuffer.append(event.getRawAudio());
+		
+		// Wait until we're ready
+		if(ringBuffer != null)
+		{
+			ringBuffer.append(event.getRawAudio());
+		}
 	}
 	
 	private static int msToSamples(long ms)
@@ -127,12 +132,6 @@ public class ClientCensorCraft {
 	
 	private static void startJScribe()
 	{
-		if(!monitorVoice)
-		{
-			CensorCraft.LOGGER.debug("Not starting JScribe, monitorVoice is disabled");
-			return;
-		}
-		
 		if(controller != null && controller.isInUse())
 		{
 			CensorCraft.LOGGER.debug("Ignoring start request, JScribe is already running");
@@ -182,12 +181,6 @@ public class ClientCensorCraft {
 	
 	private static void stopJScribe()
 	{
-		if(!monitorVoice)
-		{
-			CensorCraft.LOGGER.debug("Not stopping JScribe, monitorVoice is disabled");
-			return;
-		}
-		
 		startJScribeAttempt = false;
 		
 		if(controller == null)
@@ -280,17 +273,6 @@ public class ClientCensorCraft {
 		if(event.side != LogicalSide.CLIENT)
 			return;
 		
-		// There is nothing to do if monitorVoice is disabled
-		if(!monitorVoice)
-		{
-			if(ClientConfig.get().isDebug())
-			{
-				setGUIText(Component.literal("Transcription is off\n"), true);
-			}
-			
-			return;
-		}
-		
 		// no clue if .player can be null but im compensating for it anyways
 		boolean playerAlive = Optional.ofNullable(Minecraft.getInstance().player).map(LocalPlayer::isAlive).orElse(false);
 		
@@ -361,10 +343,7 @@ public class ClientCensorCraft {
 				// Collect transcriptions
 				StringBuffer processBuffer = new StringBuffer();
 				
-				results.getTranscriptions().forEach(t ->
-				{
-					processBuffer.append(t.text());
-				});
+				results.getTranscriptions().forEach(t -> processBuffer.append(t.text()));
 				
 				// Configure what to send
 				String raw = processBuffer.toString();
@@ -458,11 +437,11 @@ public class ClientCensorCraft {
 	 *
 	 * @param model name of model in model dir
 	 */
-	public static void setup(Path model, boolean monitorVoice, long audioContextLength)
+	public static void setup(Path model, int audioContextLength)
 	{
 		// stopJScribe();
 		ClientCensorCraft.model = model;
-		ClientCensorCraft.monitorVoice = monitorVoice;
+		ringBuffer = new RollingAudioBuffer(audioContextLength, SAMPLE_RATE); // hold the amount of MS set by the server
 		startJScribe();
 	}
 	

@@ -49,28 +49,24 @@ public class SetupPacket implements IPacket {
 			byte[] bytes = packet.model.getBytes(Charset.defaultCharset());
 			buffer.writeInt(bytes.length);
 			buffer.writeBytes(bytes);
-			buffer.writeBoolean(packet.monitorVoice);
-			buffer.writeLong(packet.audioContextLength);
+			buffer.writeInt(packet.audioContextLength);
 		}
 		
 		@Override
 		public SetupPacket decode(FriendlyByteBuf buffer)
 		{
 			var model = buffer.readCharSequence(buffer.readInt(), Charset.defaultCharset()).toString();
-			var monitorVoice = buffer.readBoolean();
-			var audioContextLength = buffer.readLong();
-			return new SetupPacket(model, monitorVoice, audioContextLength);
+			var audioContextLength = buffer.readInt();
+			return new SetupPacket(model, audioContextLength);
 		}
 	};
 	
 	private final String model;
-	private final boolean monitorVoice;
-	private final long audioContextLength;
+	private final int audioContextLength;
 	
-	public SetupPacket(String model, boolean monitorVoice, long audioContextLength)
+	public SetupPacket(String model, int audioContextLength)
 	{
 		this.model = model;
-		this.monitorVoice = monitorVoice;
 		this.audioContextLength = audioContextLength;
 	}
 	
@@ -79,16 +75,16 @@ public class SetupPacket implements IPacket {
 	public static void playerJoinedEvent(GatherLoginConfigurationTasksEvent event)
 	{
 		// Inform the player of the preferred model
-		CensorCraft.channel.send(new SetupPacket(ServerConfig.get().getPreferredModel(), ServerConfig.get().isMonitorVoice(), (long) (ServerConfig.get().getContextLength() * 1000)), event.getConnection()); // CONTEXT_LENGTH is in seconds, convert to ms
+		CensorCraft.channel.send(new SetupPacket(ServerConfig.get().getPreferredModel(), (int) (ServerConfig.get().getContextLength() * 1000)), event.getConnection()); // CONTEXT_LENGTH is in seconds, convert to ms
 	}
 	
 	@Override
 	public void consume(Context context)
 	{
-		CensorCraft.LOGGER.info("Consuming setup packet (model: {}, monitorVoice: {})", model, monitorVoice);
+		CensorCraft.LOGGER.info("Consuming setup packet (model: {})", model);
 		
 		// If we don't have the model requested by the server
-		if(monitorVoice && !ClientCensorCraft.hasModel(model))
+		if(!ClientCensorCraft.hasModel(model))
 		{
 			CensorCraft.LOGGER.info("Client does not have {} model installed", model);
 			
@@ -97,7 +93,7 @@ public class SetupPacket implements IPacket {
 		}
 		else
 		{
-			ClientCensorCraft.setup(ClientCensorCraft.getModelPath(model), monitorVoice, audioContextLength);
+			ClientCensorCraft.setup(ClientCensorCraft.getModelPath(model), audioContextLength);
 		}
 	}
 }

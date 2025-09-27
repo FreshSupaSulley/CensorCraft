@@ -28,8 +28,8 @@ public class Transcriber extends Thread implements Runnable {
 	public static boolean libraryLoaded = false;
 	
 	private final WhisperJNI whisper = new WhisperJNI();
-	private final LinkedBlockingQueue<Recording> recordings = new LinkedBlockingQueue<Recording>();
-	private final List<Transcription> results = new ArrayList<Transcription>();
+	private final LinkedBlockingQueue<Recording> recordings = new LinkedBlockingQueue<>();
+	private final List<Transcription> results = new ArrayList<>();
 	
 	private final WhisperFullParams params;
 	private final Path modelPath;
