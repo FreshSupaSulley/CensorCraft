@@ -46,7 +46,7 @@ public class CensorCraft {
 	private void commonSetup(FMLCommonSetupEvent event)
 	{
 		// ig just bump this with each new major (and thus incompatible with the last) update?
-		final int protocolVersion = 2;
+		final int protocolVersion = 3;
 		
 		event.enqueueWork(() ->
 		{
