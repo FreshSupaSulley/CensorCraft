@@ -17,7 +17,7 @@ public class PunishmentRegistry {
 	{
 		if(REGISTERED.containsKey(punishment.getId()))
 		{
-			throw new IllegalArgumentException("Punishment with ID '" + punishment.getId() + "' is already registered");
+			throw new IllegalArgumentException("Punishment with ID '" + punishment.getId() + "' was already registered");
 		}
 		
 		REGISTERED.put(punishment.getId(), punishment);

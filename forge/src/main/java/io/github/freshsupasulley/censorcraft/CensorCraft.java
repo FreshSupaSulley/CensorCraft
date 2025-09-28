@@ -99,6 +99,13 @@ public class CensorCraft {
 		{
 			LOGGER.info("Registering events for CensorCraft plugin '{}'", plugin.getPluginId());
 			
+			// Check if someone already declared a plugin with this ID already
+			if(pluginPunishments.containsKey(plugin.getPluginId()))
+			{
+				CensorCraft.LOGGER.error("2 or more plugins declared as '{}' conflict with each other. Only the first one read will be used", plugin.getPluginId());
+				continue;
+			}
+			
 			pluginPunishments.put(plugin.getPluginId(), new PunishmentRegistry());
 			
 			try
@@ -116,16 +123,11 @@ public class CensorCraft {
 					@Override
 					public void registerPunishment(Class<? extends Punishment> clazz)
 					{
+						Punishment punishment;
+						
 						try
 						{
-							var punishment = Punishment.newInstance(clazz);
-							
-							if(punishment.getId().isBlank())
-							{
-								throw new IllegalStateException("Punishment ID cannot be blank for " + clazz);
-							}
-							
-							pluginPunishments.get(plugin.getPluginId()).register(punishment);
+							punishment = Punishment.newInstance(clazz);
 						} catch(RuntimeException e)
 						{
 							// This is the first place plugin-defined punishments are attempted to be instantiated, so this log is necessary
@@ -133,6 +135,15 @@ public class CensorCraft {
 							// Should be caught in parent try catch
 							throw e;
 						}
+						
+						// Now that it's guaranteed to be non-null, check the ID
+						if(punishment.getId().isBlank())
+						{
+							throw new IllegalStateException("Punishment ID cannot be blank for " + clazz);
+						}
+						
+						// This will throw an error if a punishment was already declared with this name
+						pluginPunishments.get(plugin.getPluginId()).register(punishment);
 					}
 				};
 				

@@ -8,6 +8,8 @@ import io.github.freshsupasulley.censorcraft.api.events.PluginRegistration;
 public interface CensorCraftPlugin {
 	
 	/**
+	 * Get the unique ID of the plugin. Cannot conflict with another plugin.
+	 *
 	 * @return the ID of this plugin
 	 */
 	String getPluginId();
