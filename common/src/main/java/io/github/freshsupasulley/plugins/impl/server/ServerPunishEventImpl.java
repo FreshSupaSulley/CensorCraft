@@ -1,16 +1,16 @@
 package io.github.freshsupasulley.plugins.impl.server;
 
 import io.github.freshsupasulley.censorcraft.api.events.server.ServerPunishEvent;
-import io.github.freshsupasulley.censorcraft.api.punishments.ServerPunishment;
+import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
 
 import java.util.UUID;
 
 public class ServerPunishEventImpl extends ServerEventImpl implements ServerPunishEvent {
 	
 	private final UUID playerUUID;
-	private final ServerPunishment punishment;
+	private final Punishment punishment;
 	
-	public ServerPunishEventImpl(UUID playerUUID, ServerPunishment punishment)
+	public ServerPunishEventImpl(UUID playerUUID, Punishment punishment)
 	{
 		this.playerUUID = playerUUID;
 		this.punishment = punishment;
@@ -23,7 +23,7 @@ public class ServerPunishEventImpl extends ServerEventImpl implements ServerPuni
 	}
 	
 	@Override
-	public ServerPunishment getPunishments()
+	public Punishment getPunishment()
 	{
 		return punishment;
 	}

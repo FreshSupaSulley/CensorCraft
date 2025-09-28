@@ -1,11 +1,11 @@
 package io.github.freshsupasulley.censorcraft.api.events.server;
 
-import io.github.freshsupasulley.censorcraft.api.punishments.ServerPunishment;
+import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
 
 import java.util.UUID;
 
 /**
- * Server-side event that fires when the player is punished.
+ * Fires when the player is about to be punished on the server-side.
  */
 public interface ServerPunishEvent extends ServerEvent {
 	
@@ -17,9 +17,9 @@ public interface ServerPunishEvent extends ServerEvent {
 	UUID getPlayerUUID();
 	
 	/**
-	 * Gets the {@link ServerPunishment} this player triggered.
+	 * Gets the {@link Punishment} this player triggered.
 	 *
-	 * @return {@link ServerPunishment} instance
+	 * @return {@link Punishment} instance
 	 */
-	ServerPunishment getPunishments();
+	Punishment getPunishment();
 }

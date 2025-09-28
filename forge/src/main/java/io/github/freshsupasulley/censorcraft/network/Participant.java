@@ -1,19 +1,17 @@
 package io.github.freshsupasulley.censorcraft.network;
 
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
 import io.github.freshsupasulley.censorcraft.CensorCraft;
 import io.github.freshsupasulley.censorcraft.api.events.server.ServerPunishEvent;
-import io.github.freshsupasulley.censorcraft.api.punishments.ClientPunishment;
 import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
-import io.github.freshsupasulley.censorcraft.api.punishments.ServerPunishment;
 import io.github.freshsupasulley.censorcraft.config.ServerConfig;
 import io.github.freshsupasulley.plugins.impl.server.ServerPunishEventImpl;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.PacketDistributor;
+
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 public class Participant {
 	
@@ -70,24 +68,21 @@ public class Participant {
 			player.level().players().forEach(sample -> sample.displayClientMessage(Component.literal(name).withStyle(style -> style.withBold(true)).append(Component.literal(" said ").withStyle(style -> style.withBold(false))).append(Component.literal("\"" + taboo + "\"")), false));
 		}
 		
-		// Trigger the server side punishments only. Client side ones comes after
-		configPunishments.values().stream().flatMap(List::stream).filter(p -> p instanceof ServerPunishment).map(ServerPunishment.class::cast).forEach((punishment -> runServerPunishment(punishment, player)));
+		// Trigger the server side punishments. Client side ones comes after
+		configPunishments.values().stream().flatMap(List::stream).forEach((punishment -> runServerPunishment(punishment, player)));
 		
 		// Notify the player that they were punished
 		// This will trigger the client-side punishment code (if implemented) once received
 		CensorCraft.LOGGER.debug("Sending punished packet");
 		
-		// Get the client punishments, if any
-		var clientPunishments = configPunishments.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().stream().filter(p -> p instanceof ClientPunishment).map(ClientPunishment.class::cast).collect(Collectors.toUnmodifiableList())));
-		
 		// Send the packet
-		CensorCraft.channel.send(new PunishedPacket(clientPunishments), PacketDistributor.PLAYER.with(player));
+		CensorCraft.channel.send(new PunishedPacket(configPunishments), PacketDistributor.PLAYER.with(player));
 		
 		// Reset the participant's word buffer
 		clearWordBuffer();
 	}
 	
-	private void runServerPunishment(ServerPunishment option, ServerPlayer player)
+	private void runServerPunishment(Punishment option, ServerPlayer player)
 	{
 		// If this was cancelled, don't punish the player
 		if(!CensorCraft.events.dispatchEvent(ServerPunishEvent.class, new ServerPunishEventImpl(player.getUUID(), option)))

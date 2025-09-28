@@ -17,7 +17,7 @@ import java.util.stream.Stream;
  */
 public abstract class Punishment {
 	
-	protected CommentedConfig config;
+	public CommentedConfig config;
 	
 	/**
 	 * Creates a new instance of the punishment.
@@ -60,11 +60,31 @@ public abstract class Punishment {
 	 * }</pre>
 	 *
 	 * <p>
-	 * You can use {@link #config} in {@link ServerPunishment#punish(Object)} to retrieve the server admin's settings of what you
-	 * defined here.
+	 * You can use {@link #config} in {@link #punish(Object)} to retrieve the server admin's settings of
+	 * what you defined here.
 	 * </p>
 	 */
 	protected abstract void buildConfig();
+	
+	/**
+	 * Punishes the player for this punishment type.
+	 *
+	 * @param serverPlayer the <code>net.minecraft.server.level</code> instance (you'll need to cast it yourself)
+	 */
+	public abstract void punish(Object serverPlayer);
+	
+	/**
+	 * Punishes the player for this punishment type <b>on the client-side</b> (on the punished-player's machine).
+	 *
+	 * <p>Most of the time, server-side punishments are sufficient (which is why implementing this method is
+	 * optional).</p>
+	 *
+	 * <p>The server config's punishment settings is automatically sent to the client, meaning you can read from the
+	 * <code>config</code> instance variable on the client (however, setting anything to the config does nothing).</p>
+	 */
+	public void punishClientSide()
+	{
+	}
 	
 	/**
 	 * Internally used to set the config when loaded so it can be properly deserialized from the config file.

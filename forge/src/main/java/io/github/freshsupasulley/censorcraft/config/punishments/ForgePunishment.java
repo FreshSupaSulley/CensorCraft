@@ -1,9 +1,9 @@
 package io.github.freshsupasulley.censorcraft.config.punishments;
 
-import io.github.freshsupasulley.censorcraft.api.punishments.ServerPunishment;
+import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
 import net.minecraft.server.level.ServerPlayer;
 
-public abstract class ForgePunishment extends ServerPunishment {
+public abstract class ForgePunishment extends Punishment {
 	
 	abstract void punish(ServerPlayer player);
 	

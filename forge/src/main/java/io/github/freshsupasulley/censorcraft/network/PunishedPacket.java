@@ -5,15 +5,13 @@ import com.electronwill.nightconfig.toml.TomlFormat;
 import io.github.freshsupasulley.censorcraft.CensorCraft;
 import io.github.freshsupasulley.censorcraft.ClientCensorCraft;
 import io.github.freshsupasulley.censorcraft.api.events.client.ClientPunishEvent;
-import io.github.freshsupasulley.censorcraft.api.punishments.ClientPunishment;
 import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
 import io.github.freshsupasulley.plugins.impl.client.ClientPunishEventImpl;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraftforge.event.network.CustomPayloadEvent.Context;
 
-import java.io.ByteArrayInputStream;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -52,7 +50,7 @@ public class PunishedPacket implements IPacket {
 					buffer.writeCharSequence(toWrite, Charset.defaultCharset());
 					
 					// Append the data to this buffer
-					buffer.writeByteArray(punishment.serializeConfig());
+					buffer.writeByteArray(serializeConfig(punishment));
 				});
 			});
 		}
@@ -60,7 +58,7 @@ public class PunishedPacket implements IPacket {
 		@Override
 		public PunishedPacket decode(RegistryFriendlyByteBuf buffer)
 		{
-			Map<String, List<ClientPunishment>> registry = new HashMap<>();
+			Map<String, List<Punishment>> registry = new HashMap<>();
 			final int plugins = buffer.readInt();
 			
 			for(int i = 0; i < plugins; i++)
@@ -78,7 +76,7 @@ public class PunishedPacket implements IPacket {
 					
 					try
 					{
-						ClientPunishment punishment = Punishment.newInstance((Class<? extends ClientPunishment>) Class.forName(punishmentName));
+						Punishment punishment = Punishment.newInstance((Class<? extends Punishment>) Class.forName(punishmentName));
 						
 						// Read the config from the wire
 						ByteArrayInputStream in = new ByteArrayInputStream(buffer.readByteArray());
@@ -99,9 +97,9 @@ public class PunishedPacket implements IPacket {
 		}
 	};
 	
-	private Map<String, List<ClientPunishment>> registry;
+	private Map<String, List<Punishment>> registry;
 	
-	public PunishedPacket(Map<String, List<ClientPunishment>> punishments)
+	public PunishedPacket(Map<String, List<Punishment>> punishments)
 	{
 		this.registry = punishments;
 	}
@@ -124,12 +122,33 @@ public class PunishedPacket implements IPacket {
 				
 				try
 				{
-					punishment.punish();
+					punishment.punishClientSide();
 				} catch(Exception e)
 				{
 					CensorCraft.LOGGER.error("Failed executing '{}' punishment", punishment.getId(), e);
 				}
 			}
 		});
+	}
+	
+	/**
+	 * Serializes and returns the server's config file to be sent to the client.
+	 */
+	private static byte[] serializeConfig(Punishment punishment)
+	{
+		ByteArrayOutputStream out = new ByteArrayOutputStream();
+		OutputStreamWriter writer = new OutputStreamWriter(out);
+		TomlFormat.instance().createWriter().write(punishment.config, writer);
+		
+		try
+		{
+			writer.flush();
+		} catch(IOException e)
+		{
+			// This should never happen so lazily wrap
+			throw new RuntimeException(e);
+		}
+		
+		return out.toByteArray();
 	}
 }

@@ -1,9 +1,9 @@
 package io.github.freshsupasulley.censorcraft.config.punishments;
 
 import io.github.freshsupasulley.censorcraft.CensorCraft;
-import io.github.freshsupasulley.censorcraft.api.punishments.ClientPunishment;
+import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
 
-public class Crash extends ClientPunishment {
+public class Crash extends Punishment {
 	
 	@Override
 	public String getId()
@@ -17,8 +17,12 @@ public class Crash extends ClientPunishment {
 		defineInRange("seconds", 0, 0, Integer.MAX_VALUE, "Delay (in seconds) before Minecraft crashes (creates a \"Not Responding\" screen)");
 	}
 	
+	// Crashing will do nothing server-side (maybe we can kick them first or something)
 	@Override
-	public void punish()
+	public void punish(Object serverPlayer) {}
+	
+	@Override
+	public void punishClientSide()
 	{
 		try
 		{
