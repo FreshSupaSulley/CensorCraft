@@ -11,6 +11,12 @@ import net.minecraft.server.level.ServerPlayer;
 
 public class Commands extends ForgePunishment {
 	
+	@Override
+	public String getId()
+	{
+		return "commands";
+	}
+	
 	@SuppressWarnings("unchecked")
 	@Override
 	public void punish(ServerPlayer player)

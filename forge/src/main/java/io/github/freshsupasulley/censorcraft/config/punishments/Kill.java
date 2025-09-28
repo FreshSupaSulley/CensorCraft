@@ -5,6 +5,12 @@ import net.minecraft.server.level.ServerPlayer;
 public class Kill extends ForgePunishment {
 	
 	@Override
+	public String getId()
+	{
+		return "kill";
+	}
+	
+	@Override
 	public void buildConfig()
 	{
 		// General settings

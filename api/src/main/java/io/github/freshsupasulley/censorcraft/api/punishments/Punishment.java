@@ -1,15 +1,16 @@
 package io.github.freshsupasulley.censorcraft.api.punishments;
 
+import com.electronwill.nightconfig.core.CommentedConfig;
+
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import com.electronwill.nightconfig.core.CommentedConfig;
-
 /**
  * Defines a punishment.
+ *
+ * <p>All punishments <b>MUST</b> have a default, no-arg constructor!</p>
  *
  * <p>Extend this class to define your own punishments. There are helper methods here to define options for your
  * punishment that appear in the server config file.</p>
@@ -19,7 +20,54 @@ public abstract class Punishment {
 	protected CommentedConfig config;
 	
 	/**
-	 * Interally used to set the config when loaded so it can be properly deserialized from the config file.
+	 * Creates a new instance of the punishment.
+	 *
+	 * <p>
+	 * All punishments <b>MUST</b> have a default, no-arg constructor.
+	 * </p>
+	 *
+	 * @param clazz punishment class
+	 * @return new {@link Punishment} instance
+	 * @throws RuntimeException if instantiating this class goes wrong
+	 */
+	public static <T extends Punishment> T newInstance(Class<T> clazz)
+	{
+		try
+		{
+			return clazz.getDeclaredConstructor().newInstance();
+		} catch(Exception e)
+		{
+			throw new RuntimeException(e);
+		}
+	}
+	
+	/**
+	 * The ID of this punishment. <b>Must be unique to this plugin</b>!
+	 *
+	 * <p>Used to write the name of the punishment to the server config file and distinguish punishments over the
+	 * wire. An example could be <code>explosion</code>, <code>mob_effects</code>, etc.</p>
+	 *
+	 * @return unique name of this punishment
+	 */
+	public abstract String getId();
+	
+	/**
+	 * Builds your punishment's section of the server config file. Use the parent's <code>define</code> methods to build
+	 * it. Example:
+	 *
+	 * <pre>{@code
+	 * defineInRange("explosion_radius", 5D, 0D, Double.MAX_VALUE);
+	 * }</pre>
+	 *
+	 * <p>
+	 * You can use {@link #config} in {@link ServerPunishment#punish(Object)} to retrieve the server admin's settings of what you
+	 * defined here.
+	 * </p>
+	 */
+	protected abstract void buildConfig();
+	
+	/**
+	 * Internally used to set the config when loaded so it can be properly deserialized from the config file.
 	 *
 	 * @param config {@link CommentedConfig} instance
 	 * @return this instance
@@ -48,34 +96,6 @@ public abstract class Punishment {
 	}
 	
 	/**
-	 * Builds your punishment's section of the server config file. Use the parent's <code>define</code> methods to build
-	 * it. Example:
-	 *
-	 * <pre>{@code
-	 * defineInRange("explosion_radius", 5D, 0D, Double.MAX_VALUE);
-	 * }</pre>
-	 *
-	 * <p>
-	 * You may later use {@link #config} in {@link #punish(UUID)} to retrieve the server admin's settings of what you
-	 * defined here.
-	 */
-	protected abstract void buildConfig();
-	
-	/**
-	 * Deserializes this punishment type from the server config file.
-	 *
-	 * @param config {@link CommentedConfig} instance
-	 * @return new punishment instance
-	 * @throws Exception if instantiating this class goes wrong
-	 */
-	public final Punishment deserialize(CommentedConfig config) throws Exception
-	{
-		Punishment option = Punishment.newInstance(this.getClass());
-		option.config = config;
-		return option;
-	}
-	
-	/**
 	 * Convenience method to bundle defining a value and a comment.
 	 *
 	 * @param <E>      value type
@@ -86,7 +106,7 @@ public abstract class Punishment {
 	protected final <E> void define(String key, E value, String... comments)
 	{
 		config.set(key, value);
-		config.setComment(key, Stream.of(comments).map(comment -> " " + comment).collect(Collectors.joining(System.getProperty("line.separator"))));
+		config.setComment(key, Stream.of(comments).map(comment -> " " + comment).collect(Collectors.joining(System.lineSeparator())));
 	}
 	
 	/**
@@ -99,7 +119,6 @@ public abstract class Punishment {
 	 */
 	protected final <E extends Enum<E>> void defineEnum(String key, E value, String... comments)
 	{
-		// holy UGLYYYY
 		define(key, value, Stream.concat(Stream.of(comments), Stream.of("Allowed Values: " + Stream.of(value.getDeclaringClass().getEnumConstants()).map(Enum::name).collect(Collectors.joining(", ")))).toArray(String[]::new));
 	}
 	
@@ -129,22 +148,6 @@ public abstract class Punishment {
 	}
 	
 	/**
-	 * Creates a new instance of the punishment.
-	 *
-	 * <p>
-	 * All punishments <b>MUST</b> have a default, no-arg constructor.
-	 * </p>
-	 *
-	 * @param clazz punishment class
-	 * @return new {@link Punishment} instance
-	 * @throws Exception if instantiating this class goes wrong
-	 */
-	public static Punishment newInstance(Class<? extends Punishment> clazz) throws Exception
-	{
-		return clazz.getDeclaredConstructor().newInstance();
-	}
-	
-	/**
 	 * Checks if this punishment type is enabled by the server admin.
 	 *
 	 * @return true if this punishment's <code>enabled</code> flag is set to true
@@ -165,8 +168,7 @@ public abstract class Punishment {
 	}
 	
 	/**
-	 * Checks a sample word (what a player said) to the taboo trie and returns a taboo if the player said one. Can be
-	 * null!
+	 * Checks if a taboo is in the punishment-specific taboo trie and returns it if found. Can be null!
 	 *
 	 * <p>You can override this method to add customized taboos that can change at your whim.</p>
 	 *
@@ -180,23 +182,5 @@ public abstract class Punishment {
 		List<String> taboos = config.get("taboo");
 		Trie trie = new Trie(taboos);
 		return isolateWords ? trie.containsAnyIsolatedIgnoreCase(sample) : trie.containsAnyIgnoreCase(sample);
-	}
-	
-	/**
-	 * Punishes the player for this punishment type.
-	 *
-	 * @param serverPlayer the <code>net.minecraft.server.level.ServerPlayer</code> instance (you'll need to cast it)
-	 */
-	public abstract void punish(Object serverPlayer);
-	
-	/**
-	 * Used to write the name of the punishment to the server config file. By default, the name is derived from the
-	 * class name.
-	 *
-	 * @return name of the punishment type
-	 */
-	public String getName()
-	{
-		return this.getClass().getSimpleName().toLowerCase();
 	}
 }

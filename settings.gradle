@@ -5,6 +5,10 @@ pluginManagement {
             name = 'MinecraftForge'
             url = 'https://maven.minecraftforge.net/'
         }
+        // For the API (lets us download MC libraries with official mappings)
+        maven {
+            url = 'https://maven.fabricmc.net/'
+        }
     }
 }
 

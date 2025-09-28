@@ -13,7 +13,7 @@ import net.minecraftforge.registries.ForgeRegistries;
 public class MobEffects extends ForgePunishment {
 	
 	@Override
-	public String getName()
+	public String getId()
 	{
 		return "mob_effects";
 	}

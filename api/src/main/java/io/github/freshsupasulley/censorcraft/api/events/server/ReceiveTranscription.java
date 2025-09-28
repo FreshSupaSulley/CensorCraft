@@ -6,7 +6,7 @@ import java.util.UUID;
  * Fires when the server receives transcription results from a player and before analyzing if the player should be
  * punished.
  *
- * <p>Like {@link PunishEvent}, cancelling this will prevent any punishments from occurring.</p>
+ * <p>Like {@link ServerPunishEvent}, cancelling this will prevent any punishments from occurring.</p>
  */
 public interface ReceiveTranscription extends ServerEvent {
 	

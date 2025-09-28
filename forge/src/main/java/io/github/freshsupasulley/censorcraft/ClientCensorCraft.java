@@ -49,7 +49,6 @@ public class ClientCensorCraft {
 	private static boolean loggedIn, startJScribeAttempt;
 	
 	// Packets
-	public static final long HEARTBEAT_TIME = 30000, HEARTBEAT_SAFETY_NET = 5000;
 	private static long lastWordPacket;
 	
 	// Setup
@@ -335,7 +334,6 @@ public class ClientCensorCraft {
 			
 			// Beyond this point, we need it to be running and actively transcribing
 			// If it's not blank, send it
-			// Send empty packet anyways if we need to keep up with the heartbeat
 			Transcriptions results = controller.getTranscriptions();
 			
 			if(!results.isEmpty())
@@ -410,14 +408,6 @@ public class ClientCensorCraft {
 			{
 				setGUIText(Component.literal("Stopped CensorCraft").withStyle(style -> style.withBold(true)));
 			}
-		}
-		
-		// Heartbeat
-		if(System.currentTimeMillis() - lastWordPacket >= HEARTBEAT_TIME - HEARTBEAT_SAFETY_NET)
-		{
-			CensorCraft.LOGGER.info("Sending heartbeat");
-			lastWordPacket = System.currentTimeMillis();
-			CensorCraft.channel.send(new WordPacket(""), PacketDistributor.SERVER.noArg());
 		}
 	}
 	

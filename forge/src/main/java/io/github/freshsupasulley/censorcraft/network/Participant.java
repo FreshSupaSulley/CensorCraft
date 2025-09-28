@@ -1,17 +1,24 @@
 package io.github.freshsupasulley.censorcraft.network;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import io.github.freshsupasulley.censorcraft.CensorCraft;
+import io.github.freshsupasulley.censorcraft.api.events.server.ServerPunishEvent;
+import io.github.freshsupasulley.censorcraft.api.punishments.ClientPunishment;
 import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
+import io.github.freshsupasulley.censorcraft.api.punishments.ServerPunishment;
+import io.github.freshsupasulley.censorcraft.config.ServerConfig;
+import io.github.freshsupasulley.plugins.impl.server.ServerPunishEventImpl;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.PacketDistributor;
 
 public class Participant {
 	
 	private String name;
-	private long lastHeartbeat = System.currentTimeMillis(), lastPunishment; // intentionally setting lastPunishment to nothing, so the cooldown doesn't apply on start
+	private long lastPunishment; // intentionally setting lastPunishment to nothing, so the cooldown doesn't apply on start
 	
 	// Hold 200 characters
 	private static final int BUFFER_SIZE = 200;
@@ -22,6 +29,12 @@ public class Participant {
 		this.name = name;
 	}
 	
+	/**
+	 * Appends the word just said to their "last said" buffer (separated with spaces) and returns the buffer.
+	 *
+	 * @param word word to append
+	 * @return buffer of words most recently said
+	 */
 	public String appendWord(String word)
 	{
 		// Separate words with spaces
@@ -47,28 +60,61 @@ public class Participant {
 		return buffer.toString();
 	}
 	
-	public void punish(List<Punishment> punishments, ServerPlayer player)
+	public void punish(Map<String, List<Punishment>> configPunishments, String taboo, ServerPlayer player)
 	{
-		CensorCraft.LOGGER.debug("Sending punishment packet");
-		CensorCraft.channel.send(new PunishedPacket(punishments.stream().map(Punishment::getName).collect(Collectors.toList()).toArray(String[]::new)), PacketDistributor.PLAYER.with(player));
-		buffer.setLength(0);
 		lastPunishment = System.currentTimeMillis();
-		heartbeat();
+		
+		// Announce the punishment
+		if(ServerConfig.get().isChatTaboos())
+		{
+			player.level().players().forEach(sample -> sample.displayClientMessage(Component.literal(name).withStyle(style -> style.withBold(true)).append(Component.literal(" said ").withStyle(style -> style.withBold(false))).append(Component.literal("\"" + taboo + "\"")), false));
+		}
+		
+		// Trigger the server side punishments only. Client side ones comes after
+		configPunishments.values().stream().flatMap(List::stream).filter(p -> p instanceof ServerPunishment).map(ServerPunishment.class::cast).forEach((punishment -> runServerPunishment(punishment, player)));
+		
+		// Notify the player that they were punished
+		// This will trigger the client-side punishment code (if implemented) once received
+		CensorCraft.LOGGER.debug("Sending punished packet");
+		
+		// Get the client punishments, if any
+		var clientPunishments = configPunishments.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().stream().filter(p -> p instanceof ClientPunishment).map(ClientPunishment.class::cast).collect(Collectors.toUnmodifiableList())));
+		
+		// Send the packet
+		CensorCraft.channel.send(new PunishedPacket(clientPunishments), PacketDistributor.PLAYER.with(player));
+		
+		// Reset the participant's word buffer
+		clearWordBuffer();
 	}
 	
-	public void heartbeat()
+	private void runServerPunishment(ServerPunishment option, ServerPlayer player)
 	{
-		this.lastHeartbeat = System.currentTimeMillis();
+		// If this was cancelled, don't punish the player
+		if(!CensorCraft.events.dispatchEvent(ServerPunishEvent.class, new ServerPunishEventImpl(player.getUUID(), option)))
+		{
+			CensorCraft.LOGGER.info("Server-side punishment was cancelled");
+			return;
+		}
+		
+		CensorCraft.LOGGER.info("Invoking punishment '{}' onto player '{}'", option.getId(), player.getUUID());
+		
+		try
+		{
+			option.punish(player);
+		} catch(Exception e)
+		{
+			CensorCraft.LOGGER.warn("Something went wrong punishing the player for punishment '{}'", option.getId(), e);
+		}
+	}
+	
+	public void clearWordBuffer()
+	{
+		buffer.setLength(0);
 	}
 	
 	public String getName()
 	{
 		return name;
-	}
-	
-	public long getLastHeartbeat()
-	{
-		return lastHeartbeat;
 	}
 	
 	public long getLastPunishment()

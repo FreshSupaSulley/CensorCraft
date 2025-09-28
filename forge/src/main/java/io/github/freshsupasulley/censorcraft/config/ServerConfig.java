@@ -2,12 +2,14 @@ package io.github.freshsupasulley.censorcraft.config;
 
 import com.electronwill.nightconfig.core.CommentedConfig;
 import com.electronwill.nightconfig.core.ConfigSpec;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import io.github.freshsupasulley.censorcraft.CensorCraft;
+import io.github.freshsupasulley.censorcraft.PunishmentRegistry;
 import io.github.freshsupasulley.censorcraft.api.events.server.ServerConfigEvent;
 import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
-import io.github.freshsupasulley.censorcraft.config.punishments.*;
 import io.github.freshsupasulley.censorcraft.network.PunishedPacket;
+import io.github.freshsupasulley.censorcraft.network.WordPacket;
 import io.github.freshsupasulley.plugins.impl.CensorCraftServerAPIImpl;
 import io.github.freshsupasulley.plugins.impl.server.ServerConfigEventImpl;
 import net.minecraft.commands.CommandSourceStack;
@@ -28,19 +30,15 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.function.Consumer;
-import java.util.stream.Stream;
-
-import static io.github.freshsupasulley.censorcraft.CensorCraft.punishments;
+import java.util.Map;
 
 @Mod.EventBusSubscriber(modid = CensorCraft.MODID)
 public class ServerConfig extends ConfigFile {
 	
 	private static ServerConfig SERVER;
 	private static final LevelResource SERVERCONFIG = new LevelResource("serverconfig");
-	
-	private Punishment[] allPunishments;
 	
 	@SubscribeEvent
 	private static void serverSetup(ServerAboutToStartEvent event)
@@ -55,28 +53,30 @@ public class ServerConfig extends ConfigFile {
 	private static void registerCommands(RegisterCommandsEvent event)
 	{
 		// probably highest op level for this command? (4)
-		event.getDispatcher().register(Commands.literal("censorcraft").requires(source -> source.hasPermission(4))
-				.then(Commands.literal("enable").executes(ctx -> setEnabled(ctx.getSource(), true)))
-				.then(Commands.literal("disable").executes(ctx -> setEnabled(ctx.getSource(), false)))
-		);
+		event.getDispatcher().register(Commands.literal("censorcraft").requires(source -> source.hasPermission(4)).then(Commands.literal("enable").executes(ctx -> setEnabled(ctx.getSource(), true))).then(Commands.literal("disable").executes(ctx -> setEnabled(ctx.getSource(), false))));
 	}
-
-	private static int setEnabled(CommandSourceStack source, boolean enabled)
+	
+	private static int setEnabled(CommandSourceStack source, boolean enabled) throws CommandSyntaxException
 	{
 		boolean state = get().isCensorCraftEnabled();
-
+		
 		if(state == enabled)
-			new SimpleCommandExceptionType(Component.literal("CensorCraft is already " + (state ? "enabled" : "disabled")));
-
+		{
+			throw new SimpleCommandExceptionType(Component.literal("CensorCraft is already " + (state ? "enabled" : "disabled"))).create();
+		}
+		
 		// If we just enabled it
 		if(enabled)
 		{
+			// Clear the accumulated participants buffer
+			WordPacket.resetParticipants();
+			
 			for(ServerPlayer player : source.getServer().getPlayerList().getPlayers())
 			{
 				// Signal to clients to reset their audio buffer
 				// (so if they spoke a taboo right as its enabled, they don't get punished)
 				// This could be paired with temporarily ignoring taboos for like 1s server side if required
-				CensorCraft.channel.send(new PunishedPacket(), PacketDistributor.PLAYER.with(player));
+				CensorCraft.channel.send(new PunishedPacket(Map.of()), PacketDistributor.PLAYER.with(player));
 			}
 		}
 		
@@ -167,31 +167,54 @@ public class ServerConfig extends ConfigFile {
 		return config.get("monitor_chat");
 	}
 	
-	public List<Punishment> getPunishments()
+	/**
+	 * Maps each plugin's ID to an array of deserialized punishments that are currently defined in the server config
+	 * file.
+	 *
+	 * @return map of plugin IDs to a list of {@link Punishment}
+	 */
+	public Map<String, List<Punishment>> getConfigPunishments()
 	{
-		List<Punishment> options = new ArrayList<>();
+		Map<String, List<Punishment>> options = new HashMap<>();
 		
 		// By fucking LAW each default option needs to be in the server config file
 		// ^ why did i write this comment in such a demanding manner
-		// ^ ah i remember. because we're checking each punishment anyways and the data for at least one better be in there
-		for(Punishment punishment : allPunishments)
+		// ^^ ah i remember. because we're checking each punishment anyways and the data for at least one better be in there
+		// ^^^ what?? can i get away with removing entire punishments from the config?? need to test
+		
+		// For each plugin punishment
+		CensorCraft.pluginPunishments.forEach((pluginID, registry) ->
 		{
-			// array of tables not attack on titan :(
-			List<CommentedConfig> aot = config.get(punishment.getName());
+			// Create the punishment list for this plugin
+			var punishmentList = new ArrayList<Punishment>();
 			
-			aot.forEach(config ->
+			// Now for each punishment defined in this plugin
+			registry.all().forEach(punishment ->
 			{
-				safeInstantiation(punishment.getClass(), (p) ->
+				// array of tables not attack on titan :(
+				List<CommentedConfig> aot = config.get(pluginID + "." + punishment.getId());
+				
+				aot.forEach(config ->
 				{
-					options.add(p.fillConfig(config));
+					// ... hence why a Punishment must have a default constructor
+					// This should never fail
+					Punishment p = Punishment.newInstance(punishment.getClass());
+					punishmentList.add(p.fillConfig(config));
 				});
 			});
-		}
+			
+			// If we actually put something in the list, then add it to the map
+			// This counters the rare case that no punishment was instantiated
+			// ... which probably will never happen (read the javadoc of safeInstantiation)
+			if(!punishmentList.isEmpty())
+			{
+				options.put(pluginID, punishmentList);
+			}
+		});
 		
 		return options;
 	}
 	
-	@SuppressWarnings("unchecked")
 	@Override
 	void register(ConfigSpec spec)
 	{
@@ -206,54 +229,34 @@ public class ServerConfig extends ConfigFile {
 		define("isolate_words", true, "If true, only whole words are considered (surrounded by spaces or word boundaries). If false, partial matches are allowed (e.g., 'art' triggers punishment for 'start')");
 		define("monitor_chat", true, "Punish players for sending taboos to chat");
 		
-		// Punishments are special. They are an array of tables
-		List<Punishment> totalPunishments = new ArrayList<>();
-		
-		// First assemble all plugin-defined punishments
-		// This fires an event to (all? test more than one) plugin(s)
-		punishments.forEach(sample -> safeInstantiation(sample, totalPunishments::add));
-		
-		// Now add the default punishments below the plugin-defined ones ig
-		// maybe this could be a cancellable event in the future?
-		// ... sadly can't have generic arrays in java
-		Class<?>[] defaults = new Class<?>[] {io.github.freshsupasulley.censorcraft.config.punishments.Commands.class, Crash.class, Dimension.class, Entities.class, Explosion.class, Ignite.class, Kill.class, Lightning.class, MobEffects.class, Teleport.class};
-		Stream.of(defaults).forEach(punishment -> safeInstantiation((Class<? extends Punishment>) punishment, totalPunishments::add));
-		
-		// Set all punishments
-		this.allPunishments = totalPunishments.toArray(Punishment[]::new);
-		
-		for(Punishment option : allPunishments)
+		// Define (always server) configs for all punishments
+		for(Map.Entry<String, PunishmentRegistry> plugin : CensorCraft.pluginPunishments.entrySet())
 		{
-			CensorCraft.LOGGER.info("Defining config for punishment '{}'", option.getName());
+			CensorCraft.LOGGER.info("Defining config for plugin '{}'", plugin.getKey());
 			
-			try
+			// For each punishment defined in this plugin
+			for(Punishment option : plugin.getValue().all())
 			{
-				// Each punishment creates an array of tables with only one entry
-				CommentedConfig table = config.createSubConfig();
-				option.buildConfig(table);
-				// Intentionally lax validator, otherwise NightConfig freaks out
-				spec.define(option.getName(), List.of(table), value -> value instanceof List);
-				// Very sadly, we can't add comments to array of tables in night config :(
-				// might need to switch to new library one day
-				// config.setComment(option.getName(), option.getDescription());
-			} catch(Exception e)
-			{
-				CensorCraft.LOGGER.warn("An error occurred defining the config for punishment type '{}'", option.getName(), e);
+				CensorCraft.LOGGER.info("Defining config for punishment '{}' of '{}'", option.getId(), plugin.getKey());
+				
+				try
+				{
+					// Each punishment creates an array of tables with only one entry
+					CommentedConfig table = config.createSubConfig();
+					option.buildConfig(table);
+					// Intentionally lax validator, otherwise NightConfig freaks out
+					// We concatenate the plugin and the punishment IDs together with a dot (TOML standard)
+					spec.define(plugin.getKey() + "." + option.getId(), List.of(table), value -> value instanceof List);
+					// Very sadly, we can't add comments to array of tables in night config :(
+					// might need to switch to new library one day
+					// config.setComment(option.getName(), option.getDescription());
+				} catch(Exception e)
+				{
+					CensorCraft.LOGGER.warn("An error occurred defining the config for punishment '{}'", option.getId(), e);
+				}
 			}
 		}
 		
 		// spec.define("punishments", punishments);
-	}
-	
-	private static void safeInstantiation(Class<? extends Punishment> clazz, Consumer<Punishment> onSuccess)
-	{
-		try
-		{
-			Punishment p = Punishment.newInstance(clazz);
-			onSuccess.accept(p);
-		} catch(Exception e)
-		{
-			CensorCraft.LOGGER.warn("Can't deserialize punishment '{}'. The punishment must have a default constructor with no args!", clazz.getName(), e);
-		}
 	}
 }

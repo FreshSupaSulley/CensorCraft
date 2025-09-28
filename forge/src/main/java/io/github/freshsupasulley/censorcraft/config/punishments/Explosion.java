@@ -8,6 +8,12 @@ import net.minecraft.world.phys.Vec3;
 public class Explosion extends ForgePunishment {
 	
 	@Override
+	public String getId()
+	{
+		return "explosion";
+	}
+	
+	@Override
 	public void buildConfig()
 	{
 		defineInRange("explosion_radius", 5D, 0D, Double.MAX_VALUE); // it seems by not defining a range, forge thinks the config file is broken

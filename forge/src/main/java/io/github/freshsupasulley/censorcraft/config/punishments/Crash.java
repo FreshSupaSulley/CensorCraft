@@ -1,9 +1,15 @@
 package io.github.freshsupasulley.censorcraft.config.punishments;
 
 import io.github.freshsupasulley.censorcraft.CensorCraft;
-import net.minecraft.server.level.ServerPlayer;
+import io.github.freshsupasulley.censorcraft.api.punishments.ClientPunishment;
 
-public class Crash extends ForgePunishment {
+public class Crash extends ClientPunishment {
+	
+	@Override
+	public String getId()
+	{
+		return "crash";
+	}
 	
 	@Override
 	public void buildConfig()
@@ -12,22 +18,20 @@ public class Crash extends ForgePunishment {
 	}
 	
 	@Override
-	public void punish(ServerPlayer player)
+	public void punish()
 	{
-		// Presence of player means this is server-side. This is a client-side executed punishment only
-		if(player != null)
-			return;
-		
 		try
 		{
-			Thread.sleep((long) (config.getInt("seconds") * 1000L));
-		} catch(InterruptedException e)
-		{
-			e.printStackTrace();
-		} finally
-		{
+			int seconds = config.getInt("seconds");
+			CensorCraft.LOGGER.info("Waiting {} seconds before crashing", seconds);
+			Thread.sleep((long) (seconds * 1000L));
+			
+			// Now close
 			CensorCraft.LOGGER.info("Exiting Minecraft (get trolled)");
 			System.exit(0);
+		} catch(InterruptedException e)
+		{
+			CensorCraft.LOGGER.error("Failed executing crash punishment", e);
 		}
 	}
 }

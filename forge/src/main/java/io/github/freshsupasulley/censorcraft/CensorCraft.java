@@ -6,6 +6,7 @@ import io.github.freshsupasulley.censorcraft.api.ForgeCensorCraftPlugin;
 import io.github.freshsupasulley.censorcraft.api.events.Event;
 import io.github.freshsupasulley.censorcraft.api.events.PluginRegistration;
 import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
+import io.github.freshsupasulley.censorcraft.config.punishments.*;
 import io.github.freshsupasulley.censorcraft.network.PunishedPacket;
 import io.github.freshsupasulley.censorcraft.network.SetupPacket;
 import io.github.freshsupasulley.censorcraft.network.WordPacket;
@@ -20,7 +21,9 @@ import net.minecraftforge.network.SimpleChannel;
 import org.slf4j.Logger;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 @Mod(CensorCraft.MODID)
@@ -32,9 +35,35 @@ public class CensorCraft {
 	// Packets
 	public static SimpleChannel channel;
 	
-	/** Used for the plugins! */
+	/** Used for the plugins */
 	public static EventHandler events;
-	public static List<Class<? extends Punishment>> punishments = new ArrayList<>();
+	public static Map<String, PunishmentRegistry> pluginPunishments = new HashMap();
+	
+	// Define our built-in plugin
+	private CensorCraftPlugin defaultPlugin = new CensorCraftPlugin() {
+		
+		@Override
+		public String getPluginId()
+		{
+			// maybe change
+			return "censorcraft";
+		}
+		
+		@Override
+		public void register(PluginRegistration r)
+		{
+			r.registerPunishment(Commands.class);
+			r.registerPunishment(Crash.class);
+			r.registerPunishment(Dimension.class);
+			r.registerPunishment(Entities.class);
+			r.registerPunishment(Explosion.class);
+			r.registerPunishment(Ignite.class);
+			r.registerPunishment(Kill.class);
+			r.registerPunishment(Lightning.class);
+			r.registerPunishment(MobEffects.class);
+			r.registerPunishment(Teleport.class);
+		}
+	};
 	
 	public CensorCraft(FMLJavaModLoadingContext context)
 	{
@@ -65,27 +94,48 @@ public class CensorCraft {
 		CensorCraft.LOGGER.info("Found {} plugin(s)", plugins.size());
 		
 		EventHandlerBuilder eventBuilder = new EventHandlerBuilder(CensorCraft.LOGGER);
-		PluginRegistration registration = new PluginRegistration() {
-			
-			@Override
-			public <T extends Event> void registerEvent(Class<T> eventClass, Consumer<T> onEvent)
-			{
-				eventBuilder.addEvent(eventClass, onEvent);
-			}
-			
-			@Override
-			public void registerPunishment(Class<? extends Punishment> punishment)
-			{
-				punishments.add(punishment);
-			}
-		};
 		
 		for(CensorCraftPlugin plugin : plugins)
 		{
 			LOGGER.info("Registering events for CensorCraft plugin '{}'", plugin.getPluginId());
 			
+			pluginPunishments.put(plugin.getPluginId(), new PunishmentRegistry());
+			
 			try
 			{
+				PluginRegistration registration = new PluginRegistration() {
+					
+					@Override
+					public <T extends Event> void registerEvent(Class<T> eventClass, Consumer<T> onEvent)
+					{
+						eventBuilder.addEvent(eventClass, onEvent);
+					}
+					
+					// this might need to be done on the server side only??
+					// wait no because we need to be able to run client side punishments anyways so the client HAS to know about them
+					@Override
+					public void registerPunishment(Class<? extends Punishment> clazz)
+					{
+						try
+						{
+							var punishment = Punishment.newInstance(clazz);
+							
+							if(punishment.getId().isBlank())
+							{
+								throw new IllegalStateException("Punishment ID cannot be blank for " + clazz);
+							}
+							
+							pluginPunishments.get(plugin.getPluginId()).register(punishment);
+						} catch(RuntimeException e)
+						{
+							// This is the first place plugin-defined punishments are attempted to be instantiated, so this log is necessary
+							CensorCraft.LOGGER.warn("Can't instantiate punishment '{}'. The punishment must have a default constructor with no args!", clazz.getName(), e);
+							// Should be caught in parent try catch
+							throw e;
+						}
+					}
+				};
+				
 				plugin.register(registration);
 			} catch(Exception e)
 			{
@@ -99,6 +149,8 @@ public class CensorCraft {
 	public List<CensorCraftPlugin> loadPlugins()
 	{
 		List<CensorCraftPlugin> plugins = new ArrayList<>();
+		// Load our default plugin
+		plugins.add(defaultPlugin);
 		
 		ModList.get().getAllScanData().forEach(scan ->
 		{
@@ -113,9 +165,16 @@ public class CensorCraft {
 						if(CensorCraftPlugin.class.isAssignableFrom(clazz))
 						{
 							CensorCraftPlugin plugin = (CensorCraftPlugin) clazz.getDeclaredConstructor().newInstance();
+							
+							// Ensure the ID isn't empty
+							if(plugin.getPluginId().isBlank())
+							{
+								throw new IllegalStateException("Plugin ID cannot be blank for " + clazz);
+							}
+							
 							plugins.add(plugin);
 						}
-					} catch(Throwable e)
+					} catch(Exception e)
 					{
 						CensorCraft.LOGGER.warn("Failed to load plugin '{}'", annotationData.memberName(), e);
 					}

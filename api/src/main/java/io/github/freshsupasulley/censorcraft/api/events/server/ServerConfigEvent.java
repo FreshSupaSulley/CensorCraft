@@ -1,7 +1,9 @@
 package io.github.freshsupasulley.censorcraft.api.events.server;
 
 /**
- * Fires when the server config file has been created, which fires when the server is about to start.
+ * Fires when the server is about to start.
+ *
+ * <p>Completion of this event means the server config file was created.</p>
  */
 public interface ServerConfigEvent extends ServerEvent {
 	

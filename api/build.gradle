@@ -2,6 +2,7 @@ plugins {
     id 'java-library'
     id 'maven-publish'
     id 'org.jreleaser' version '1.17.0'
+//    id 'fabric-loom' version '1.11-SNAPSHOT'
 }
 
 group = "io.github.freshsupasulley.censorcraft"
@@ -10,10 +11,18 @@ description = 'CensorCraft API'
 
 repositories {
     mavenCentral()
+    maven {
+        name = 'Minecraft libraries'
+        url = 'https://libraries.minecraft.net'
+    }
 }
 
 dependencies {
-    compileOnly 'com.electronwill.night-config:core:[1.0,)'
+//    minecraft "com.mojang:minecraft:${minecraft_version}"
+//    mappings loom.officialMojangMappings()
+    // Forge specific
+    compileOnly 'com.electronwill.night-config:core:[3.7,)'
+    compileOnly 'com.electronwill.night-config:toml:[3.7,)'
 }
 
 java {

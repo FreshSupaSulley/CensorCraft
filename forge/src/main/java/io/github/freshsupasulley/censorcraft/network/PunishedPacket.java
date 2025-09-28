@@ -1,72 +1,135 @@
 package io.github.freshsupasulley.censorcraft.network;
 
+import com.electronwill.nightconfig.core.CommentedConfig;
+import com.electronwill.nightconfig.toml.TomlFormat;
 import io.github.freshsupasulley.censorcraft.CensorCraft;
 import io.github.freshsupasulley.censorcraft.ClientCensorCraft;
-import io.github.freshsupasulley.censorcraft.api.events.client.ClientAcknowledgePunish;
-import io.github.freshsupasulley.censorcraft.config.punishments.Crash;
-import io.github.freshsupasulley.plugins.impl.client.ClientAcknowledgePunishImpl;
+import io.github.freshsupasulley.censorcraft.api.events.client.ClientPunishEvent;
+import io.github.freshsupasulley.censorcraft.api.punishments.ClientPunishment;
+import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
+import io.github.freshsupasulley.plugins.impl.client.ClientPunishEventImpl;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.event.network.CustomPayloadEvent.Context;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStreamReader;
 import java.nio.charset.Charset;
-import java.util.Arrays;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+/**
+ * Sent to the client when they were punished.
+ *
+ * <p>Informs the client to reset their audio buffer, and what client-side punishments to run.</p>
+ */
 public class PunishedPacket implements IPacket {
 	
-	public static final StreamCodec<RegistryFriendlyByteBuf, PunishedPacket> CODEC = new StreamCodec<RegistryFriendlyByteBuf, PunishedPacket>()
-	{
+	public static final StreamCodec<RegistryFriendlyByteBuf, PunishedPacket> CODEC = new StreamCodec<>() {
+		
 		@Override
 		public void encode(RegistryFriendlyByteBuf buffer, PunishedPacket packet)
 		{
-			buffer.writeInt(packet.punishments.length);
+			// Number of plugins this affected
+			buffer.writeInt(packet.registry.size());
 			
-			for(String string : packet.punishments)
+			packet.registry.forEach((id, punishments) ->
 			{
-				byte[] bytes = string.getBytes(Charset.defaultCharset());
-				buffer.writeInt(bytes.length);
-				buffer.writeBytes(bytes);
-			}
+				// The name of the plugin
+				buffer.writeInt(id.length());
+				buffer.writeCharSequence(id, Charset.defaultCharset());
+				
+				// Number of punishments for this
+				buffer.writeInt(punishments.size());
+				
+				punishments.forEach(punishment ->
+				{
+					String toWrite = punishment.getClass().getName();
+					buffer.writeInt(toWrite.length());
+					buffer.writeCharSequence(toWrite, Charset.defaultCharset());
+					
+					// Append the data to this buffer
+					buffer.writeByteArray(punishment.serializeConfig());
+				});
+			});
 		}
 		
 		@Override
 		public PunishedPacket decode(RegistryFriendlyByteBuf buffer)
 		{
-			String[] punishments = new String[buffer.readInt()];
+			Map<String, List<ClientPunishment>> registry = new HashMap<>();
+			final int plugins = buffer.readInt();
 			
-			for(int i = 0; i < punishments.length; i++)
+			for(int i = 0; i < plugins; i++)
 			{
-				punishments[i] = buffer.readCharSequence(buffer.readInt(), Charset.defaultCharset()).toString();
+				// Get the plugin ID
+				String pluginID = buffer.readCharSequence(buffer.readInt(), Charset.defaultCharset()).toString();
+				
+				// Get the number of punishments of this particular plugin
+				final int punishments = buffer.readInt();
+				registry.put(pluginID, new ArrayList<>());
+				
+				for(int j = 0; j < punishments; j++)
+				{
+					String punishmentName = buffer.readCharSequence(buffer.readInt(), Charset.defaultCharset()).toString();
+					
+					try
+					{
+						ClientPunishment punishment = Punishment.newInstance((Class<? extends ClientPunishment>) Class.forName(punishmentName));
+						
+						// Read the config from the wire
+						ByteArrayInputStream in = new ByteArrayInputStream(buffer.readByteArray());
+						CommentedConfig config = TomlFormat.instance().createParser().parse(new InputStreamReader(in, StandardCharsets.UTF_8));
+						punishment.fillConfig(config);
+						
+						// Add to our buffer
+						registry.get(pluginID).add(punishment);
+					} catch(Exception e)
+					{
+						// I believe this can only happen if the client doesn't have the punishment (mismatching mods problem)
+						CensorCraft.LOGGER.error("Failed to deserialize punishment class '{}' for plugin '{}'", punishmentName, pluginID, e);
+					}
+				}
 			}
 			
-			return new PunishedPacket(punishments);
+			return new PunishedPacket(registry);
 		}
 	};
 	
-	private String[] punishments;
+	private Map<String, List<ClientPunishment>> registry;
 	
-	public PunishedPacket(String... punishments)
+	public PunishedPacket(Map<String, List<ClientPunishment>> punishments)
 	{
-		this.punishments = punishments;
+		this.registry = punishments;
 	}
 	
 	@Override
 	public void consume(Context context)
 	{
-		CensorCraft.LOGGER.info("Received punished packet: {}", Arrays.toString(punishments));
+		CensorCraft.LOGGER.info("Received punished packet");
 		
-		// Notify any APIs that we're now in the client-side
-		CensorCraft.events.dispatchEvent(ClientAcknowledgePunish.class, new ClientAcknowledgePunishImpl(punishments));
-		
-		// Client is the only one (so far) that needs to be executed client side
-		// Needs to match getName() of PunishmentOption
-		if(List.of(punishments).contains("crash"))
-		{
-			new Crash().punish((ServerPlayer) null);
-		}
-		
+		// Reset our audio buffer
 		ClientCensorCraft.punished();
+		
+		// Trigger the client-side code of the punishment
+		registry.values().stream().flatMap(List::stream).forEach(punishment ->
+		{
+			// Signal to plugins that the punishment is about to be executed client-side
+			if(CensorCraft.events.dispatchEvent(ClientPunishEvent.class, new ClientPunishEventImpl(punishment)))
+			{
+				CensorCraft.LOGGER.debug("Invoking '{}' client-side punishment code", punishment.getId());
+				
+				try
+				{
+					punishment.punish();
+				} catch(Exception e)
+				{
+					CensorCraft.LOGGER.error("Failed executing '{}' punishment", punishment.getId(), e);
+				}
+			}
+		});
 	}
 }

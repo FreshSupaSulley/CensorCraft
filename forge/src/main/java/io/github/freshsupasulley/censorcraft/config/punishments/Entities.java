@@ -12,6 +12,12 @@ import net.minecraftforge.registries.ForgeRegistries;
 public class Entities extends ForgePunishment {
 	
 	@Override
+	public String getId()
+	{
+		return "entities";
+	}
+	
+	@Override
 	public void buildConfig()
 	{
 		define("entities", new ArrayList<>(List.of("warden", "skeleton")), "Entities to spawn on the player", "Allowed list (case-insensitive, duplicates allowed): " + ForgeRegistries.ENTITY_TYPES.getKeys().stream().map(ResourceLocation::getPath).sorted().collect(Collectors.joining(", ")));

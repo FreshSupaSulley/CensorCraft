@@ -23,6 +23,12 @@ import net.minecraft.world.phys.Vec3;
 public class Dimension extends ForgePunishment {
 	
 	@Override
+	public String getId()
+	{
+		return "dimension";
+	}
+	
+	@Override
 	public void buildConfig()
 	{
 		// builder.comment("Using RANDOM means the player will be sent to a dimension they are not already in");
