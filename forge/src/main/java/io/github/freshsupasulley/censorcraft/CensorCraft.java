@@ -98,14 +98,6 @@ public class CensorCraft {
 		for(CensorCraftPlugin plugin : plugins)
 		{
 			LOGGER.info("Registering events for CensorCraft plugin '{}'", plugin.getPluginId());
-			
-			// Check if someone already declared a plugin with this ID already
-			if(pluginPunishments.containsKey(plugin.getPluginId()))
-			{
-				CensorCraft.LOGGER.error("2 or more plugins declared as '{}' conflict with each other. Only the first one read will be used", plugin.getPluginId());
-				continue;
-			}
-			
 			pluginPunishments.put(plugin.getPluginId(), new PunishmentRegistry());
 			
 			try
@@ -183,7 +175,15 @@ public class CensorCraft {
 								throw new IllegalStateException("Plugin ID cannot be blank for " + clazz);
 							}
 							
-							plugins.add(plugin);
+							// Check if someone already declared a plugin with this ID already
+							if(pluginPunishments.containsKey(plugin.getPluginId()))
+							{
+								CensorCraft.LOGGER.warn("2 or more plugins declared as '{}' conflict with each other. Only the first one found will be added", plugin.getPluginId());
+							}
+							else
+							{
+								plugins.add(plugin);
+							}
 						}
 					} catch(Exception e)
 					{

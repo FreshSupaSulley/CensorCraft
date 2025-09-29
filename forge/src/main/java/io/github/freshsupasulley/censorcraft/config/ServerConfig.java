@@ -177,11 +177,6 @@ public class ServerConfig extends ConfigFile {
 	{
 		Map<String, List<Punishment>> options = new HashMap<>();
 		
-		// By fucking LAW each default option needs to be in the server config file
-		// ^ why did i write this comment in such a demanding manner
-		// ^^ ah i remember. because we're checking each punishment anyways and the data for at least one better be in there
-		// ^^^ what?? can i get away with removing entire punishments from the config?? need to test
-		
 		// For each plugin punishment
 		CensorCraft.pluginPunishments.forEach((pluginID, registry) ->
 		{
@@ -192,16 +187,22 @@ public class ServerConfig extends ConfigFile {
 			registry.all().forEach(punishment ->
 			{
 				// array of tables not attack on titan :(
+				// By convention, there needs to be at least one of each punishment type in the config file
 				List<CommentedConfig> aot = config.get(pluginID + "." + punishment.getId());
 				
-				aot.forEach(config ->
+				// If we have a list
+				// ... don't print to logs if null cause that'll spam it
+				if(aot != null)
 				{
-					// ... hence why a Punishment must have a default constructor
-					// Punishments are proven to be working at this point, as plugin registration tests instantiation
-					Punishment p = Punishment.newInstance(punishment.getClass());
-					p.config = config;
-					punishmentList.add(p);
-				});
+					aot.forEach(config ->
+					{
+						// ... hence why a Punishment must have a default constructor
+						// Punishments are proven to be working at this point, as plugin registration tests instantiation
+						Punishment p = Punishment.newInstance(punishment.getClass());
+						p.config = config;
+						punishmentList.add(p);
+					});
+				}
 			});
 			
 			// If we actually put something in the list, then add it to the map

@@ -11,7 +11,7 @@ import java.util.Map;
  */
 public class PunishmentRegistry {
 	
-	private static final Map<String, Punishment> REGISTERED = new HashMap<>();
+	private final Map<String, Punishment> REGISTERED = new HashMap<>();
 	
 	public void register(Punishment punishment)
 	{
