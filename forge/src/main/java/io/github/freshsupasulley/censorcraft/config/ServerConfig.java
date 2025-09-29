@@ -197,9 +197,10 @@ public class ServerConfig extends ConfigFile {
 				aot.forEach(config ->
 				{
 					// ... hence why a Punishment must have a default constructor
-					// This should never fail
+					// Punishments are proven to be working at this point, as plugin registration tests instantiation
 					Punishment p = Punishment.newInstance(punishment.getClass());
-					punishmentList.add(p.fillConfig(config));
+					p.config = config;
+					punishmentList.add(p);
 				});
 			});
 			

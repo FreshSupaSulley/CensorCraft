@@ -96,18 +96,6 @@ public abstract class Punishment implements Serializable {
 	}
 	
 	/**
-	 * Internally used to set the config when loaded so it can be properly deserialized from the config file.
-	 *
-	 * @param config {@link CommentedConfig} instance
-	 * @return this instance
-	 */
-	public final Punishment fillConfig(CommentedConfig config)
-	{
-		this.config = config;
-		return this;
-	}
-	
-	/**
 	 * Internally used to build the punishment's default parameters.
 	 *
 	 * @param config {@link CommentedConfig} instance
