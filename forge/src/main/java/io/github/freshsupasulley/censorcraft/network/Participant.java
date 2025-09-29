@@ -1,9 +1,12 @@
 package io.github.freshsupasulley.censorcraft.network;
 
 import io.github.freshsupasulley.censorcraft.CensorCraft;
+import io.github.freshsupasulley.censorcraft.api.events.PluginPunishments;
+import io.github.freshsupasulley.censorcraft.api.events.server.ChatTabooEvent;
 import io.github.freshsupasulley.censorcraft.api.events.server.ServerPunishEvent;
 import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
 import io.github.freshsupasulley.censorcraft.config.ServerConfig;
+import io.github.freshsupasulley.plugins.impl.server.ChatTabooEventImpl;
 import io.github.freshsupasulley.plugins.impl.server.ServerPunishEventImpl;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -19,7 +22,7 @@ public class Participant {
 	
 	// Hold 200 characters
 	private static final int BUFFER_SIZE = 200;
-	private StringBuilder buffer = new StringBuilder(BUFFER_SIZE);
+	private final StringBuilder buffer = new StringBuilder(BUFFER_SIZE);
 	
 	public Participant(String name)
 	{
@@ -57,25 +60,33 @@ public class Participant {
 		return buffer.toString();
 	}
 	
-	public void punish(Map<String, List<Punishment>> configPunishments, String taboo, ServerPlayer player)
+	public void punish(Map<String, List<Punishment>> rawPunishments, String taboo, ServerPlayer player)
 	{
+		var punishments = new PluginPunishments(rawPunishments);
 		lastPunishment = System.currentTimeMillis();
 		
 		// Announce the punishment
 		if(ServerConfig.get().isChatTaboos())
 		{
-			player.level().players().forEach(sample -> sample.displayClientMessage(Component.literal(name).withStyle(style -> style.withBold(true)).append(Component.literal(" said ").withStyle(style -> style.withBold(false))).append(Component.literal("\"" + taboo + "\"")), false));
+			// Allow plugins to change what gets sent
+			var component = Component.literal(name).withStyle(style -> style.withBold(true)).append(Component.literal(" said ").withStyle(style -> style.withBold(false))).append(Component.literal("\"" + taboo + "\""));
+			var event = new ChatTabooEventImpl(punishments, player.getUUID(), component);
+			
+			if(CensorCraft.events.dispatchEvent(ChatTabooEvent.class, event))
+			{
+				player.level().players().forEach(sample -> sample.displayClientMessage((Component) event.getText(), false));
+			}
 		}
 		
 		// Trigger the server side punishments. Client side ones comes after
-		configPunishments.values().stream().flatMap(List::stream).forEach((punishment -> runServerPunishment(punishment, player)));
+		punishments.flatMappedStream().forEach((punishment -> runServerPunishment(punishment, player)));
 		
 		// Notify the player that they were punished
 		// This will trigger the client-side punishment code (if implemented) once received
 		CensorCraft.LOGGER.debug("Sending punished packet");
 		
 		// Send the packet
-		CensorCraft.channel.send(new PunishedPacket(configPunishments), PacketDistributor.PLAYER.with(player));
+		CensorCraft.channel.send(new PunishedPacket(punishments), PacketDistributor.PLAYER.with(player));
 		
 		// Reset the participant's word buffer
 		clearWordBuffer();

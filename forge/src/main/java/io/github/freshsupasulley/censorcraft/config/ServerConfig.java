@@ -6,6 +6,7 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import io.github.freshsupasulley.censorcraft.CensorCraft;
 import io.github.freshsupasulley.censorcraft.PunishmentRegistry;
+import io.github.freshsupasulley.censorcraft.api.events.PluginPunishments;
 import io.github.freshsupasulley.censorcraft.api.events.server.ServerConfigEvent;
 import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
 import io.github.freshsupasulley.censorcraft.network.PunishedPacket;
@@ -76,7 +77,7 @@ public class ServerConfig extends ConfigFile {
 				// Signal to clients to reset their audio buffer
 				// (so if they spoke a taboo right as its enabled, they don't get punished)
 				// This could be paired with temporarily ignoring taboos for like 1s server side if required
-				CensorCraft.channel.send(new PunishedPacket(Map.of()), PacketDistributor.PLAYER.with(player));
+				CensorCraft.channel.send(new PunishedPacket(new PluginPunishments(Map.of())), PacketDistributor.PLAYER.with(player));
 			}
 		}
 		

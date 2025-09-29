@@ -2,6 +2,7 @@ package io.github.freshsupasulley.censorcraft.network;
 
 import io.github.freshsupasulley.censorcraft.CensorCraft;
 import io.github.freshsupasulley.censorcraft.ClientCensorCraft;
+import io.github.freshsupasulley.censorcraft.api.events.PluginPunishments;
 import io.github.freshsupasulley.censorcraft.api.events.client.ClientPunishEvent;
 import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
 import io.github.freshsupasulley.plugins.impl.client.ClientPunishEventImpl;
@@ -31,10 +32,12 @@ public class PunishedPacket implements IPacket {
 		@Override
 		public void encode(RegistryFriendlyByteBuf buffer, PunishedPacket packet)
 		{
-			// Number of plugins this affected
-			buffer.writeInt(packet.registry.size());
+			var raw = packet.registry.getRaw();
 			
-			packet.registry.forEach((id, punishments) ->
+			// Number of plugins this affected
+			buffer.writeInt(raw.size());
+			
+			raw.forEach((id, punishments) ->
 			{
 				// The name of the plugin
 				buffer.writeInt(id.length());
@@ -50,7 +53,8 @@ public class PunishedPacket implements IPacket {
 					buffer.writeCharSequence(toWrite, Charset.defaultCharset());
 					
 					// Append the data to this buffer
-					try {
+					try
+					{
 						ByteArrayOutputStream baos = new ByteArrayOutputStream();
 						ObjectOutputStream oos = new ObjectOutputStream(baos);
 						oos.writeObject(punishment);
@@ -59,7 +63,8 @@ public class PunishedPacket implements IPacket {
 						
 						// Write to the buffer if successful
 						buffer.writeByteArray(bytes);
-					} catch(Exception e) {
+					} catch(Exception e)
+					{
 						CensorCraft.LOGGER.error("Failed to encode punishment '{}'", punishment.getId(), e);
 						// Error will be detected during decoding
 						buffer.writeByteArray(new byte[0]);
@@ -117,13 +122,13 @@ public class PunishedPacket implements IPacket {
 				}
 			}
 			
-			return new PunishedPacket(registry);
+			return new PunishedPacket(new PluginPunishments(registry));
 		}
 	};
 	
-	private final Map<String, List<Punishment>> registry;
+	private final PluginPunishments registry;
 	
-	public PunishedPacket(Map<String, List<Punishment>> punishments)
+	public PunishedPacket(PluginPunishments punishments)
 	{
 		this.registry = punishments;
 	}
@@ -137,7 +142,7 @@ public class PunishedPacket implements IPacket {
 		ClientCensorCraft.punished();
 		
 		// Trigger the client-side code of the punishment
-		registry.values().stream().flatMap(List::stream).forEach(punishment ->
+		registry.flatMappedStream().forEach(punishment ->
 		{
 			// Signal to plugins that the punishment is about to be executed client-side
 			if(CensorCraft.events.dispatchEvent(ClientPunishEvent.class, new ClientPunishEventImpl(punishment)))

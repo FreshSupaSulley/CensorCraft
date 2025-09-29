@@ -5,7 +5,8 @@
 ### Added
 
 - Client-side punishments now have a dedicated function that can be optionally implemented.
-- `ClientPunishEvent` and `ServerPunishEvent` hooks into running sided punishments.
+- `ClientPunishEvent` and `ServerPunishEvent` events to hook into running sided code.
+- `ChatTabooEvent`.
 
 ### Changed
 
