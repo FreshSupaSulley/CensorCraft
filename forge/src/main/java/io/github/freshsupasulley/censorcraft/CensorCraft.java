@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.regex.Pattern;
 
 @Mod(CensorCraft.MODID)
 public class CensorCraft {
@@ -35,7 +36,10 @@ public class CensorCraft {
 	// Packets
 	public static SimpleChannel channel;
 	
-	/** Used for the plugins */
+	// Used for the plugins
+	/** For validating plugin and punishment IDs to ensure they meet the TOML bare key standard */
+	private static final Pattern TOML_BARE_KEY = Pattern.compile("^[A-Za-z0-9_-]+$");
+	
 	public static EventHandler events;
 	public static Map<String, PunishmentRegistry> pluginPunishments = new HashMap();
 	
@@ -129,9 +133,9 @@ public class CensorCraft {
 						}
 						
 						// Now that it's guaranteed to be non-null, check the ID
-						if(punishment.getId().isBlank())
+						if(!isValidTomlKey(punishment.getId()))
 						{
-							throw new IllegalStateException("Punishment ID cannot be blank for " + clazz);
+							throw new IllegalStateException("Punishment ID defined at " + clazz + " fails TOML bare key regex");
 						}
 						
 						// This will throw an error if a punishment was already declared with this name
@@ -170,15 +174,15 @@ public class CensorCraft {
 							CensorCraftPlugin plugin = (CensorCraftPlugin) clazz.getDeclaredConstructor().newInstance();
 							
 							// Ensure the ID isn't empty
-							if(plugin.getPluginId().isBlank())
+							if(!isValidTomlKey(plugin.getPluginId()))
 							{
-								throw new IllegalStateException("Plugin ID cannot be blank for " + clazz);
+								throw new IllegalStateException("Plugin ID defined at " + clazz + " fails TOML bare key regex");
 							}
 							
 							// Check if someone already declared a plugin with this ID already
-							if(pluginPunishments.containsKey(plugin.getPluginId()))
+							if(plugins.stream().anyMatch(sample -> sample.getPluginId().equals(plugin.getPluginId())))
 							{
-								CensorCraft.LOGGER.warn("2 or more plugins declared as '{}' conflict with each other. Only the first one found will be added", plugin.getPluginId());
+								CensorCraft.LOGGER.warn("Another plugin declared with ID '{}' was already loaded", plugin.getPluginId());
 							}
 							else
 							{
@@ -194,5 +198,10 @@ public class CensorCraft {
 		});
 		
 		return plugins;
+	}
+	
+	private static boolean isValidTomlKey(String key)
+	{
+		return TOML_BARE_KEY.matcher(key).matches();
 	}
 }
