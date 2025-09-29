@@ -11,6 +11,8 @@
 
 - Punishments now need to have unique IDs with respect to other punishments defined in the same plugin. More
   importantly, plugins also need to have unique IDs with respect to every other plugin loaded.
+- Punishments are now serializable and send their instance variables to the client, allowing for server-client
+  communication.
 
 ### Removed
 

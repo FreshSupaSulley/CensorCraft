@@ -1,7 +1,5 @@
 package io.github.freshsupasulley.censorcraft.network;
 
-import com.electronwill.nightconfig.core.CommentedConfig;
-import com.electronwill.nightconfig.toml.TomlFormat;
 import io.github.freshsupasulley.censorcraft.CensorCraft;
 import io.github.freshsupasulley.censorcraft.ClientCensorCraft;
 import io.github.freshsupasulley.censorcraft.api.events.client.ClientPunishEvent;
@@ -11,9 +9,11 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraftforge.event.network.CustomPayloadEvent.Context;
 
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -50,7 +50,20 @@ public class PunishedPacket implements IPacket {
 					buffer.writeCharSequence(toWrite, Charset.defaultCharset());
 					
 					// Append the data to this buffer
-					buffer.writeByteArray(serializeConfig(punishment));
+					try {
+						ByteArrayOutputStream baos = new ByteArrayOutputStream();
+						ObjectOutputStream oos = new ObjectOutputStream(baos);
+						oos.writeObject(punishment);
+						oos.flush();
+						byte[] bytes = baos.toByteArray();
+						
+						// Write to the buffer if successful
+						buffer.writeByteArray(bytes);
+					} catch(Exception e) {
+						CensorCraft.LOGGER.error("Failed to encode punishment '{}'", punishment.getId(), e);
+						// Error will be detected during decoding
+						buffer.writeByteArray(new byte[0]);
+					}
 				});
 			});
 		}
@@ -76,19 +89,30 @@ public class PunishedPacket implements IPacket {
 					
 					try
 					{
-						Punishment punishment = Punishment.newInstance((Class<? extends Punishment>) Class.forName(punishmentName));
+						Class<? extends Punishment> clazz = (Class<? extends Punishment>) Class.forName(punishmentName);
+						Punishment punishment;
 						
-						// Read the config from the wire
-						ByteArrayInputStream in = new ByteArrayInputStream(buffer.readByteArray());
-						CommentedConfig config = TomlFormat.instance().createParser().parse(new InputStreamReader(in, StandardCharsets.UTF_8));
-						punishment.fillConfig(config);
+						// Read object
+						byte[] bytes = buffer.readByteArray();
+						
+						if(bytes.length == 0)
+						{
+							CensorCraft.LOGGER.warn("Received empty punishment object with name '{}'", punishmentName);
+							punishment = Punishment.newInstance(clazz);
+						}
+						else
+						{
+							ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
+							ObjectInputStream ois = new ObjectInputStream(bais);
+							punishment = clazz.cast(ois.readObject());
+						}
 						
 						// Add to our buffer
 						registry.get(pluginID).add(punishment);
 					} catch(Exception e)
 					{
 						// I believe this can only happen if the client doesn't have the punishment (mismatching mods problem)
-						CensorCraft.LOGGER.error("Failed to deserialize punishment class '{}' for plugin '{}'", punishmentName, pluginID, e);
+						CensorCraft.LOGGER.error("Failed to decode punishment class '{}' for plugin '{}'", punishmentName, pluginID, e);
 					}
 				}
 			}
@@ -97,7 +121,7 @@ public class PunishedPacket implements IPacket {
 		}
 	};
 	
-	private Map<String, List<Punishment>> registry;
+	private final Map<String, List<Punishment>> registry;
 	
 	public PunishedPacket(Map<String, List<Punishment>> punishments)
 	{
@@ -129,26 +153,5 @@ public class PunishedPacket implements IPacket {
 				}
 			}
 		});
-	}
-	
-	/**
-	 * Serializes and returns the server's config file to be sent to the client.
-	 */
-	private static byte[] serializeConfig(Punishment punishment)
-	{
-		ByteArrayOutputStream out = new ByteArrayOutputStream();
-		OutputStreamWriter writer = new OutputStreamWriter(out);
-		TomlFormat.instance().createWriter().write(punishment.config, writer);
-		
-		try
-		{
-			writer.flush();
-		} catch(IOException e)
-		{
-			// This should never happen so lazily wrap
-			throw new RuntimeException(e);
-		}
-		
-		return out.toByteArray();
 	}
 }

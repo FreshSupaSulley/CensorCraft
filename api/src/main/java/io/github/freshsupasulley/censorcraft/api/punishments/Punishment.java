@@ -2,22 +2,27 @@ package io.github.freshsupasulley.censorcraft.api.punishments;
 
 import com.electronwill.nightconfig.core.CommentedConfig;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
- * Defines a punishment.
+ * Punishments can run on the server, the client, or both. They are configurable in the server config file.
  *
  * <p>All punishments <b>MUST</b> have a default, no-arg constructor!</p>
  *
  * <p>Extend this class to define your own punishments. There are helper methods here to define options for your
  * punishment that appear in the server config file.</p>
+ *
+ * <p>Punishments are serialized and sent to the client, meaning instance variables will be accessible for client-side
+ * punishments, with the notable exception of <code>config</code> (see {@link #punishClientSide()}).</p>
  */
-public abstract class Punishment {
+public abstract class Punishment implements Serializable {
 	
-	public CommentedConfig config;
+	/** Server config that defines this punishment. This is <b>ONLY</b> accessible server-side. */
+	public transient CommentedConfig config;
 	
 	/**
 	 * Creates a new instance of the punishment.
@@ -60,8 +65,8 @@ public abstract class Punishment {
 	 * }</pre>
 	 *
 	 * <p>
-	 * You can use {@link #config} in {@link #punish(Object)} to retrieve the server admin's settings of
-	 * what you defined here.
+	 * You can use {@link #config} in {@link #punish(Object)} to retrieve the server admin's settings of what you
+	 * defined here.
 	 * </p>
 	 */
 	protected abstract void buildConfig();
@@ -79,8 +84,12 @@ public abstract class Punishment {
 	 * <p>Most of the time, server-side punishments are sufficient (which is why implementing this method is
 	 * optional).</p>
 	 *
-	 * <p>The server config's punishment settings is automatically sent to the client, meaning you can read from the
-	 * <code>config</code> instance variable on the client (however, setting anything to the config does nothing).</p>
+	 * <p>Punishments are serialized and sent to the client, but <code>config</code> is not. Attempting to read from
+	 * the config on the client will raise a {@link NullPointerException}. If you want to send config settings from the
+	 * server to the client, take out what you need and store them as instance variables in {@link #punish(Object)}.
+	 * Those instance variables will be serialized and sent to the client, where you can use them in this method.
+	 * <b>Only store serializable instance variables</b>! Unserializable instance variables will raise
+	 * {@link java.io.NotSerializableException}.</p>
 	 */
 	public void punishClientSide()
 	{

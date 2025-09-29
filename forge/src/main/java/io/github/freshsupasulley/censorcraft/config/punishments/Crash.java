@@ -5,6 +5,8 @@ import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
 
 public class Crash extends Punishment {
 	
+	private int seconds;
+	
 	@Override
 	public String getId()
 	{
@@ -19,14 +21,16 @@ public class Crash extends Punishment {
 	
 	// Crashing will do nothing server-side (maybe we can kick them first or something)
 	@Override
-	public void punish(Object serverPlayer) {}
+	public void punish(Object serverPlayer)
+	{
+		this.seconds = config.getInt("seconds");
+	}
 	
 	@Override
 	public void punishClientSide()
 	{
 		try
 		{
-			int seconds = config.getInt("seconds");
 			CensorCraft.LOGGER.info("Waiting {} seconds before crashing", seconds);
 			Thread.sleep((long) (seconds * 1000L));
 			
