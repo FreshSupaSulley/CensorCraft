@@ -65,7 +65,11 @@ public class Participant {
 		var punishments = new PluginPunishments(rawPunishments);
 		lastPunishment = System.currentTimeMillis();
 		
+		// Trigger the server side punishments. Client side ones comes after
+		punishments.flatMappedStream().forEach((punishment -> runServerPunishment(punishment, player)));
+		
 		// Announce the punishment
+		// The only reason I'm announcing the punishment AFTER running it is for my niche plugin so it can access instance variables during ChatTabooEvent
 		if(ServerConfig.get().isChatTaboos())
 		{
 			// Allow plugins to change what gets sent
@@ -77,9 +81,6 @@ public class Participant {
 				player.level().players().forEach(sample -> sample.displayClientMessage((Component) event.getText(), false));
 			}
 		}
-		
-		// Trigger the server side punishments. Client side ones comes after
-		punishments.flatMappedStream().forEach((punishment -> runServerPunishment(punishment, player)));
 		
 		// Notify the player that they were punished
 		// This will trigger the client-side punishment code (if implemented) once received

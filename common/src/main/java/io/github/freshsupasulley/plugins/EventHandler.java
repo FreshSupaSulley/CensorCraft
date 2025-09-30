@@ -51,12 +51,12 @@ public class EventHandler {
 				
 				if(event.isCancelled())
 				{
-					logger.debug("{} event was cancelled", event.getClass().getSimpleName());
+					logger.debug("{} event was cancelled", eventClass.getClass().getSimpleName());
 					break;
 				}
 			} catch(Exception e)
 			{
-				logger.error("Failed to dispatch event {}", event.getClass().getSimpleName(), e);
+				logger.error("Something went wrong dispatching event {}", eventClass.getClass().getSimpleName(), e);
 			}
 		}
 		
