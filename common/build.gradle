@@ -1,42 +1,58 @@
 plugins {
     id 'java-library'
-}
-
-java {
-    withJavadocJar()
-    withSourcesJar()
+    id 'fabric-loom' version '1.11-SNAPSHOT'
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
 }
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
 }
 
-// Building for the same version as forge
-sourceCompatibility = JavaVersion.VERSION_21
-targetCompatibility = JavaVersion.VERSION_21
-
 repositories {
-    mavenCentral()
-    //mavenLocal() // for my fork of whisper JNI
+    //mavenLocal() // if im using a bleeding-edge version of whisper JNI
+    maven {
+        name = "henkelmax.public"
+        url = 'https://maven.maxhenkel.de/repository/public'
+    }
+    maven {
+        name = 'Minecraft libraries'
+        url = 'https://libraries.minecraft.net'
+    }
+}
+
+java {
+    withSourcesJar()
+}
+
+configurations {
+    shadow
+    implementation.extendsFrom(shadow)
+}
+
+// We use the shadowJar as it doesn't remap into obfuscated bullshit again
+tasks.named("remapJar").configure {
+    enabled = false
 }
 
 dependencies {
-    //api files("whisper-jni-0.4.0-sources.jar")
-    api 'io.github.freshsupasulley:whisper-jni:0.5.5' // my fucking radically awesome custom fork
-    api 'org.slf4j:slf4j-api:2.0.16'
-    compileOnly 'com.electronwill.night-config:core:[1.0,)'
-    
+    // Use official Minecraft mappings
+    minecraft "com.mojang:minecraft:1.21.8"
+    mappings loom.officialMojangMappings()
+
     api project(":api")
-	implementation 'org.json:json:20250107' // Helps with parsing API responses for downloading models
-    
-    testImplementation libs.junit.jupiter
-    testImplementation 'org.slf4j:slf4j-simple:2.0.17'
+    shadow 'io.github.freshsupasulley:whisper-jni:0.5.5' // my fucking radically awesome custom fork
+    shadow 'org.json:json:20250107' // Helps with parsing API responses for downloading models
 }
 
-tasks.named('test') {
-    useJUnitPlatform()
+shadowJar {
+    archiveClassifier.set('') // final name = yourmodname-all.jar
+    configurations = [project.configurations.shadow]
+
+    dependencies {
+        exclude(dependency("org.slf4j:slf4j-api"))
+    }
 }
 
-test {
-    testLogging.showStandardStreams = true
+tasks.build {
+    dependsOn shadowJar
 }

@@ -1,6 +1,7 @@
 package io.github.freshsupasulley.censorcraft.api.punishments;
 
 import com.electronwill.nightconfig.core.CommentedConfig;
+import de.maxhenkel.voicechat.api.ServerPlayer;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -25,12 +26,20 @@ public abstract class Punishment implements Serializable {
 	public transient CommentedConfig config;
 	
 	/**
+	 * Initializes a new {@link Punishment}.
+	 */
+	public Punishment()
+	{
+	}
+	
+	/**
 	 * Creates a new instance of the punishment.
 	 *
 	 * <p>
 	 * All punishments <b>MUST</b> have a default, no-arg constructor.
 	 * </p>
 	 *
+	 * @param <T>   punishment class
 	 * @param clazz punishment class
 	 * @return new {@link Punishment} instance
 	 * @throws RuntimeException if instantiating this class goes wrong
@@ -65,7 +74,7 @@ public abstract class Punishment implements Serializable {
 	 * }</pre>
 	 *
 	 * <p>
-	 * You can use {@link #config} in {@link #punish(Object)} to retrieve the server admin's settings of what you
+	 * You can use {@link #config} in {@link #punish(ServerPlayer)} to retrieve the server admin's settings of what you
 	 * defined here.
 	 * </p>
 	 */
@@ -74,9 +83,9 @@ public abstract class Punishment implements Serializable {
 	/**
 	 * Punishes the player for this punishment type.
 	 *
-	 * @param serverPlayer the <code>net.minecraft.server.level</code> instance (you'll need to cast it yourself)
+	 * @param player the server player object
 	 */
-	public abstract void punish(Object serverPlayer);
+	public abstract void punish(ServerPlayer player);
 	
 	/**
 	 * Punishes the player for this punishment type <b>on the client-side</b> (on the punished-player's machine).
@@ -86,8 +95,9 @@ public abstract class Punishment implements Serializable {
 	 *
 	 * <p>Punishments are serialized and sent to the client, but <code>config</code> is not. Attempting to read from
 	 * the config on the client will raise a {@link NullPointerException}. If you want to send config settings from the
-	 * server to the client, take out what you need and store them as instance variables in {@link #punish(Object)}.
-	 * Those instance variables will be serialized and sent to the client, where you can use them in this method.
+	 * server to the client, take out what you need and store them as instance variables in
+	 * {@link #punish(ServerPlayer)}. Those instance variables will be serialized and sent to the client, where you can
+	 * use them in this method.
 	 * <b>Only store serializable instance variables</b>! Unserializable instance variables will raise
 	 * {@link java.io.NotSerializableException}.</p>
 	 */

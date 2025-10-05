@@ -2,7 +2,6 @@ plugins {
     id 'java-library'
     id 'maven-publish'
     id 'org.jreleaser' version '1.17.0'
-//    id 'fabric-loom' version '1.11-SNAPSHOT'
 }
 
 group = "io.github.freshsupasulley.censorcraft"
@@ -12,21 +11,19 @@ description = 'CensorCraft API'
 repositories {
     mavenCentral()
     maven {
-        name = 'Minecraft libraries'
-        url = 'https://libraries.minecraft.net'
+        name = "henkelmax.public"
+        url = 'https://maven.maxhenkel.de/repository/public'
     }
 }
 
 dependencies {
-//    minecraft "com.mojang:minecraft:${minecraft_version}"
-//    mappings loom.officialMojangMappings()
-
-    // Minecraft uses this for packets
-//    compileOnly 'io.netty:netty-buffer:[4.1.118:Final,)'
-
+    // Simple voice chat API
+    compileOnlyApi "de.maxhenkel.voicechat:voicechat-api:${voicechat_api_version}"
     // Forge uses this for configs
-    compileOnly 'com.electronwill.night-config:core:[3.7,)'
-    compileOnly 'com.electronwill.night-config:toml:[3.7,)'
+    compileOnlyApi 'com.electronwill.night-config:core:[3.7,)'
+    compileOnlyApi 'com.electronwill.night-config:toml:[3.7,)'
+    // From the MC libraries
+    compileOnlyApi 'org.jetbrains:annotations:[26,)'
 }
 
 java {

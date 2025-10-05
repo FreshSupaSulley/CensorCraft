@@ -15,11 +15,23 @@ public class Trie {
 	private List<String> list;
 	private TrieNode root;
 	
+	/**
+	 * Defines a new Trie with a list of initial entries that will be <code>toString()</code>'d and inserted into the
+	 * Trie.
+	 *
+	 * @param rawList entries
+	 */
 	public Trie(Iterable<?> rawList)
 	{
 		update(rawList);
 	}
 	
+	/**
+	 * Updates the Trie with a new list if that list differs from the one already in the tree, equivalent to
+	 * instantiating a new Trie.
+	 *
+	 * @param rawList entries
+	 */
 	public void update(Iterable<?> rawList)
 	{
 		// Check if we need to update
@@ -50,7 +62,7 @@ public class Trie {
 	
 	/**
 	 * Returns the first word found in the text (case-insensitive), or null if none was found.
-	 * 
+	 *
 	 * @param text text to check
 	 * @return first word found, or null
 	 */
@@ -82,7 +94,7 @@ public class Trie {
 	
 	/**
 	 * Returns the first full word found in the text (case-insensitive), or null if none was found.
-	 * 
+	 *
 	 * @param text text to check
 	 * @return first word found, or null
 	 */

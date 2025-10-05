@@ -1,16 +1,34 @@
 subprojects {
     apply plugin: 'java'
 
-    /*java {
-        toolchain {
-            languageVersion = JavaLanguageVersion.of(21)
-        }
-    }*/
-
     tasks.withType(JavaCompile).configureEach {
         options.encoding = 'UTF-8'
     }
 
     sourceCompatibility = JavaVersion.VERSION_21
     targetCompatibility = JavaVersion.VERSION_21
+}
+
+//def DEFAULT_MOD_LOADER = 'fabric'
+//
+//subprojects { subproject ->
+//    ext.mod_loader = getOrDefault('mod_loader', DEFAULT_MOD_LOADER)
+//    ext.is_forge = mod_loader.equalsIgnoreCase('forge')
+//
+//
+//}
+
+/**
+ * Checks if a property exists or falls back to a default value.
+ *
+ * @param propertyName the name of the property to check
+ * @param defaultValue the default value if the property doesn't exists
+ * @param mutator mutates the return value (Only applied if the property exists)
+ * @return the property
+ */
+def <T> T getOrDefault(String propertyName, T defaultValue = null, Closure mutator = { it }) {
+    if (!project.hasProperty(propertyName)) {
+        return defaultValue
+    }
+    return mutator(getProperty(propertyName))
 }

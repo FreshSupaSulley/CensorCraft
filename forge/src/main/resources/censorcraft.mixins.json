@@ -1,7 +1,7 @@
 {
   "required": true,
   "minVersion": "0.8.2",
-  "package": "io.github.freshsupasulley.censorcraft.mixins",  
+  "package": "io.github.freshsupasulley.censorcraft.forge.mixins",
   "compatibilityLevel": "JAVA_21",
   "client": [
     "GUIMixin"
