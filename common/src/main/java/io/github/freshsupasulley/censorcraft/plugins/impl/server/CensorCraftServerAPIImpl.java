@@ -9,23 +9,18 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-public class CensorCraftServerAPIImpl implements CensorCraftServerAPI {
+/**
+ * @param config Begin instance variables
+ */
+public record CensorCraftServerAPIImpl(CommentedFileConfig config) implements CensorCraftServerAPI {
 	
 	// Instance everyone can see
 	public static CensorCraftServerAPI INSTANCE;
 	
-	// Begin instance variables
-	private final CommentedFileConfig config;
-	
-	public CensorCraftServerAPIImpl(CommentedFileConfig config)
-	{
-		this.config = config;
-	}
-	
 	@Override
-	public void punish(de.maxhenkel.voicechat.api.ServerPlayer player, @Nullable String taboo, Punishment... punishments)
+	public void punish(Object player, @Nullable String taboo, Punishment... punishments)
 	{
-		WordPacket.punish((ServerPlayer) player.getPlayer(), taboo, List.of(punishments));
+		WordPacket.punish((ServerPlayer) player, taboo, List.of(punishments));
 	}
 	
 	public CommentedFileConfig getServerConfig()
