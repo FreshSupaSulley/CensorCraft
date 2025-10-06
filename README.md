@@ -7,7 +7,7 @@ CensorCraft is a Forge Minecraft mod that actively listens to your voice with [S
 Install it on [CurseForge](https://www.curseforge.com/minecraft/mc-mods/censorcraft)! See the [wiki](https://github.com/FreshSupaSulley/CensorCraft/wiki) for setup instructions.
 
 # How it works
-When you first try to join a world, you'll be asked to download a whisper model to your client config folder (see models below). When in-game, your audio feed is captured and transcribed locally in real-time. If you speak a forbidden word, all sorts of punishment may be incurred. Punishments are set by the server admin.
+When you first try to join a world, you'll be asked to download a [whisper.cpp](https://github.com/ggml-org/whisper.cpp) model to your client config folder. When in-game, that model is used to transcribe your voice in real-time. If you speak a forbidden word, punishments are ran, and they are set by the server admin.
 
 This mod comes with a handful of default punishments, but it's extendable with plugins.
 
@@ -16,12 +16,12 @@ This mod comes with a handful of default punishments, but it's extendable with p
 This is a multi-project gradle build:
 
 - [forge](./forge)
-Forge mod source. Depends on all other subprojects.
+Forge-specific code.
 - [common](./common)
-The non-forge specific code of the mod. Mainly keeping it out of forge just in case that one day we want to support different mod loaders (unlikely).
+The meat of the mod, no modloader code.
 - [api](./api)
-The CensorCraft API code, allowing you to hook into CensorCraft to create your own punishment types or messing with internal events.
+The CensorCraft API project, allowing you to hook into CensorCraft to create your own punishments or mess with internal events.
 
 # Contributing
 
-Please contribute (pull requests are encouraged)! Looking to support multiple mod loaders in the future by restructuring the gradle subprojects.
+Pull requests are encouraged!
