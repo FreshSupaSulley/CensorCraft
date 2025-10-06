@@ -1,10 +1,11 @@
 package io.github.freshsupasulley.censorcraft.forge;
 
-import io.github.freshsupasulley.censorcraft.common.ClientCensorCraft;
-import io.github.freshsupasulley.censorcraft.common.gui.DownloadScreen;
-import io.github.freshsupasulley.censorcraft.common.jscribe.JScribe;
-import io.github.freshsupasulley.censorcraft.common.jscribe.Model;
-import io.github.freshsupasulley.censorcraft.common.plugins.impl.client.CensorCraftClientAPIImpl;
+import io.github.freshsupasulley.censorcraft.ClientCensorCraft;
+import io.github.freshsupasulley.censorcraft.gui.ConfigScreen;
+import io.github.freshsupasulley.censorcraft.gui.DownloadScreen;
+import io.github.freshsupasulley.censorcraft.jscribe.JScribe;
+import io.github.freshsupasulley.censorcraft.jscribe.Model;
+import io.github.freshsupasulley.censorcraft.plugins.impl.client.CensorCraftClientAPIImpl;
 import io.github.freshsupasulley.censorcraft.forge.config.ForgeClientConfig;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
@@ -17,6 +18,7 @@ import net.minecraft.network.chat.Style;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.client.event.ScreenEvent;
+import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent.LevelTickEvent;
 import net.minecraftforge.eventbus.api.listener.SubscribeEvent;
 import net.minecraftforge.fml.LogicalSide;
@@ -26,90 +28,81 @@ import net.minecraftforge.fml.loading.FMLPaths;
 
 import java.io.IOException;
 import java.net.URI;
-import java.nio.file.Files;
 import java.nio.file.Path;
 
 // dist has to be client here, otherwise dedicated servers will try to load the ConfigScreen class and shit the bed
-@Mod.EventBusSubscriber(modid = ForgeCensorCraft.MODID, value = Dist.CLIENT)
+// I thought omitting Bus.BOTH would be fine here because it's supposed to be the default but ig not
+@Mod.EventBusSubscriber(modid = ForgeCensorCraft.MODID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.BOTH)
 public class ForgeClientCensorCraft extends ClientCensorCraft {
+	
+	static
+	{
+		INSTANCE = new ForgeClientCensorCraft();
+	}
 	
 	private static JScribe controller;
 	private static Path model;
 	
-	@Override
-	public Path getModelDir()
+	public ForgeClientCensorCraft()
 	{
-		Path models = FMLPaths.CONFIGDIR.get().resolve("censorcraft/models");
-		
-		try
-		{
-			Files.createDirectories(models);
-		} catch(IOException e)
-		{
-			ForgeCensorCraft.LOGGER.error("Failed to create model directory {}", models, e);
-		}
-		
-		return models;
+		super(FMLPaths.CONFIGDIR.get().resolve("censorcraft/models"));
 	}
 	
+	// Forge bus
 	@SubscribeEvent
-	private static void clientSetup(FMLClientSetupEvent event)
+	public static void clientSetup(FMLClientSetupEvent event)
 	{
-//		MinecraftForge.registerConfigScreen((minecraft, screen) -> new ConfigScreen(minecraft));
+		MinecraftForge.registerConfigScreen((minecraft, screen) -> new ConfigScreen(minecraft));
 		var CLIENT = new ForgeClientConfig();
 		CensorCraftClientAPIImpl.INSTANCE = new CensorCraftClientAPIImpl(CLIENT.config);
 	}
 	
-//	@SubscribeEvent
-//	public static void screenEvent(ScreenEvent.Opening event)
-//	{
-//		// I don't need to do this instanceof check but it makes me feel better
-//		if(event.getNewScreen() instanceof DisconnectedScreen && disconnectFlag)
-//		{
-//			disconnectFlag = false;
-//
-//			try
-//			{
-//				// Probably ok that this happens in the main thread
-//				Model model = JScribe.getModelInfo(requestedModel);
-//
-//				if(model == null)
-//				{
-//					event.setNewScreen(errorScreen("Server requested a model that doesn't exist (" + requestedModel + ")", "Ask the server owner to fix the config"));
-//				}
-//				else
-//				{
-//					event.setNewScreen(new PopupScreen.Builder(new TitleScreen(), Component.literal("Missing model")).setMessage(Component.literal("This server requires a transcription model to play (").append(Component.literal(requestedModel + ", " + model.getSizeFancy()).withStyle(Style.EMPTY.withBold(true))).append(")\n\nDownload the model?")).addButton(CommonComponents.GUI_YES, (screen) ->
-//					{
-//						Minecraft.getInstance().setScreen(new DownloadScreen(model));
-//					}).addButton(CommonComponents.GUI_NO, PopupScreen::onClose).addButton(Component.literal("Learn more"), (screen) ->
-//					{
-//						Util.getPlatform().openUri(URI.create("https://www.curseforge.com/minecraft/mc-mods/censorcraft"));
-//						// screen.onClose();
-//					}).build());
-//				}
-//			} catch(IOException e)
-//			{
-//				event.setNewScreen(errorScreen("Failed to get model info", e));
-//			}
-//		}
-//	}
+	@SubscribeEvent
+	public static void screenEvent(ScreenEvent.Opening event)
+	{
+		// I don't need to do this instanceof check but it makes me feel better
+		if(event.getNewScreen() instanceof DisconnectedScreen && disconnectFlag)
+		{
+			disconnectFlag = false;
+			
+			try
+			{
+				// Probably ok that this happens in the main thread
+				Model model = JScribe.getModelInfo(requestedModel);
+				
+				if(model == null)
+				{
+					event.setNewScreen(errorScreen("Server requested a model that doesn't exist (" + requestedModel + ")", "Ask the server owner to fix the config"));
+				}
+				else
+				{
+					event.setNewScreen(new PopupScreen.Builder(new TitleScreen(), Component.literal("Missing model")).setMessage(Component.literal("This server requires a transcription model to play (").append(Component.literal(requestedModel + ", " + model.getSizeFancy()).withStyle(Style.EMPTY.withBold(true))).append(")\n\nDownload the model?")).addButton(CommonComponents.GUI_YES, (screen) ->
+					{
+						Minecraft.getInstance().setScreen(new DownloadScreen(model));
+					}).addButton(CommonComponents.GUI_NO, PopupScreen::onClose).addButton(Component.literal("Learn more"), (screen) ->
+					{
+						Util.getPlatform().openUri(URI.create("https://www.curseforge.com/minecraft/mc-mods/censorcraft"));
+						// screen.onClose();
+					}).build());
+				}
+			} catch(IOException e)
+			{
+				event.setNewScreen(errorScreen("Failed to get model info", e));
+			}
+		}
+	}
 	
 	// its expected that SetupPacket will be consumed before this
 	@SubscribeEvent
 	public static void onJoinWorld(ClientPlayerNetworkEvent.LoggingIn event)
 	{
-		ForgeCensorCraft.LOGGER.info("LoggingIn event fired");
-		loggedIn = true;
-		startJScribe();
+		ClientCensorCraft.onJoinWorld();
 	}
 	
 	@SubscribeEvent
 	public static void onLeaveWorld(ClientPlayerNetworkEvent.LoggingOut event)
 	{
-		ForgeCensorCraft.LOGGER.info("LoggingOut event fired");
-		loggedIn = false;
-		stopJScribe();
+		ClientCensorCraft.onLeaveWorld();
 	}
 	
 	@SubscribeEvent

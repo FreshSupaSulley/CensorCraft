@@ -1,7 +1,7 @@
 package io.github.freshsupasulley.censorcraft.forge.mixins;
 
-import io.github.freshsupasulley.censorcraft.common.ClientCensorCraft;
-import io.github.freshsupasulley.censorcraft.common.config.ClientConfig;
+import io.github.freshsupasulley.censorcraft.ClientCensorCraft;
+import io.github.freshsupasulley.censorcraft.config.ClientConfig;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;

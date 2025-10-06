@@ -6,14 +6,14 @@ import com.mojang.logging.LogUtils;
 import io.github.freshsupasulley.censorcraft.api.CensorCraftPlugin;
 import io.github.freshsupasulley.censorcraft.api.ForgeCensorCraftPlugin;
 import io.github.freshsupasulley.censorcraft.api.events.server.ServerConfigEvent;
-import io.github.freshsupasulley.censorcraft.common.CensorCraft;
-import io.github.freshsupasulley.censorcraft.common.config.ServerConfig;
-import io.github.freshsupasulley.censorcraft.common.network.IPacket;
-import io.github.freshsupasulley.censorcraft.common.network.PunishedPacket;
-import io.github.freshsupasulley.censorcraft.common.network.SetupPacket;
-import io.github.freshsupasulley.censorcraft.common.network.WordPacket;
-import io.github.freshsupasulley.censorcraft.common.plugins.impl.server.CensorCraftServerAPIImpl;
-import io.github.freshsupasulley.censorcraft.common.plugins.impl.server.ServerConfigEventImpl;
+import io.github.freshsupasulley.censorcraft.CensorCraft;
+import io.github.freshsupasulley.censorcraft.config.ServerConfig;
+import io.github.freshsupasulley.censorcraft.network.IPacket;
+import io.github.freshsupasulley.censorcraft.network.PunishedPacket;
+import io.github.freshsupasulley.censorcraft.network.SetupPacket;
+import io.github.freshsupasulley.censorcraft.network.WordPacket;
+import io.github.freshsupasulley.censorcraft.plugins.impl.server.CensorCraftServerAPIImpl;
+import io.github.freshsupasulley.censorcraft.plugins.impl.server.ServerConfigEventImpl;
 import io.github.freshsupasulley.censorcraft.forge.config.ForgeServerConfig;
 import io.github.freshsupasulley.censorcraft.forge.network.PacketContextImpl;
 import net.minecraft.commands.CommandSourceStack;
@@ -21,6 +21,9 @@ import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.event.RegisterCommandsEvent;
+import net.minecraftforge.event.ServerChatEvent;
+import net.minecraftforge.event.network.CustomPayloadEvent;
+import net.minecraftforge.event.network.GatherLoginConfigurationTasksEvent;
 import net.minecraftforge.event.server.ServerAboutToStartEvent;
 import net.minecraftforge.eventbus.api.listener.SubscribeEvent;
 import net.minecraftforge.fml.ModList;
@@ -39,7 +42,7 @@ import java.util.List;
  * Only register common and server events here.
  */
 @Mod(ForgeCensorCraft.MODID)
-@Mod.EventBusSubscriber(modid = CensorCraft.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
+@Mod.EventBusSubscriber(modid = CensorCraft.MODID)
 public class ForgeCensorCraft extends CensorCraft {
 	
 	public static final String MODID = "censorcraft";
@@ -62,13 +65,37 @@ public class ForgeCensorCraft extends CensorCraft {
 			{
 				channel = ChannelBuilder.named(ForgeCensorCraft.MODID).networkProtocolVersion(protocolVersion).simpleChannel();
 				
-				channel.configuration().clientbound().addMain(SetupPacket.class, SetupPacket.CODEC, (packet, context) -> packet.consume(new PacketContextImpl(context)));
-				channel.play().serverbound().addMain(WordPacket.class, WordPacket.CODEC, (packet, context) -> packet.consume(context.getSender()));
+				channel.configuration().clientbound().addMain(SetupPacket.class, SetupPacket.CODEC, this::safeConsume);
+				channel.play().serverbound().addMain(WordPacket.class, WordPacket.CODEC, this::safeConsume);
 				channel.play().clientbound().addMain(PunishedPacket.class, PunishedPacket.CODEC, (packet, context) -> packet.consume(new PacketContextImpl(context)));
 				
 				channel.build();
 			});
 		});
+	}
+	
+	private void safeConsume(IPacket packet, CustomPayloadEvent.Context context)
+	{
+		try
+		{
+			packet.consume(new PacketContextImpl(context));
+		} catch(Exception e)
+		{
+			CensorCraft.LOGGER.error("Something went wrong consuming packet", e);
+		}
+	}
+	
+	@SubscribeEvent
+	public static void chatEvent(ServerChatEvent event)
+	{
+		WordPacket.chatEvent(event.getPlayer(), event.getRawText());
+	}
+	
+	@SubscribeEvent
+	public static void playerJoinedEvent(GatherLoginConfigurationTasksEvent event)
+	{
+		// Not using overridden methods here because there is no serverplayer yet
+		channel.send(new SetupPacket(ServerConfig.get().getPreferredModel(), (int) (ServerConfig.get().getContextLength() * 1000)), event.getConnection()); // CONTEXT_LENGTH is in seconds, convert to ms
 	}
 	
 	@SubscribeEvent

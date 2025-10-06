@@ -1,6 +1,6 @@
 package io.github.freshsupasulley.censorcraft.forge.config;
 
-import io.github.freshsupasulley.censorcraft.common.config.ServerConfig;
+import io.github.freshsupasulley.censorcraft.config.ServerConfig;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.storage.LevelResource;
 import net.minecraftforge.fml.config.ConfigFileTypeHandler;

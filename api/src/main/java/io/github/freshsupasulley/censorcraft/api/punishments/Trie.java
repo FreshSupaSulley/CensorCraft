@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 /**
@@ -35,13 +34,13 @@ public class Trie {
 	public void update(Iterable<?> rawList)
 	{
 		// Check if we need to update
-		List<String> newList = StreamSupport.stream(rawList.spliterator(), false).map(Object::toString).collect(Collectors.toList());
+		List<String> newList = StreamSupport.stream(rawList.spliterator(), false).map(Object::toString).toList();
 		
 		if(!newList.equals(list))
 		{
-			list = new ArrayList<String>();
+			list = new ArrayList<>();
 			root = new TrieNode();
-			newList.forEach(item -> insert(item));
+			newList.forEach(this::insert);
 		}
 	}
 	
