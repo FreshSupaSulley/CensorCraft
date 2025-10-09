@@ -1,7 +1,7 @@
 package io.github.freshsupasulley.censorcraft.api.punishments;
 
 import com.electronwill.nightconfig.core.CommentedConfig;
-import de.maxhenkel.voicechat.api.ServerPlayer;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -95,9 +95,8 @@ public abstract class Punishment implements Serializable {
 	 *
 	 * <p>Punishments are serialized and sent to the client, but <code>config</code> is not. Attempting to read from
 	 * the config on the client will raise a {@link NullPointerException}. If you want to send config settings from the
-	 * server to the client, take out what you need and store them as instance variables in
-	 * {@link #punish(Object)}. Those instance variables will be serialized and sent to the client, where you can
-	 * use them in this method.
+	 * server to the client, take out what you need and store them as instance variables in {@link #punish(Object)}.
+	 * Those instance variables will be serialized and sent to the client, where you can use them in this method.
 	 * <b>Only store serializable instance variables</b>! Unserializable instance variables will raise
 	 * {@link java.io.NotSerializableException}.</p>
 	 */
@@ -195,7 +194,7 @@ public abstract class Punishment implements Serializable {
 	}
 	
 	/**
-	 * Checks if a taboo is in the punishment-specific taboo trie and returns it if found. Can be null!
+	 * Checks if a taboo is in the punishment-specific taboo trie and returns it if found. Can be <code>null</code>!
 	 *
 	 * <p>You can override this method to add customized taboos that can change at your whim.</p>
 	 *
@@ -203,7 +202,7 @@ public abstract class Punishment implements Serializable {
 	 * @param isolateWords if the server admin enabled isolate words in the config file
 	 * @return the taboo the player spoke, or null if not found
 	 */
-	public String getTaboo(String sample, boolean isolateWords)
+	public @Nullable String getTaboo(String sample, boolean isolateWords)
 	{
 		// We can't store Tries as instance variables anymore so this is required
 		List<String> taboos = config.get("taboo");
