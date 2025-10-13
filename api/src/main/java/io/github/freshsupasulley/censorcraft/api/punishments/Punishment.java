@@ -184,6 +184,17 @@ public abstract class Punishment implements Serializable {
 	}
 	
 	/**
+	 * Gets the list of punishment-specific taboos.
+	 *
+	 * @return {@link List} of taboos
+	 */
+	public List<String> getTaboos()
+	{
+		List<String> taboos = config.getOrElse("taboo", List.of()); // not sure if the orElse is necessary
+		return taboos;
+	}
+	
+	/**
 	 * Checks if this punishment type ignores the <code>global_taboos</code> array.
 	 *
 	 * @return true if the punishment type ignores global taboos
@@ -205,8 +216,7 @@ public abstract class Punishment implements Serializable {
 	public @Nullable String getTaboo(String sample, boolean isolateWords)
 	{
 		// We can't store Tries as instance variables anymore so this is required
-		List<String> taboos = config.get("taboo");
-		Trie trie = new Trie(taboos);
+		Trie trie = new Trie(getTaboos());
 		return isolateWords ? trie.containsAnyIsolatedIgnoreCase(sample) : trie.containsAnyIgnoreCase(sample);
 	}
 }

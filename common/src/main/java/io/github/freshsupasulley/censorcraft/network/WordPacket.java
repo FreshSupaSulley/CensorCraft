@@ -36,7 +36,7 @@ public class WordPacket implements IPacket {
 		}
 	};
 	
-	private static final Map<UUID, Participant> participants = new HashMap<>();
+	public static final Map<UUID, Participant> participants = new HashMap<>();
 	private final String payload;
 	
 	public WordPacket(String payload)

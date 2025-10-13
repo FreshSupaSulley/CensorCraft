@@ -1,12 +1,12 @@
 package io.github.freshsupasulley.censorcraft.forge;
 
 import io.github.freshsupasulley.censorcraft.ClientCensorCraft;
+import io.github.freshsupasulley.censorcraft.forge.config.ForgeClientConfig;
 import io.github.freshsupasulley.censorcraft.gui.ConfigScreen;
 import io.github.freshsupasulley.censorcraft.gui.DownloadScreen;
 import io.github.freshsupasulley.censorcraft.jscribe.JScribe;
 import io.github.freshsupasulley.censorcraft.jscribe.Model;
 import io.github.freshsupasulley.censorcraft.plugins.impl.client.CensorCraftClientAPIImpl;
-import io.github.freshsupasulley.censorcraft.forge.config.ForgeClientConfig;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.PopupScreen;

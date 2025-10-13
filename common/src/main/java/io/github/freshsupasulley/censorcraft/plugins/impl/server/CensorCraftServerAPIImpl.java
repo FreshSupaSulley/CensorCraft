@@ -3,6 +3,7 @@ package io.github.freshsupasulley.censorcraft.plugins.impl.server;
 import com.electronwill.nightconfig.core.file.CommentedFileConfig;
 import io.github.freshsupasulley.censorcraft.api.CensorCraftServerAPI;
 import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
+import io.github.freshsupasulley.censorcraft.config.ServerConfig;
 import io.github.freshsupasulley.censorcraft.network.WordPacket;
 import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.Nullable;
@@ -21,6 +22,12 @@ public record CensorCraftServerAPIImpl(CommentedFileConfig config) implements Ce
 	public void punish(Object player, @Nullable String taboo, Punishment... punishments)
 	{
 		WordPacket.punish((ServerPlayer) player, taboo, List.of(punishments));
+	}
+	
+	@Override
+	public List<Punishment> getConfigPunishments()
+	{
+		return ServerConfig.get().getConfigPunishments();
 	}
 	
 	public CommentedFileConfig getServerConfig()

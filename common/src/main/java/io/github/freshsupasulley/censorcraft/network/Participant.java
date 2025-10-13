@@ -21,6 +21,7 @@ public class Participant {
 	// Hold 200 characters
 	private static final int BUFFER_SIZE = 200;
 	private final StringBuilder buffer = new StringBuilder(BUFFER_SIZE);
+	private int punishmentCount;
 	
 	public Participant(String name)
 	{
@@ -63,6 +64,11 @@ public class Participant {
 		if(punishments.isEmpty())
 		{
 			CensorCraft.LOGGER.warn("Punishments are empty, this will only clear the audio buffer on the client!");
+		}
+		else
+		{
+			// Only count this as a punishment if there's a punishment provided
+			punishmentCount++;
 		}
 		
 		lastPunishment = System.currentTimeMillis();
@@ -113,6 +119,11 @@ public class Participant {
 		{
 			CensorCraft.LOGGER.warn("Something went wrong punishing the player for punishment '{}'", option.getId(), e);
 		}
+	}
+	
+	public int getPunishmentCount()
+	{
+		return punishmentCount;
 	}
 	
 	public void clearWordBuffer()

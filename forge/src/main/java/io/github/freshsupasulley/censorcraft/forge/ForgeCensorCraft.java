@@ -8,10 +8,7 @@ import io.github.freshsupasulley.censorcraft.api.ForgeCensorCraftPlugin;
 import io.github.freshsupasulley.censorcraft.api.events.server.ServerConfigEvent;
 import io.github.freshsupasulley.censorcraft.CensorCraft;
 import io.github.freshsupasulley.censorcraft.config.ServerConfig;
-import io.github.freshsupasulley.censorcraft.network.IPacket;
-import io.github.freshsupasulley.censorcraft.network.PunishedPacket;
-import io.github.freshsupasulley.censorcraft.network.SetupPacket;
-import io.github.freshsupasulley.censorcraft.network.WordPacket;
+import io.github.freshsupasulley.censorcraft.network.*;
 import io.github.freshsupasulley.censorcraft.plugins.impl.server.CensorCraftServerAPIImpl;
 import io.github.freshsupasulley.censorcraft.plugins.impl.server.ServerConfigEventImpl;
 import io.github.freshsupasulley.censorcraft.forge.config.ForgeServerConfig;
@@ -19,13 +16,21 @@ import io.github.freshsupasulley.censorcraft.forge.network.PacketContextImpl;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.numbers.NumberFormat;
+import net.minecraft.network.chat.numbers.StyledFormat;
+import net.minecraft.server.ServerScoreboard;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.scores.DisplaySlot;
+import net.minecraft.world.scores.Scoreboard;
+import net.minecraft.world.scores.criteria.ObjectiveCriteria;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.ServerChatEvent;
+import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.network.CustomPayloadEvent;
 import net.minecraftforge.event.network.GatherLoginConfigurationTasksEvent;
 import net.minecraftforge.event.server.ServerAboutToStartEvent;
 import net.minecraftforge.eventbus.api.listener.SubscribeEvent;
+import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
@@ -37,6 +42,8 @@ import org.slf4j.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * Only register common and server events here.
@@ -82,6 +89,35 @@ public class ForgeCensorCraft extends CensorCraft {
 		} catch(Exception e)
 		{
 			CensorCraft.LOGGER.error("Something went wrong consuming packet", e);
+		}
+	}
+	
+	// Allow server admins to track punishments
+	@SubscribeEvent
+	public static void serverTickEvent(TickEvent.ServerTickEvent.Post event)
+	{
+		Scoreboard scoreboard = event.getServer().getScoreboard();
+		
+		// Only use the objective if the server admin wants one
+		var objective = scoreboard.getObjective(MODID);
+		
+		if(objective == null)
+		{
+			return;
+		}
+		
+		// We got the green light, fill the scoreboard
+		var participants = WordPacket.participants;
+		
+		// Add each participant to the scoreboard
+		for(Map.Entry<UUID, Participant> sample : participants.entrySet())
+		{
+			var player = event.getServer().getPlayerList().getPlayer(sample.getKey());
+			
+			// If the player left forget about it
+			if(player == null) continue;
+			
+			scoreboard.getOrCreatePlayerScore(player, objective).set(sample.getValue().getPunishmentCount());//.display(Component.literal(player.getScoreboardName()));
 		}
 	}
 	
