@@ -9,6 +9,8 @@ import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * @param config Begin instance variables
@@ -19,9 +21,9 @@ public record CensorCraftServerAPIImpl(CommentedFileConfig config) implements Ce
 	public static CensorCraftServerAPI INSTANCE;
 	
 	@Override
-	public void punish(Object player, @Nullable String taboo, Punishment... punishments)
+	public void punish(Object player, Map<Punishment, @Nullable String> punishments)
 	{
-		WordPacket.punish((ServerPlayer) player, taboo, List.of(punishments));
+		WordPacket.punish((ServerPlayer) player, punishments);
 	}
 	
 	@Override

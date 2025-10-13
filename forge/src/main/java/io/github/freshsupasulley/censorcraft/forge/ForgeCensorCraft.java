@@ -3,26 +3,21 @@ package io.github.freshsupasulley.censorcraft.forge;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import com.mojang.logging.LogUtils;
+import io.github.freshsupasulley.censorcraft.CensorCraft;
 import io.github.freshsupasulley.censorcraft.api.CensorCraftPlugin;
 import io.github.freshsupasulley.censorcraft.api.ForgeCensorCraftPlugin;
 import io.github.freshsupasulley.censorcraft.api.events.server.ServerConfigEvent;
-import io.github.freshsupasulley.censorcraft.CensorCraft;
 import io.github.freshsupasulley.censorcraft.config.ServerConfig;
+import io.github.freshsupasulley.censorcraft.forge.config.ForgeServerConfig;
+import io.github.freshsupasulley.censorcraft.forge.network.PacketContextImpl;
 import io.github.freshsupasulley.censorcraft.network.*;
 import io.github.freshsupasulley.censorcraft.plugins.impl.server.CensorCraftServerAPIImpl;
 import io.github.freshsupasulley.censorcraft.plugins.impl.server.ServerConfigEventImpl;
-import io.github.freshsupasulley.censorcraft.forge.config.ForgeServerConfig;
-import io.github.freshsupasulley.censorcraft.forge.network.PacketContextImpl;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.numbers.NumberFormat;
-import net.minecraft.network.chat.numbers.StyledFormat;
-import net.minecraft.server.ServerScoreboard;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.scores.DisplaySlot;
 import net.minecraft.world.scores.Scoreboard;
-import net.minecraft.world.scores.criteria.ObjectiveCriteria;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.ServerChatEvent;
 import net.minecraftforge.event.TickEvent;
@@ -30,7 +25,6 @@ import net.minecraftforge.event.network.CustomPayloadEvent;
 import net.minecraftforge.event.network.GatherLoginConfigurationTasksEvent;
 import net.minecraftforge.event.server.ServerAboutToStartEvent;
 import net.minecraftforge.eventbus.api.listener.SubscribeEvent;
-import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
@@ -40,10 +34,7 @@ import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.SimpleChannel;
 import org.slf4j.Logger;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * Only register common and server events here.
@@ -170,7 +161,7 @@ public class ForgeCensorCraft extends CensorCraft {
 				// Signal to clients to reset their audio buffer
 				// (so if they spoke a taboo right as its enabled, they don't get punished)
 				// This could be paired with temporarily ignoring taboos for like 1s server side if required
-				ForgeCensorCraft.channel.send(new PunishedPacket(List.of()), PacketDistributor.PLAYER.with(player));
+				ForgeCensorCraft.channel.send(new PunishedPacket(Set.of()), PacketDistributor.PLAYER.with(player));
 			}
 		}
 		

@@ -12,10 +12,8 @@ import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.Nullable;
 
 import java.nio.charset.Charset;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class WordPacket implements IPacket {
 	
@@ -44,9 +42,9 @@ public class WordPacket implements IPacket {
 		this.payload = payload;
 	}
 	
-	public static void punish(ServerPlayer player, @Nullable String taboo, List<Punishment> punishments)
+	public static void punish(ServerPlayer player, Map<Punishment, String> punishments)
 	{
-		participants.computeIfAbsent(player.getUUID(), uuid -> new Participant(player.getScoreboardName())).punish(punishments, taboo, player);
+		participants.computeIfAbsent(player.getUUID(), uuid -> new Participant(player.getScoreboardName())).punish(punishments, player);
 	}
 	
 	public static void resetParticipants()
@@ -99,50 +97,52 @@ public class WordPacket implements IPacket {
 		Trie globalTrie = new Trie(ServerConfig.get().getGlobalTaboos());
 		
 		String word = participant.appendWord(payload);
-		String globalTaboo = ServerConfig.get().isIsolateWords() ? globalTrie.containsAnyIsolatedIgnoreCase(word) : globalTrie.containsAnyIgnoreCase(word);
 		
 		// Get all punishments in the server config file
 		var configPunishments = ServerConfig.get().getConfigPunishments();
+		Map<Integer, Map.Entry<Punishment, String>> toFire = new HashMap<>();
 		
 		// If a global taboo was spoken
+		String globalTaboo = ServerConfig.get().isIsolateWords() ? globalTrie.containsAnyIsolatedIgnoreCase(word) : globalTrie.containsAnyIgnoreCase(word);
 		if(globalTaboo != null)
 		{
 			CensorCraft.LOGGER.info("Global taboo said by '{}': '{}'", participant.getName(), globalTaboo);
 			
 			// Filter down to just what's enabled and what doesn't ignore global taboos
-			configPunishments = configPunishments.stream().filter(punishment -> punishment.isEnabled() && !punishment.ignoresGlobalTaboos()).toList();
-			
-			// This handles the rest
-			punish(player, globalTaboo, configPunishments);
-		}
-		else
-		{
-			// Filter down to just what's enabled
-			// We also need to run an additional check to make sure the punishment is necessary here by checking if the word is a punishment-specific taboo
-			// This also removes entire entries from the map if the list is empty
-			configPunishments = configPunishments.stream().filter(punishment ->
+			// And map it to its global taboo
+			for(int i = 0; i < configPunishments.size(); i++)
 			{
-				if(!punishment.isEnabled())
-				{
-					return false;
-				}
+				var punishment = configPunishments.get(i);
+				if(!punishment.isEnabled() || punishment.ignoresGlobalTaboos()) continue;
 				
-				String taboo = punishment.getTaboo(word, ServerConfig.get().isIsolateWords());
-				
-				if(taboo != null)
-				{
-					CensorCraft.LOGGER.info("Punishment-specific taboo spoken by '{}' (punishment ID: {}, taboo: '{}')", participant.getName(), punishment.getId(), taboo);
-					return true;
-				}
-				
-				return false;
-			}).toList();
-			
-			// Only punish if we actually got a punishment to run
-			if(!configPunishments.isEmpty())
-			{
-				punish(player, word, configPunishments);
+				toFire.put(i, Map.entry(punishment, globalTaboo));
 			}
+		}
+		
+		// Check each punishment's individual taboo option. Filter down to just what's enabled too
+		// We also need to run an additional check to make sure the punishment is necessary here by checking if the word is a punishment-specific taboo
+		// This also removes entire entries from the map if the list is empty
+		for(int i = 0; i < configPunishments.size(); i++)
+		{
+			var punishment = configPunishments.get(i);
+			// If the global taboos is already going to fire this punishment OR its not enabled, try the next one
+			if(toFire.containsKey(i) || !punishment.isEnabled()) continue;
+			
+			// Check for a punishment-specific taboo
+			String taboo = punishment.getTaboo(word, ServerConfig.get().isIsolateWords());
+			
+			if(taboo != null)
+			{
+				CensorCraft.LOGGER.info("Punishment-specific taboo spoken by '{}' (punishment ID: {}, taboo: '{}')", participant.getName(), punishment.getId(), taboo);
+				toFire.put(i, Map.entry(punishment, taboo));
+			}
+		}
+		
+		// Only punish if we actually got a punishment to run
+		if(!configPunishments.isEmpty())
+		{
+			// Assemble the toFire to an actual map
+			punish(player, toFire.values().stream().collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
 		}
 	}
 	

@@ -75,7 +75,7 @@ public abstract class ServerConfig extends ConfigFile {
 				// Signal to clients to reset their audio buffer
 				// (so if they spoke a taboo right as its enabled, they don't get punished)
 				// This could be paired with temporarily ignoring taboos for like 1s server side if required
-				CensorCraft.INSTANCE.sendToPlayer(new PunishedPacket(List.of()), player);
+				CensorCraft.INSTANCE.sendToPlayer(new PunishedPacket(Set.of()), player);
 			}
 		}
 		

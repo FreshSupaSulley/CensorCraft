@@ -12,6 +12,9 @@ import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 public class Participant {
 	
@@ -59,7 +62,7 @@ public class Participant {
 		return buffer.toString();
 	}
 	
-	public void punish(List<Punishment> punishments, @Nullable String taboo, ServerPlayer player)
+	public void punish(Map<Punishment, @Nullable String> punishments, ServerPlayer player)
 	{
 		if(punishments.isEmpty())
 		{
@@ -74,19 +77,45 @@ public class Participant {
 		lastPunishment = System.currentTimeMillis();
 		
 		// Trigger the server side punishments. Client side ones comes after
-		punishments.forEach((punishment -> runServerPunishment(punishment, player)));
+		var successes = punishments.entrySet().stream().filter(entry -> runServerPunishment(entry.getKey(), player)).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 		
 		// Announce the punishment
 		// The only reason I'm announcing the punishment AFTER running it is for my niche plugin so it can access instance variables during ChatTabooEvent
-		if(taboo != null && ServerConfig.get().isChatTaboos())
+		if(ServerConfig.get().isChatTaboos())
 		{
-			// Allow plugins to change what gets sent
-			var component = Component.literal(name).withStyle(style -> style.withBold(true)).append(Component.literal(" said ").withStyle(style -> style.withBold(false))).append(Component.literal("\"" + taboo + "\""));
-			var event = new ChatTabooEventImpl(punishments, player.getUUID(), component);
+			Component taboos = successes.values().stream().distinct().map(string -> Component.literal("\"" + string + "\"").withStyle(style -> style.withBold(true))).reduce(Component.empty(), (og, sample) -> og.append(sample).append(Component.literal(", ")));
+			var parts = taboos.getSiblings();
 			
-			if(CensorCraft.events.dispatchEvent(ChatTabooEvent.class, event))
+			if(!parts.isEmpty())
 			{
-				player.level().players().forEach(sample -> sample.displayClientMessage((Component) event.getText(), false));
+				System.out.println(parts);
+				// The last component is always just a comma
+				parts.removeLast();
+				
+				if(parts.size() > 1)
+				{
+					// Remove the last 2 elements and readd the very last one after we've added ", and"
+					var readd = parts.removeLast();
+					parts.removeLast();
+					
+					parts.add(Component.literal(", and "));
+					parts.add(readd);
+				}
+//				System.out.println(taboos.getSiblings().size() + " siblings");
+				// If we need to add an ", and" before the last taboo
+//				if(index != -1)
+//				{
+//					taboos = taboos.substring(0, index) + ", and " + taboos.substring(index + 2);
+//				}
+				
+				// Allow plugins to change what gets sent
+				var component = Component.empty().append(Component.literal(name).withStyle(style -> style.withBold(true))).append(Component.literal(" said ")).append(taboos);
+				var event = new ChatTabooEventImpl(punishments.keySet(), player.getUUID(), component);
+				
+				if(CensorCraft.events.dispatchEvent(ChatTabooEvent.class, event))
+				{
+					player.level().players().forEach(sample -> sample.displayClientMessage((Component) event.getText(), false));
+				}
 			}
 		}
 		
@@ -95,19 +124,19 @@ public class Participant {
 		CensorCraft.LOGGER.debug("Sending punished packet");
 		
 		// Send the packet
-		CensorCraft.INSTANCE.sendToPlayer(new PunishedPacket(punishments), player);
+		CensorCraft.INSTANCE.sendToPlayer(new PunishedPacket(punishments.keySet()), player);
 		
 		// Reset the participant's word buffer
 		clearWordBuffer();
 	}
 	
-	private void runServerPunishment(Punishment option, ServerPlayer player)
+	private boolean runServerPunishment(Punishment option, ServerPlayer player)
 	{
 		// If this was cancelled, don't punish the player
 		if(!CensorCraft.events.dispatchEvent(ServerPunishEvent.class, new ServerPunishEventImpl(player.getUUID(), option)))
 		{
 			CensorCraft.LOGGER.info("Server-side punishment was cancelled");
-			return;
+			return false;
 		}
 		
 		CensorCraft.LOGGER.info("Invoking punishment '{}' onto player '{}'", option.getId(), player.getUUID());
@@ -115,10 +144,13 @@ public class Participant {
 		try
 		{
 			option.punish(player);
+			return true;
 		} catch(Exception e)
 		{
 			CensorCraft.LOGGER.warn("Something went wrong punishing the player for punishment '{}'", option.getId(), e);
 		}
+		
+		return false;
 	}
 	
 	public int getPunishmentCount()

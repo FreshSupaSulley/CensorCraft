@@ -2,7 +2,7 @@ package io.github.freshsupasulley.censorcraft.api.events.server;
 
 import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
 
-import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -11,11 +11,11 @@ import java.util.UUID;
 public interface ChatTabooEvent extends ServerEvent {
 	
 	/**
-	 * Gets the {@link java.util.List} of punishments about to be fired.
+	 * Gets the {@link java.util.Set} of punishments about to be fired.
 	 *
-	 * @return {@link List} of punishments
+	 * @return {@link Set} of punishments
 	 */
-	List<Punishment> getPunishments();
+	Set<Punishment> getPunishments();
 	
 	/**
 	 * Gets the player UUID who's about to be punished.

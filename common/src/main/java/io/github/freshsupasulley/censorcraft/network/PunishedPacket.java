@@ -13,8 +13,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Sent to the client when they were punished.
@@ -68,7 +68,7 @@ public class PunishedPacket implements IPacket {
 		@Override
 		public PunishedPacket decode(RegistryFriendlyByteBuf buffer)
 		{
-			List<Punishment> registry = new ArrayList<>();
+			Set<Punishment> registry = new HashSet<>();
 			final int size = buffer.readInt();
 			
 			for(int j = 0; j < size; j++)
@@ -108,9 +108,9 @@ public class PunishedPacket implements IPacket {
 		}
 	};
 	
-	private final List<Punishment> registry;
+	private final Set<Punishment> registry;
 	
-	public PunishedPacket(List<Punishment> punishments)
+	public PunishedPacket(Set<Punishment> punishments)
 	{
 		this.registry = punishments;
 	}

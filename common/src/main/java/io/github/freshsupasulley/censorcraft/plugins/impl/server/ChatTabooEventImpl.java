@@ -4,15 +4,16 @@ import io.github.freshsupasulley.censorcraft.api.events.server.ChatTabooEvent;
 import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 public class ChatTabooEventImpl extends ServerEventImpl implements ChatTabooEvent {
 	
-	private List<Punishment> punishments;
+	private Set<Punishment> punishments;
 	private UUID uuid;
 	private Object component;
 	
-	public ChatTabooEventImpl(List<Punishment> punishments, UUID uuid, Object component)
+	public ChatTabooEventImpl(Set<Punishment> punishments, UUID uuid, Object component)
 	{
 		this.punishments = punishments;
 		this.uuid = uuid;
@@ -20,7 +21,7 @@ public class ChatTabooEventImpl extends ServerEventImpl implements ChatTabooEven
 	}
 	
 	@Override
-	public List<Punishment> getPunishments()
+	public Set<Punishment> getPunishments()
 	{
 		return punishments;
 	}
