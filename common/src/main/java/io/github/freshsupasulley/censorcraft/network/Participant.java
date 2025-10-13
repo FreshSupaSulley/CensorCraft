@@ -88,7 +88,6 @@ public class Participant {
 			
 			if(!parts.isEmpty())
 			{
-				System.out.println(parts);
 				// The last component is always just a comma
 				parts.removeLast();
 				
@@ -101,12 +100,6 @@ public class Participant {
 					parts.add(Component.literal(", and "));
 					parts.add(readd);
 				}
-//				System.out.println(taboos.getSiblings().size() + " siblings");
-				// If we need to add an ", and" before the last taboo
-//				if(index != -1)
-//				{
-//					taboos = taboos.substring(0, index) + ", and " + taboos.substring(index + 2);
-//				}
 				
 				// Allow plugins to change what gets sent
 				var component = Component.empty().append(Component.literal(name).withStyle(style -> style.withBold(true))).append(Component.literal(" said ")).append(taboos);

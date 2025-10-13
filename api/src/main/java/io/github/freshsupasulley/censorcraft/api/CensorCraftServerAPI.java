@@ -20,6 +20,8 @@ public interface CensorCraftServerAPI {
 	 * indicating to reset their rolling audio buffer which will also fire the client-side code for all
 	 * punishments.</p>
 	 *
+	 * <p>If the map is empty, it will only reset the audio buffer on the client's machine.</p>
+	 *
 	 * @param player      the <code>net.minecraft.server.level</code> server player object
 	 * @param punishments {@link Map} of list of punishments to invoke onto the player to the taboo they said that
 	 *                    invoked that punishment. The value can be <code>null</code> to not announce a message for that
