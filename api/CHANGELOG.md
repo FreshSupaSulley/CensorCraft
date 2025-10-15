@@ -1,5 +1,15 @@
 # CensorCraft API Changelog
 
+## [3.0.0]
+
+### Changed
+
+- `Trie` getter methods were renamed and given proper Javadoc descriptions.
+
+### Removed
+
+- `Trie.update` to encourage instantiating new objects rather than updating it.
+
 ## [2.0.0]
 
 ### Added

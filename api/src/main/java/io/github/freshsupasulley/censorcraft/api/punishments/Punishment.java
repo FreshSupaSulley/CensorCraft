@@ -217,6 +217,6 @@ public abstract class Punishment implements Serializable {
 	{
 		// We can't store Tries as instance variables anymore so this is required
 		Trie trie = new Trie(getTaboos());
-		return isolateWords ? trie.containsAnyIsolatedIgnoreCase(sample) : trie.containsAnyIgnoreCase(sample);
+		return isolateWords ? trie.findFirstIsolatedEntry(sample) : trie.findFirstEntry(sample);
 	}
 }

@@ -104,7 +104,7 @@ public class WordPacket implements IPacket {
 		Map<Integer, Map.Entry<Punishment, String>> toFire = new HashMap<>();
 		
 		// If a global taboo was spoken
-		String globalTaboo = ServerConfig.get().isIsolateWords() ? globalTrie.containsAnyIsolatedIgnoreCase(word) : globalTrie.containsAnyIgnoreCase(word);
+		String globalTaboo = ServerConfig.get().isIsolateWords() ? globalTrie.findFirstIsolatedEntry(word) : globalTrie.findFirstEntry(word);
 		if(globalTaboo != null)
 		{
 			CensorCraft.LOGGER.info("Global taboo said by '{}': '{}'", participant.getName(), globalTaboo);

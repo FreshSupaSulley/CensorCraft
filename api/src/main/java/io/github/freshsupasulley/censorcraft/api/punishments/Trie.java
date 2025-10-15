@@ -1,8 +1,8 @@
 package io.github.freshsupasulley.censorcraft.api.punishments;
 
-import java.util.ArrayList;
+import org.jetbrains.annotations.Nullable;
+
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.stream.StreamSupport;
 
@@ -11,8 +11,7 @@ import java.util.stream.StreamSupport;
  */
 public class Trie {
 	
-	private List<String> list;
-	private TrieNode root;
+	private final TrieNode root;
 	
 	/**
 	 * Defines a new Trie with a list of initial entries that will be <code>toString()</code>'d and inserted into the
@@ -22,50 +21,32 @@ public class Trie {
 	 */
 	public Trie(Iterable<?> rawList)
 	{
-		update(rawList);
+		root = new TrieNode();
+		
+		// Add each toString()'d object to the trie
+		StreamSupport.stream(rawList.spliterator(), false).map(Object::toString).toList().forEach(word ->
+		{
+			word = word.toLowerCase();
+			
+			TrieNode node = root;
+			
+			for(char c : word.toCharArray())
+			{
+				node = node.children.computeIfAbsent(c, k -> new TrieNode());
+			}
+			
+			node.isEndOfWord = true;
+		});
 	}
 	
 	/**
-	 * Updates the Trie with a new list if that list differs from the one already in the tree, equivalent to
-	 * instantiating a new Trie.
-	 *
-	 * @param rawList entries
-	 */
-	public void update(Iterable<?> rawList)
-	{
-		// Check if we need to update
-		List<String> newList = StreamSupport.stream(rawList.spliterator(), false).map(Object::toString).toList();
-		
-		if(!newList.equals(list))
-		{
-			list = new ArrayList<>();
-			root = new TrieNode();
-			newList.forEach(this::insert);
-		}
-	}
-	
-	private void insert(String word)
-	{
-		word = word.toLowerCase();
-		list.add(word);
-		
-		TrieNode node = root;
-		
-		for(char c : word.toCharArray())
-		{
-			node = node.children.computeIfAbsent(c, k -> new TrieNode());
-		}
-		
-		node.isEndOfWord = true;
-	}
-	
-	/**
-	 * Returns the first word found in the text (case-insensitive), or null if none was found.
+	 * Returns the first word found in the text (case-insensitive), or null if none was found. Word boundaries are not
+	 * considered.
 	 *
 	 * @param text text to check
 	 * @return first word found, or null
 	 */
-	public String containsAnyIgnoreCase(String text)
+	public @Nullable String findFirstEntry(String text)
 	{
 		for(int i = 0; i < text.length(); i++)
 		{
@@ -92,12 +73,13 @@ public class Trie {
 	}
 	
 	/**
-	 * Returns the first full word found in the text (case-insensitive), or null if none was found.
+	 * Returns the first <b>full word</b> (words separated by whitespace, non-letters, or end of line) found in the text
+	 * (case-insensitive), or null if none was found.
 	 *
 	 * @param text text to check
 	 * @return first word found, or null
 	 */
-	public String containsAnyIsolatedIgnoreCase(String text)
+	public @Nullable String findFirstIsolatedEntry(String text)
 	{
 		for(int i = 0; i < text.length(); i++)
 		{
