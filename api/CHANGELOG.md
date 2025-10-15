@@ -6,7 +6,7 @@
 
 - Client-side punishments now have a dedicated function that can be optionally implemented.
 - `ClientPunishEvent` and `ServerPunishEvent` events to hook into running sided code.
-- `ChatTabooEvent`.
+- `ChatTabooEvent`, allowing you to intercept what gets sent to chat.
 
 ### Changed
 
@@ -16,6 +16,7 @@
   importantly, plugins also need to have unique IDs with respect to every other plugin loaded. This is because we write
   to the server config file based off of the concatenation of the plugin ID and the punishment ID and therefore we need
   to ensure proper separation.
+- `PunishEvent` was renamed to `ServerPunishEvent`.
 
 ### Removed
 

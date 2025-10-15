@@ -4,6 +4,7 @@
 
 - `/censorcraft [enable/disable]` commands to quickly turn on / off punishing in-game.
 - `enable_censorcraft` setting in server config (ties to the `/censorcraft` command).
+- Scoreboard support to track who said the most punishments (see the [wiki](https://github.com/FreshSupaSulley/CensorCraft/wiki/server-setup#scoreboard)).
 
 ### Changed
 
