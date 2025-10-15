@@ -81,8 +81,5 @@ public class SetupPacket implements IPacket {
 			CensorCraft.LOGGER.info("Client has model installed");
 			ClientCensorCraft.setup(ClientCensorCraft.INSTANCE.getModelPath(model), audioContextLength);
 		}
-		
-		CensorCraft.LOGGER.info("I WILL FUCK YOU(model: {})", model);
-		
 	}
 }
