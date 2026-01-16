@@ -1,9 +1,9 @@
 # CensorCraft
-
 CensorCraft is a Forge Minecraft mod that actively listens to your voice with [Simple Voice Chat](https://www.curseforge.com/minecraft/mc-mods/simple-voice-chat) and punishes you for saying forbidden words.
 
-# Setup
+[![promo video](https://img.youtube.com/vi/MEmlDMB17S4/0.jpg)](https://youtu.be/MEmlDMB17S4)
 
+# Setup
 Install it on [CurseForge](https://www.curseforge.com/minecraft/mc-mods/censorcraft)! See the [wiki](https://github.com/FreshSupaSulley/CensorCraft/wiki) for setup instructions.
 
 # How it works
@@ -12,7 +12,6 @@ When you first try to join a world, you'll be asked to download a [whisper.cpp](
 This mod comes with a handful of default punishments, but it's extendable with plugins.
 
 ## Project structure
-
 This is a multi-project gradle build:
 
 - [forge](./forge)
@@ -23,5 +22,4 @@ The meat of the mod, no modloader code.
 The CensorCraft API project, allowing you to hook into CensorCraft to create your own punishments or mess with internal events.
 
 # Contributing
-
-Pull requests are encouraged!
+I don't plan on maintaining this project, so pull requests are encouraged.
