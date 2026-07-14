@@ -2,94 +2,58 @@ package io.github.freshsupasulley.censorcraft.config;
 
 import com.electronwill.nightconfig.core.CommentedConfig;
 import com.electronwill.nightconfig.core.ConfigSpec;
-import com.mojang.brigadier.CommandDispatcher;
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import io.github.freshsupasulley.censorcraft.CensorCraft;
 import io.github.freshsupasulley.censorcraft.api.CensorCraftPlugin;
 import io.github.freshsupasulley.censorcraft.api.events.server.ServerConfigEvent;
+import io.github.freshsupasulley.censorcraft.api.punishments.IConfigFile;
+import io.github.freshsupasulley.censorcraft.api.punishments.PunishmentParam;
 import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
-import io.github.freshsupasulley.censorcraft.network.PunishedPacket;
-import io.github.freshsupasulley.censorcraft.network.WordPacket;
 import io.github.freshsupasulley.censorcraft.plugins.impl.server.CensorCraftServerAPIImpl;
 import io.github.freshsupasulley.censorcraft.plugins.impl.server.ServerConfigEventImpl;
-import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.commands.Commands;
-import net.minecraft.network.chat.Component;
-import net.minecraft.server.level.ServerPlayer;
 
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public abstract class ServerConfig extends ConfigFile {
 	
-	private static ServerConfig SERVER;
+	private static ServerConfig INSTANCE;
 	
 	public ServerConfig(Path configFolder)
 	{
 		super(configFolder, "server");
 		
-		SERVER = this;
+		INSTANCE = this;
 		
 		// Now the plugins can see the API impl
-		CensorCraftServerAPIImpl.INSTANCE = new CensorCraftServerAPIImpl(SERVER.config);
+		CensorCraftServerAPIImpl.INSTANCE = new CensorCraftServerAPIImpl(INSTANCE.config);
 		CensorCraft.events.dispatchEvent(ServerConfigEvent.class, new ServerConfigEventImpl());
 	}
 	
 	public static ServerConfig get()
 	{
-		if(SERVER == null)
+		if(INSTANCE == null)
 		{
 			throw new IllegalStateException("Tried to access server config before it was initialized");
 		}
 		
-		return SERVER;
+		return INSTANCE;
 	}
 	
-	protected void onRegisterCommands(CommandDispatcher<CommandSourceStack> dispatcher)
+	/**
+	 * Gets a {@link PunishmentParam} value for a particular punishment. If that doesn't exist, we fallback to the
+	 * server config value (and then another fallback to the default value).
+	 *
+	 * @param param      {@link PunishmentParam} to check
+	 * @param punishment punishment to check for a global param override
+	 * @param <T>        type of value (boolean, double, etc.)
+	 * @return value of the setting
+	 */
+	public <T> T getParam(PunishmentParam<T> param, Punishment punishment)
 	{
-		// probably highest op level for this command? (4)
-		dispatcher.register(Commands.literal("censorcraft").requires(source -> source.hasPermission(4)).then(Commands.literal("enable").executes(ctx -> setEnabled(ctx.getSource(), true))).then(Commands.literal("disable").executes(ctx -> setEnabled(ctx.getSource(), false))));
-	}
-	
-	private static int setEnabled(CommandSourceStack source, boolean enabled) throws CommandSyntaxException
-	{
-		boolean state = get().isCensorCraftEnabled();
+		var defaultValue = param.getDefaultValue();
+		var obj = punishment.getParam(param, param.getValue(config, defaultValue));
 		
-		if(state == enabled)
-		{
-			throw new SimpleCommandExceptionType(Component.literal("CensorCraft is already " + (state ? "enabled" : "disabled"))).create();
-		}
-		
-		// If we just enabled it
-		if(enabled)
-		{
-			// Clear the accumulated participants buffer
-			WordPacket.resetParticipants();
-			
-			for(ServerPlayer player : source.getServer().getPlayerList().getPlayers())
-			{
-				// Signal to clients to reset their audio buffer
-				// (so if they spoke a taboo right as its enabled, they don't get punished)
-				// This could be paired with temporarily ignoring taboos for like 1s server side if required
-				CensorCraft.INSTANCE.sendToPlayer(new PunishedPacket(Set.of()), player);
-			}
-		}
-		
-		// Let's also notify them that the mod is active
-		source.getLevel().players().forEach(sample -> sample.displayClientMessage(Component.literal("CensorCraft is now ").append(Component.literal(enabled ? "enabled" : "disabled").withStyle(style -> style.withBold(true))), false));
-		
-		CensorCraft.LOGGER.info("Setting CensorCraft enabled state: {}", enabled);
-		get().config.set("enable_censorcraft", enabled);
-		return 1;
-	}
-	
-	public List<String> getGlobalTaboos()
-	{
-		return config.get("global_taboos");
+		return obj;
 	}
 	
 	public boolean isCensorCraftEnabled()
@@ -107,26 +71,6 @@ public abstract class ServerConfig extends ConfigFile {
 		return ((Number) config.get("context_length")).doubleValue();
 	}
 	
-	public double getPunishmentCooldown()
-	{
-		return ((Number) config.get("punishment_cooldown")).doubleValue();
-	}
-	
-	public boolean isChatTaboos()
-	{
-		return config.get("chat_taboos");
-	}
-	
-	public boolean isIsolateWords()
-	{
-		return config.get("isolate_words");
-	}
-	
-	public boolean isMonitorChat()
-	{
-		return config.get("monitor_chat");
-	}
-	
 	/**
 	 * Maps each plugin's ID to an array of deserialized punishments that are currently defined in the server config
 	 * file.
@@ -138,7 +82,7 @@ public abstract class ServerConfig extends ConfigFile {
 		List<Punishment> punishmentList = new ArrayList<>();
 		
 		// For each plugin punishment
-		CensorCraft.pluginPunishments.forEach((plugin, classes) ->
+		CensorCraft.PLUGIN_PUNISHMENTS.forEach((plugin, classes) ->
 		{
 			// Now for each punishment defined in this plugin
 			classes.forEach(punishment ->
@@ -169,19 +113,19 @@ public abstract class ServerConfig extends ConfigFile {
 	@Override
 	void register(ConfigSpec spec)
 	{
-		// Global on / off state
+		// Super global, non-punishment specific config options
 		define("enable_censorcraft", true, "On/off switch for the entire mod", "You can also use the /censorcraft enable/disable commands");
-		
-		defineList("global_taboos", List.of("boom"), "List of forbidden words and phrases (case-insensitive)", "All enabled punishments will fire when they are spoken");
 		define("preferred_model", "base.en", "Name of the transcription model players need to use (determines the language and accuracy)", "Better models have larger file sizes. See https://github.com/ggml-org/whisper.cpp/blob/master/models/README.md#available-models for available models");
 		defineInRange("context_length", 3D, 0D, Double.MAX_VALUE, "Maximum amount of time (in seconds) an individual audio recording is. The higher the value, the more intensive on players PCs", "Enter a number to at least 1 decimal place!");
-		defineInRange("punishment_cooldown", 0D, 0D, Double.MAX_VALUE, "Delay (in seconds) before a player can be punished again", "Enter a number to at least 1 decimal place!");
-		define("chat_taboos", true, "When someone is punished, send what the player said to chat");
-		define("isolate_words", true, "If true, only whole words are considered (surrounded by spaces or word boundaries). If false, partial matches are allowed (e.g., 'art' triggers punishment for 'start')");
-		define("monitor_chat", true, "Punish players for sending taboos to chat");
+		
+		// Punishment params that can be applied globally unless explicitly overridden
+		for(var param : PunishmentParam.values())
+		{
+			param.applyDefinitions(this);
+		}
 		
 		// Define (always server) configs for all punishments
-		for(Map.Entry<CensorCraftPlugin, Set<Punishment>> plugin : CensorCraft.pluginPunishments.entrySet())
+		for(Map.Entry<CensorCraftPlugin, Set<Punishment>> plugin : CensorCraft.PLUGIN_PUNISHMENTS.entrySet())
 		{
 			CensorCraft.LOGGER.info("Defining config for plugin '{}'", plugin.getKey());
 			
@@ -194,7 +138,25 @@ public abstract class ServerConfig extends ConfigFile {
 				{
 					// Each punishment creates an array of tables with only one entry
 					CommentedConfig table = config.createSubConfig();
-					option.buildConfig(table);
+					
+					// Define default params
+					PunishmentParam.values().forEach(v -> v.applyDefinitions(new IConfigFile() {
+						
+						@Override
+						public ConfigSpec getSpec()
+						{
+							return new ConfigSpec();
+						}
+						
+						@Override
+						public Map<String, List<String>> getComments()
+						{
+							return new HashMap<>();
+						}
+					}));
+					
+					option.initialize(table);
+					
 					// Intentionally lax validator, otherwise NightConfig freaks out
 					// We concatenate the plugin and the punishment IDs together with a dot (TOML standard)
 					spec.define(plugin.getKey().getPluginId() + "." + option.getId(), List.of(table), value -> value instanceof List);
@@ -207,7 +169,5 @@ public abstract class ServerConfig extends ConfigFile {
 				}
 			}
 		}
-		
-		// spec.define("punishments", punishments);
 	}
 }

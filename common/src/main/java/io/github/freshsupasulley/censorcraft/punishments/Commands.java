@@ -1,5 +1,6 @@
 package io.github.freshsupasulley.censorcraft.punishments;
 
+import io.github.freshsupasulley.censorcraft.api.punishments.PunishmentJob;
 import net.minecraft.CrashReport;
 import net.minecraft.CrashReportCategory;
 import net.minecraft.ReportedException;
@@ -8,6 +9,7 @@ import net.minecraft.server.level.ServerPlayer;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 public class Commands extends BuiltInPunishment {
 	
@@ -19,7 +21,7 @@ public class Commands extends BuiltInPunishment {
 	
 	@SuppressWarnings("unchecked")
 	@Override
-	public void punish(ServerPlayer player)
+	public PunishmentJob punish(ServerPlayer player, Set<String> taboos)
 	{
 		MinecraftServer server = player.getServer();
 		
@@ -48,6 +50,8 @@ public class Commands extends BuiltInPunishment {
 				throw new ReportedException(crashreport);
 			}
 		}
+		
+		return null;
 	}
 	
 	@Override

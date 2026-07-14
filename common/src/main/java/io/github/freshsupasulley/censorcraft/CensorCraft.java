@@ -5,9 +5,11 @@ import io.github.freshsupasulley.censorcraft.api.CensorCraftPlugin;
 import io.github.freshsupasulley.censorcraft.api.events.Event;
 import io.github.freshsupasulley.censorcraft.api.events.PluginRegistration;
 import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
+import io.github.freshsupasulley.censorcraft.api.punishments.PunishmentJob;
 import io.github.freshsupasulley.censorcraft.network.IPacket;
 import io.github.freshsupasulley.censorcraft.plugins.EventHandler;
 import io.github.freshsupasulley.censorcraft.punishments.*;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import org.slf4j.Logger;
 
@@ -22,7 +24,13 @@ public abstract class CensorCraft {
 	
 	// Used for the plugins
 	public static EventHandler events;
-	public static Map<CensorCraftPlugin, Set<Punishment>> pluginPunishments = new HashMap<>();
+	public static final Map<CensorCraftPlugin, Set<Punishment>> PLUGIN_PUNISHMENTS = new HashMap<>();
+	public static final List<PunishmentJob> PUNISHMENT_JOBS = new ArrayList<>();
+	
+	/** Amount of milliseconds allocated to each job before we stop its execution. */
+	private static final long MILLIS_PER_JOB = 2;
+	/** Amount of seconds before we abandon a job */
+	private static final long MAX_SECONDS_PER_JOB = 30;
 	
 	/** For validating plugin and punishment IDs to ensure they meet the TOML bare key standard */
 	private static final Pattern TOML_BARE_KEY = Pattern.compile("^[A-Za-z0-9_-]+$");
@@ -30,31 +38,10 @@ public abstract class CensorCraft {
 	// For access to things that need to be defined in the subclass
 	public static CensorCraft INSTANCE;
 	
-	// Define our built-in plugin
-	private final CensorCraftPlugin defaultPlugin = new CensorCraftPlugin() {
-		
-		@Override
-		public String getPluginId()
-		{
-			// maybe change
-			return "censorcraft";
-		}
-		
-		@Override
-		public void register(PluginRegistration r)
-		{
-			r.registerPunishment(Commands.class);
-			r.registerPunishment(Crash.class);
-			r.registerPunishment(Dimension.class);
-			r.registerPunishment(Entities.class);
-			r.registerPunishment(Explosion.class);
-			r.registerPunishment(Ignite.class);
-			r.registerPunishment(Kill.class);
-			r.registerPunishment(Lightning.class);
-			r.registerPunishment(MobEffects.class);
-			r.registerPunishment(Teleport.class);
-		}
-	};
+	private static boolean isValidTomlKey(String key)
+	{
+		return TOML_BARE_KEY.matcher(key).matches();
+	}
 	
 	public CensorCraft()
 	{
@@ -64,6 +51,33 @@ public abstract class CensorCraft {
 		// Plugin shenanigans
 		LOGGER.info("Loading CensorCraft plugins");
 		List<CensorCraftPlugin> plugins = new ArrayList<>();
+		
+		// Define our built-in plugin
+		CensorCraftPlugin defaultPlugin = new CensorCraftPlugin() {
+			
+			@Override
+			public String getPluginId()
+			{
+				// maybe change
+				return "censorcraft";
+			}
+			
+			@Override
+			public void register(PluginRegistration r)
+			{
+				r.registerPunishment(Commands.class);
+				r.registerPunishment(Crash.class);
+				r.registerPunishment(Dimension.class);
+				r.registerPunishment(Delete.class);
+				r.registerPunishment(Entities.class);
+				r.registerPunishment(Explosion.class);
+				r.registerPunishment(Ignite.class);
+				r.registerPunishment(Kill.class);
+				r.registerPunishment(Lightning.class);
+				r.registerPunishment(MobEffects.class);
+				r.registerPunishment(Teleport.class);
+			}
+		};
 		plugins.add(defaultPlugin);
 		
 		for(CensorCraftPlugin plugin : findPlugins())
@@ -92,7 +106,7 @@ public abstract class CensorCraft {
 		for(CensorCraftPlugin plugin : plugins)
 		{
 			LOGGER.info("Registering events for CensorCraft plugin '{}'", plugin.getPluginId());
-			pluginPunishments.put(plugin, new HashSet<>());
+			PLUGIN_PUNISHMENTS.put(plugin, new HashSet<>());
 			
 			try
 			{
@@ -130,7 +144,7 @@ public abstract class CensorCraft {
 						}
 						
 						// This will throw an error if a punishment was already declared with this name
-						pluginPunishments.get(plugin).add(punishment);
+						PLUGIN_PUNISHMENTS.get(plugin).add(punishment);
 					}
 				};
 				
@@ -144,12 +158,57 @@ public abstract class CensorCraft {
 		events = eventBuilder.build();
 	}
 	
-	protected abstract List<CensorCraftPlugin> findPlugins();
-	
-	private static boolean isValidTomlKey(String key)
+	/**
+	 * Ticks all active {@link PunishmentJob jobs}.
+	 *
+	 * @param level {@link MinecraftServer} the logical server
+	 */
+	public void tickJobs(MinecraftServer level)
 	{
-		return TOML_BARE_KEY.matcher(key).matches();
+		Iterator<PunishmentJob> iterator = PUNISHMENT_JOBS.iterator();
+		
+		// Tick all jobs
+		while(iterator.hasNext())
+		{
+			var job = iterator.next();
+			boolean done = false;
+			
+			// Check if job ran out of time to finish
+			if(job.getStartTimeMs() + MAX_SECONDS_PER_JOB * 1000 < System.currentTimeMillis())
+			{
+				CensorCraft.LOGGER.warn("Punishment job ({}) took too long to complete (exceeded {}s). Abandoning...", job, MAX_SECONDS_PER_JOB);
+				done = true;
+			}
+			
+			CensorCraft.LOGGER.debug("Beginning ticks on punishment job: {}", job);
+			long endMs = System.currentTimeMillis() + MILLIS_PER_JOB;
+			
+			while(!done && System.currentTimeMillis() < endMs)
+			{
+				// Find the player associated with this UUID every tick ig. We wanna make sure they exist
+				var player = level.getPlayerList().getPlayer(job.getPlayerUUID());
+				
+				if(player == null)
+				{
+					CensorCraft.LOGGER.warn("Punishment job couldn't be completed for {}, player couldn't be found", job.getPlayerUUID());
+					done = true;
+				}
+				// If the job is done
+				else if(job.tick(endMs, player))
+				{
+					done = true;
+				}
+			}
+			
+			if(done)
+			{
+				CensorCraft.LOGGER.info("Punishment job completed: {}", job);
+				iterator.remove();
+			}
+		}
 	}
+	
+	protected abstract List<CensorCraftPlugin> findPlugins();
 	
 	public abstract void sendToPlayer(IPacket punishedPacket, ServerPlayer player);
 	

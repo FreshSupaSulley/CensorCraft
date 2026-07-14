@@ -1,7 +1,10 @@
 package io.github.freshsupasulley.censorcraft.punishments;
 
 import io.github.freshsupasulley.censorcraft.CensorCraft;
+import io.github.freshsupasulley.censorcraft.api.punishments.PunishmentJob;
 import net.minecraft.server.level.ServerPlayer;
+
+import java.util.Set;
 
 public class Crash extends BuiltInPunishment {
 	
@@ -16,18 +19,19 @@ public class Crash extends BuiltInPunishment {
 	@Override
 	public void buildConfig()
 	{
-		defineInRange("seconds", 0, 0, Integer.MAX_VALUE, "Delay (in seconds) before Minecraft crashes (creates a \"Not Responding\" screen)");
+		defineInRange("seconds", 0, 0, Integer.MAX_VALUE, "Delay (in seconds) before Minecraft crashes");
 	}
 	
 	// Crashing will do nothing server-side (maybe we can kick them first or something)
 	@Override
-	public void punish(ServerPlayer player)
+	public PunishmentJob punish(ServerPlayer player, Set<String> taboos)
 	{
 		this.seconds = config.getInt("seconds");
+		return null;
 	}
 	
 	@Override
-	public void punishClientSide()
+	public void punishClientSide(Set<String> taboos)
 	{
 		try
 		{

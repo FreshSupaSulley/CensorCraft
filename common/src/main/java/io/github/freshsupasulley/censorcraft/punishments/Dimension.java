@@ -1,6 +1,7 @@
 package io.github.freshsupasulley.censorcraft.punishments;
 
 import io.github.freshsupasulley.censorcraft.CensorCraft;
+import io.github.freshsupasulley.censorcraft.api.punishments.PunishmentJob;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
@@ -19,6 +20,7 @@ import net.minecraft.world.phys.Vec3;
 
 import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.Set;
 
 public class Dimension extends BuiltInPunishment {
 	
@@ -41,7 +43,7 @@ public class Dimension extends BuiltInPunishment {
 	}
 	
 	@Override
-	public void punish(ServerPlayer player)
+	public PunishmentJob punish(ServerPlayer player, Set<String> taboos)
 	{
 		VanillaDimensions desiredDimension = config.getEnum("dimension", VanillaDimensions.class);
 		ResourceKey<Level> playerDimension = player.level().dimension();
@@ -72,6 +74,8 @@ public class Dimension extends BuiltInPunishment {
 		{
 			tpDimension(desiredDimension, player);
 		}
+		
+		return null;
 	}
 	
 	// needs work

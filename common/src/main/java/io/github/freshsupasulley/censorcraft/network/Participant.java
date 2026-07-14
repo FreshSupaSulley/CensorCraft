@@ -3,6 +3,7 @@ package io.github.freshsupasulley.censorcraft.network;
 import io.github.freshsupasulley.censorcraft.CensorCraft;
 import io.github.freshsupasulley.censorcraft.api.events.server.ChatTabooEvent;
 import io.github.freshsupasulley.censorcraft.api.events.server.ServerPunishEvent;
+import io.github.freshsupasulley.censorcraft.api.punishments.PunishmentParam;
 import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
 import io.github.freshsupasulley.censorcraft.config.ServerConfig;
 import io.github.freshsupasulley.censorcraft.plugins.impl.server.ChatTabooEventImpl;
@@ -14,6 +15,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class Participant {
@@ -62,11 +64,11 @@ public class Participant {
 		return buffer.toString();
 	}
 	
-	public void punish(Map<Punishment, @Nullable String> punishments, ServerPlayer player)
+	public void punish(Map<Punishment, @Nullable Set<String>> punishments, ServerPlayer player)
 	{
 		if(punishments.isEmpty())
 		{
-			CensorCraft.LOGGER.warn("Punishments are empty, this will only clear the audio buffer on the client!");
+			CensorCraft.LOGGER.info("Punishments are empty, this will only clear the audio buffer on the client");
 		}
 		else
 		{
@@ -77,13 +79,15 @@ public class Participant {
 		lastPunishment = System.currentTimeMillis();
 		
 		// Trigger the server side punishments. Client side ones comes after
-		var successes = punishments.entrySet().stream().filter(entry -> runServerPunishment(entry.getKey(), player)).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+		// 1. filter down to successful punishments, THEN 2. filter down to just ones with chat_taboo enabled (to ensure all of them still run regardless of this setting)
+		var toChatSuccesses = punishments.entrySet().stream().filter(entry -> runServerPunishment(entry.getKey(), entry.getValue(), player)).filter(p -> ServerConfig.get().getParam(PunishmentParam.CHAT_TABOOS, p.getKey())).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 		
-		// Announce the punishment
+		// Announce the punishment. We are collapsing all ran punishments into one big message here
 		// The only reason I'm announcing the punishment AFTER running it is for my niche plugin so it can access instance variables during ChatTabooEvent
-		if(ServerConfig.get().isChatTaboos())
+		if(!toChatSuccesses.isEmpty())
 		{
-			Component taboos = successes.values().stream().distinct().map(string -> Component.literal("\"" + string + "\"").withStyle(style -> style.withBold(true))).reduce(Component.empty(), (og, sample) -> og.append(sample).append(Component.literal(", ")));
+			// insane deflation
+			Component taboos = toChatSuccesses.values().stream().flatMap(Set::stream).distinct().map(string -> Component.literal("\"" + string + "\"").withStyle(style -> style.withBold(true))).reduce(Component.empty(), (og, sample) -> og.append(sample).append(Component.literal(", ")));
 			var parts = taboos.getSiblings();
 			
 			if(!parts.isEmpty())
@@ -117,33 +121,58 @@ public class Participant {
 		CensorCraft.LOGGER.debug("Sending punished packet");
 		
 		// Send the packet
-		CensorCraft.INSTANCE.sendToPlayer(new PunishedPacket(punishments.keySet()), player);
+		CensorCraft.INSTANCE.sendToPlayer(new PunishedPacket(punishments.values().stream().filter(Objects::nonNull).flatMap(Set::stream).collect(Collectors.toSet()), punishments.keySet()), player);
 		
 		// Reset the participant's word buffer
 		clearWordBuffer();
 	}
 	
-	private boolean runServerPunishment(Punishment option, ServerPlayer player)
+	private boolean runServerPunishment(Punishment punishment, Set<String> taboos, ServerPlayer player)
 	{
-		// If this was cancelled, don't punish the player
-		if(!CensorCraft.events.dispatchEvent(ServerPunishEvent.class, new ServerPunishEventImpl(player.getUUID(), option)))
+		// Check if we need to punish everyone. If so, only punish alive players
+		List<ServerPlayer> players;
+		
+		if(!ServerConfig.get().getParam(PunishmentParam.PUNISH_EVERYONE, punishment))
 		{
-			CensorCraft.LOGGER.info("Server-side punishment was cancelled");
-			return false;
+			players = List.of(player);
+		}
+		else
+		{
+			players = Objects.requireNonNull(player.getServer()).getPlayerList().getPlayers().stream().filter(sample -> !sample.isDeadOrDying()).toList();
+			CensorCraft.LOGGER.info("Everyone ({}) is getting punished", players.size());
 		}
 		
-		CensorCraft.LOGGER.info("Invoking punishment '{}' onto player '{}'", option.getId(), player.getUUID());
+		boolean singleSuccess = false;
 		
-		try
+		for(var victim : players)
 		{
-			option.punish(player);
-			return true;
-		} catch(Exception e)
-		{
-			CensorCraft.LOGGER.warn("Something went wrong punishing the player for punishment '{}'", option.getId(), e);
+			// If this was cancelled, don't punish the player
+			if(!CensorCraft.events.dispatchEvent(ServerPunishEvent.class, new ServerPunishEventImpl(player.getUUID(), punishment)))
+			{
+				CensorCraft.LOGGER.info("Server-side punishment was cancelled");
+				continue;
+			}
+			
+			CensorCraft.LOGGER.info("Invoking punishment '{}' onto player '{}'", punishment.getId(), victim.getUUID());
+			
+			try
+			{
+				// Pop any punishment job into the queue
+				var job = punishment.punish(victim, taboos);
+				
+				if(job != null)
+				{
+					CensorCraft.PUNISHMENT_JOBS.add(job);
+				}
+				
+				singleSuccess = true;
+			} catch(Exception e)
+			{
+				CensorCraft.LOGGER.warn("Something went wrong punishing the player for punishment '{}'", punishment.getId(), e);
+			}
 		}
 		
-		return false;
+		return singleSuccess;
 	}
 	
 	public int getPunishmentCount()

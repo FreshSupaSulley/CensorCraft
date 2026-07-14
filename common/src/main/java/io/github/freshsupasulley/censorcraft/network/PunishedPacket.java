@@ -14,6 +14,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.nio.charset.Charset;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 /**
@@ -28,9 +29,17 @@ public class PunishedPacket implements IPacket {
 		@Override
 		public void encode(RegistryFriendlyByteBuf buffer, PunishedPacket packet)
 		{
-			var raw = packet.registry;
+			// Taboos
+			buffer.writeInt(packet.taboos.size());
 			
-			// Number of plugins this affected
+			for(var taboo : packet.taboos)
+			{
+				buffer.writeInt(taboo.length());
+				buffer.writeCharSequence(taboo, Charset.defaultCharset());
+			}
+			
+			// Registry
+			var raw = packet.registry;
 			buffer.writeInt(raw.size());
 			
 			raw.forEach((punishment) ->
@@ -68,6 +77,16 @@ public class PunishedPacket implements IPacket {
 		@Override
 		public PunishedPacket decode(RegistryFriendlyByteBuf buffer)
 		{
+			// Read taboos
+			final int numTaboos = buffer.readInt();
+			Set<String> taboos = new LinkedHashSet<>(numTaboos);
+			
+			for(int i = 0; i < numTaboos; i++)
+			{
+				taboos.add(buffer.readCharSequence(buffer.readInt(), Charset.defaultCharset()).toString());
+			}
+			
+			// Punishments
 			Set<Punishment> registry = new HashSet<>();
 			final int size = buffer.readInt();
 			
@@ -104,14 +123,16 @@ public class PunishedPacket implements IPacket {
 				}
 			}
 			
-			return new PunishedPacket(registry);
+			return new PunishedPacket(taboos, registry);
 		}
 	};
 	
+	private final Set<String> taboos;
 	private final Set<Punishment> registry;
 	
-	public PunishedPacket(Set<Punishment> punishments)
+	public PunishedPacket(Set<String> taboos, Set<Punishment> punishments)
 	{
+		this.taboos = taboos;
 		this.registry = punishments;
 	}
 	
@@ -133,7 +154,7 @@ public class PunishedPacket implements IPacket {
 				
 				try
 				{
-					punishment.punishClientSide();
+					punishment.punishClientSide(taboos);
 				} catch(Exception e)
 				{
 					CensorCraft.LOGGER.error("Failed executing '{}' punishment", punishment.getId(), e);

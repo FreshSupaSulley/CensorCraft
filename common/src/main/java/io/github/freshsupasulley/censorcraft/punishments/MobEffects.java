@@ -1,6 +1,7 @@
 package io.github.freshsupasulley.censorcraft.punishments;
 
 import io.github.freshsupasulley.censorcraft.CensorCraft;
+import io.github.freshsupasulley.censorcraft.api.punishments.PunishmentJob;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -8,6 +9,7 @@ import net.minecraft.world.effect.MobEffectInstance;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class MobEffects extends BuiltInPunishment {
@@ -27,7 +29,7 @@ public class MobEffects extends BuiltInPunishment {
 	}
 	
 	@Override
-	public void punish(ServerPlayer player)
+	public PunishmentJob punish(ServerPlayer player, Set<String> taboos)
 	{
 		List<String> effects = config.get("effects");
 		int ticks = config.getInt("duration");
@@ -40,5 +42,7 @@ public class MobEffects extends BuiltInPunishment {
 				CensorCraft.LOGGER.warn("Failed to find mob effect with name {}", effect);
 			});
 		}
+		
+		return null;
 	}
 }

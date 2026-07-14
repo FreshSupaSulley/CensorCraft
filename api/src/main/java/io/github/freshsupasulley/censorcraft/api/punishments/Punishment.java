@@ -4,8 +4,8 @@ import com.electronwill.nightconfig.core.CommentedConfig;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -18,7 +18,7 @@ import java.util.stream.Stream;
  * punishment that appear in the server config file.</p>
  *
  * <p>Punishments are serialized and sent to the client, meaning instance variables will be accessible for client-side
- * punishments, with the notable exception of <code>config</code> (see {@link #punishClientSide()}).</p>
+ * punishments, with the notable exception of <code>config</code> (see {@link #punishClientSide(Set)}).</p>
  */
 public abstract class Punishment implements Serializable {
 	
@@ -56,6 +56,29 @@ public abstract class Punishment implements Serializable {
 	}
 	
 	/**
+	 * Internally used to set the {@link #config} local variable and define the <code>enabled</code> parameter.
+	 *
+	 * @param config {@link CommentedConfig} instance
+	 */
+	public final void initialize(CommentedConfig config)
+	{
+		this.config = config;
+		define("enabled", isEnabledOnInit());
+		buildConfig();
+	}
+	
+	/**
+	 * Checks if this punishment type is enabled by the server admin.
+	 *
+	 * @return true if this punishment's <code>enable</code> flag is set to true
+	 */
+	public final boolean isEnabled()
+	{
+		// Definitely default to false if we can't find it
+		return config.getOrElse("enabled", false);
+	}
+	
+	/**
 	 * The ID of this punishment. <b>Must be unique to this plugin</b>!
 	 *
 	 * <p>Used to write the name of the punishment to the server config file and distinguish punishments over the
@@ -66,26 +89,51 @@ public abstract class Punishment implements Serializable {
 	public abstract String getId();
 	
 	/**
-	 * Builds your punishment's section of the server config file. Use the parent's <code>define</code> methods to build
-	 * it. Example:
+	 * Builds your punishment's section of the server config file. Your punishment may not need configuration from the
+	 * admin, and if so you may leave this method unimplemented.
+	 *
+	 * <p>
+	 * Use the parent's {@code define} methods to build it. Example:
 	 *
 	 * <pre>{@code
 	 * defineInRange("explosion_radius", 5D, 0D, Double.MAX_VALUE);
 	 * }</pre>
 	 *
 	 * <p>
-	 * You can use {@link #config} in {@link #punish(Object)} to retrieve the server admin's settings of what you
+	 * You can use {@link #config} in {@link #punish(Object, Set)} to retrieve the server config's values of what you
 	 * defined here.
-	 * </p>
 	 */
 	protected abstract void buildConfig();
 	
 	/**
+	 * Returns the value of a punishment's parameter if it was set.
+	 *
+	 * <p>This method exists so plugins can override this and ignore server config settings. Useful if you wanted the
+	 * taboos to always be a particular set of words, for example.</p>
+	 *
+	 * @param param    parameter to check
+	 * @param fallback what to return instead if the punishment doesn't have this set (the server config global
+	 *                 setting)
+	 * @param <T>      type of global param
+	 * @return {@link Optional} global punishment parameter
+	 */
+	public <T> T getParam(PunishmentParam<T> param, T fallback)
+	{
+		return param.getValue(config, fallback);
+	}
+	
+	/**
 	 * Punishes the player for this punishment type.
 	 *
+	 * <p>This method returns a {@link PunishmentJob}. If your punishment takes long to run, consider using it to
+	 * spread your compute across multiple ticks. Otherwise, you may run all of your punishment code in this method and
+	 * return <code>null</code>.</p>
+	 *
 	 * @param player the <code>net.minecraft.server.level</code> server player object
+	 * @param taboos the taboos the player said
+	 * @return optional {@link PunishmentJob} to queue a large job
 	 */
-	public abstract void punish(Object player);
+	public abstract @Nullable PunishmentJob punish(Object player, Set<String> taboos);
 	
 	/**
 	 * Punishes the player for this punishment type <b>on the client-side</b> (on the punished-player's machine).
@@ -95,30 +143,16 @@ public abstract class Punishment implements Serializable {
 	 *
 	 * <p>Punishments are serialized and sent to the client, but <code>config</code> is not. Attempting to read from
 	 * the config on the client will raise a {@link NullPointerException}. If you want to send config settings from the
-	 * server to the client, take out what you need and store them as instance variables in {@link #punish(Object)}.
-	 * Those instance variables will be serialized and sent to the client, where you can use them in this method.
+	 * server to the client, take out what you need and store them as instance variables in
+	 * {@link #punish(Object, Set)}. Those instance variables will be serialized and sent to the client, where you can
+	 * use them in this method.
 	 * <b>Only store serializable instance variables</b>! Unserializable instance variables will raise
 	 * {@link java.io.NotSerializableException}.</p>
-	 */
-	public void punishClientSide()
-	{
-	}
-	
-	/**
-	 * Internally used to build the punishment's default parameters.
 	 *
-	 * @param config {@link CommentedConfig} instance
+	 * @param taboos the taboos the player said
 	 */
-	public final void buildConfig(CommentedConfig config)
+	public void punishClientSide(Set<String> taboos)
 	{
-		// Just for building
-		this.config = config;
-		
-		define("enable", initEnable());
-		define("taboo", new ArrayList<>(List.of("")), "List of punishment-specific forbidden words and phrases (case-insensitive)");
-		define("ignore_global_taboos", false, "Global taboos don't trigger this punishment");
-		
-		buildConfig();
 	}
 	
 	/**
@@ -129,7 +163,7 @@ public abstract class Punishment implements Serializable {
 	 * @param value    initial value
 	 * @param comments config comments
 	 */
-	protected final <E> void define(String key, E value, String... comments)
+	public final <E> void define(String key, E value, String... comments)
 	{
 		config.set(key, value);
 		config.setComment(key, Stream.of(comments).map(comment -> " " + comment).collect(Collectors.joining(System.lineSeparator())));
@@ -143,7 +177,7 @@ public abstract class Punishment implements Serializable {
 	 * @param value    initial value (enum entry)
 	 * @param comments config comments
 	 */
-	protected final <E extends Enum<E>> void defineEnum(String key, E value, String... comments)
+	public final <E extends Enum<E>> void defineEnum(String key, E value, String... comments)
 	{
 		define(key, value, Stream.concat(Stream.of(comments), Stream.of("Allowed Values: " + Stream.of(value.getDeclaringClass().getEnumConstants()).map(Enum::name).collect(Collectors.joining(", ")))).toArray(String[]::new));
 	}
@@ -158,65 +192,18 @@ public abstract class Punishment implements Serializable {
 	 * @param max      maximum value
 	 * @param comments config comments
 	 */
-	protected final <E extends Comparable<? super E>> void defineInRange(String key, E value, E min, E max, String... comments)
+	public final <E extends Comparable<? super E>> void defineInRange(String key, E value, E min, E max, String... comments)
 	{
 		define(key, value, Stream.concat(Stream.of(comments), Stream.of("Range: " + min + " ~ " + max)).toArray(String[]::new));
 	}
 	
 	/**
-	 * Whether the punishment will be enabled by default when written to the server config file.
+	 * Whether the punishment will be enabled by default when the server config file is first created for a world.
 	 *
-	 * @return true if this punishment should be enabled by default
+	 * @return true if this punishment should be enabled by default when generated
 	 */
-	protected boolean initEnable()
+	protected boolean isEnabledOnInit()
 	{
 		return false;
-	}
-	
-	/**
-	 * Checks if this punishment type is enabled by the server admin.
-	 *
-	 * @return true if this punishment's <code>enabled</code> flag is set to true
-	 */
-	public boolean isEnabled()
-	{
-		return config.get("enable");
-	}
-	
-	/**
-	 * Gets the list of punishment-specific taboos.
-	 *
-	 * @return {@link List} of taboos
-	 */
-	public List<String> getTaboos()
-	{
-		List<String> taboos = config.getOrElse("taboo", List.of()); // not sure if the orElse is necessary
-		return taboos;
-	}
-	
-	/**
-	 * Checks if this punishment type ignores the <code>global_taboos</code> array.
-	 *
-	 * @return true if the punishment type ignores global taboos
-	 */
-	public boolean ignoresGlobalTaboos()
-	{
-		return config.get("ignore_global_taboos");
-	}
-	
-	/**
-	 * Checks if a taboo is in the punishment-specific taboo trie and returns it if found. Can be <code>null</code>!
-	 *
-	 * <p>You can override this method to add customized taboos that can change at your whim.</p>
-	 *
-	 * @param sample       word or phrase the player said
-	 * @param isolateWords if the server admin enabled isolate words in the config file
-	 * @return the taboo the player spoke, or null if not found
-	 */
-	public @Nullable String getTaboo(String sample, boolean isolateWords)
-	{
-		// We can't store Tries as instance variables anymore so this is required
-		Trie trie = new Trie(getTaboos());
-		return isolateWords ? trie.findFirstIsolatedEntry(sample) : trie.findFirstEntry(sample);
 	}
 }

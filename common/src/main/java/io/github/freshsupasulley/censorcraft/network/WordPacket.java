@@ -2,6 +2,7 @@ package io.github.freshsupasulley.censorcraft.network;
 
 import io.github.freshsupasulley.censorcraft.CensorCraft;
 import io.github.freshsupasulley.censorcraft.api.events.server.ReceiveTranscription;
+import io.github.freshsupasulley.censorcraft.api.punishments.PunishmentParam;
 import io.github.freshsupasulley.censorcraft.api.punishments.Punishment;
 import io.github.freshsupasulley.censorcraft.api.punishments.Trie;
 import io.github.freshsupasulley.censorcraft.config.ServerConfig;
@@ -11,10 +12,7 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerPlayer;
 
 import java.nio.charset.Charset;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
-import java.util.stream.Collectors;
+import java.util.*;
 
 public class WordPacket implements IPacket {
 	
@@ -43,7 +41,7 @@ public class WordPacket implements IPacket {
 		this.payload = payload;
 	}
 	
-	public static void punish(ServerPlayer player, Map<Punishment, String> punishments)
+	public static void punish(ServerPlayer player, Map<Punishment, Set<String>> punishments)
 	{
 		participants.computeIfAbsent(player.getUUID(), uuid -> new Participant(player.getScoreboardName())).punish(punishments, player);
 	}
@@ -53,7 +51,7 @@ public class WordPacket implements IPacket {
 		participants.values().forEach(Participant::clearWordBuffer);
 	}
 	
-	private void innerConsume(ServerPlayer player)
+	private void innerConsume(ServerPlayer player, boolean fromChat)
 	{
 		// Do nothing if mod is disabled
 		if(!ServerConfig.get().isCensorCraftEnabled())
@@ -75,89 +73,74 @@ public class WordPacket implements IPacket {
 			return;
 		}
 		
-		// If we need to wait before the player is punished again
-		long lastPunishmentTime = System.currentTimeMillis() - participant.getLastPunishment();
-		double cooldown = ServerConfig.get().getPunishmentCooldown();
-		
-		if(lastPunishmentTime < cooldown * 1000) // Convert taboo cooldown to ms
-		{
-			CensorCraft.LOGGER.info("Can't punish {} this frequently while the cooldown is set to {}s (last punishment was {}ms ago)", participant.getName(), cooldown, lastPunishmentTime);
-			return;
-		}
-		
+		// This check happens twice btw, here and in participant's punish method. We don't want to append the word to the rolling buffer if they're dead
 		if(player.isDeadOrDying())
 		{
 			// Don't punish the player if they're dead or dying
-			CensorCraft.LOGGER.info("Can't punish {}, player is dead or dying", participant.getName());
+			CensorCraft.LOGGER.info("Can't punish {}, player is not alive", participant.getName());
 			return;
 		}
 		
 		CensorCraft.LOGGER.info("Received \"{}\" from {}", payload, participant.getName());
 		
-		// Update trie in case the taboos did
-		Trie globalTrie = new Trie(ServerConfig.get().getGlobalTaboos());
-		
 		String word = participant.appendWord(payload);
 		
 		// Get all punishments in the server config file
 		var configPunishments = ServerConfig.get().getConfigPunishments();
-		Map<Integer, Map.Entry<Punishment, String>> toFire = new HashMap<>();
-		
-		// If a global taboo was spoken
-		String globalTaboo = ServerConfig.get().isIsolateWords() ? globalTrie.findFirstIsolatedEntry(word) : globalTrie.findFirstEntry(word);
-		if(globalTaboo != null)
-		{
-			CensorCraft.LOGGER.info("Global taboo said by '{}': '{}'", participant.getName(), globalTaboo);
-			
-			// Filter down to just what's enabled and what doesn't ignore global taboos
-			// And map it to its global taboo
-			for(int i = 0; i < configPunishments.size(); i++)
-			{
-				var punishment = configPunishments.get(i);
-				if(!punishment.isEnabled() || punishment.ignoresGlobalTaboos()) continue;
-				
-				toFire.put(i, Map.entry(punishment, globalTaboo));
-			}
-		}
+		Map<Punishment, Set<String>> toFire = new HashMap<>();
 		
 		// Check each punishment's individual taboo option. Filter down to just what's enabled too
 		// We also need to run an additional check to make sure the punishment is necessary here by checking if the word is a punishment-specific taboo
 		// This also removes entire entries from the map if the list is empty
-		for(int i = 0; i < configPunishments.size(); i++)
+		for(var punishment : configPunishments)
 		{
-			var punishment = configPunishments.get(i);
-			// If the global taboos is already going to fire this punishment OR its not enabled, try the next one
-			if(toFire.containsKey(i) || !punishment.isEnabled()) continue;
+			// Only handle through enabled punishments
+			if(!punishment.isEnabled())
+				continue;
 			
-			// Check for a punishment-specific taboo
-			String taboo = punishment.getTaboo(word, ServerConfig.get().isIsolateWords());
+			// If it's from chat and we're not monitoring it, abandon
+			if(fromChat && !ServerConfig.get().getParam(PunishmentParam.MONITOR_CHAT, punishment))
+				continue;
 			
-			if(taboo != null)
+			// If we need to wait before the player is punished again
+			long lastPunishmentTime = System.currentTimeMillis() - participant.getLastPunishment();
+			double cooldown = ServerConfig.get().getParam(PunishmentParam.PUNISHMENT_COOLDOWN, punishment).doubleValue();
+			
+			if(lastPunishmentTime < cooldown * 1000) // Convert taboo cooldown to ms
 			{
-				CensorCraft.LOGGER.info("Punishment-specific taboo spoken by '{}' (punishment ID: {}, taboo: '{}')", participant.getName(), punishment.getId(), taboo);
-				toFire.put(i, Map.entry(punishment, taboo));
+				CensorCraft.LOGGER.info("Can't punish {} this frequently (punishment: {}) while the cooldown is at {}s (last punishment was {}ms ago)", participant.getName(), punishment.getId(), cooldown, lastPunishmentTime);
+				continue;
+			}
+			
+			// Grab taboos
+			final boolean isolateWords = ServerConfig.get().getParam(PunishmentParam.ISOLATE_WORDS, punishment);
+			Trie globalTrie = new Trie(ServerConfig.get().getParam(PunishmentParam.TABOOS, punishment));
+			Set<String> taboos = isolateWords ? globalTrie.findIsolatedEntries(word) : globalTrie.findEntries(word);
+			
+			// If taboos were spoken
+			if(taboos != null)
+			{
+				CensorCraft.LOGGER.info("Taboo(s) said by '{}' (punishment: {}, taboo(s): {})", participant.getName(), punishment.getId(), taboos);
+				toFire.put(punishment, taboos);
 			}
 		}
 		
 		// Only punish if we actually got a punishment to run
-		if(!configPunishments.isEmpty())
+		if(!toFire.isEmpty())
 		{
 			// Assemble the toFire to an actual map
-			punish(player, toFire.values().stream().collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
+			punish(player, toFire);
 		}
 	}
 	
 	@Override
 	public void consume(PacketContext context)
 	{
-		innerConsume(context.getSender());
+		innerConsume(context.getSender(), false);
 	}
 	
 	public static void chatEvent(ServerPlayer player, String text)
 	{
-		if(ServerConfig.get().isMonitorChat())
-		{
-			new WordPacket(text).innerConsume(player);
-		}
+		new WordPacket(text).innerConsume(player, true);
 	}
 }

@@ -1,6 +1,7 @@
 package io.github.freshsupasulley.censorcraft.punishments;
 
 import io.github.freshsupasulley.censorcraft.CensorCraft;
+import io.github.freshsupasulley.censorcraft.api.punishments.PunishmentJob;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -8,6 +9,7 @@ import net.minecraft.world.entity.EntitySpawnReason;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class Entities extends BuiltInPunishment {
@@ -26,7 +28,7 @@ public class Entities extends BuiltInPunishment {
 	}
 	
 	@Override
-	public void punish(ServerPlayer player)
+	public PunishmentJob punish(ServerPlayer player, Set<String> taboos)
 	{
 		for(int i = 0; i < config.getInt("quantity"); i++)
 		{
@@ -37,5 +39,7 @@ public class Entities extends BuiltInPunishment {
 				CensorCraft.LOGGER.warn("Failed to find entity type with name {}", element);
 			}));
 		}
+		
+		return null;
 	}
 }

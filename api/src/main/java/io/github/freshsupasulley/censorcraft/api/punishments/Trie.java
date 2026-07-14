@@ -3,7 +3,9 @@ package io.github.freshsupasulley.censorcraft.api.punishments;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.StreamSupport;
 
 /**
@@ -40,14 +42,16 @@ public class Trie {
 	}
 	
 	/**
-	 * Returns the first word found in the text (case-insensitive), or null if none was found. Word boundaries are not
+	 * Returns the words found in the text (case-insensitive), or null if none was found. Word boundaries are not
 	 * considered.
 	 *
 	 * @param text text to check
-	 * @return first word found, or null
+	 * @return words found, or null
 	 */
-	public @Nullable String findFirstEntry(String text)
+	public @Nullable Set<String> findEntries(String text)
 	{
+		Set<String> result = new LinkedHashSet<>();
+		
 		for(int i = 0; i < text.length(); i++)
 		{
 			TrieNode node = root;
@@ -64,23 +68,26 @@ public class Trie {
 				
 				if(node.isEndOfWord)
 				{
-					return foundWord.toString();
+					result.add(foundWord.toString());
 				}
 			}
 		}
 		
-		return null;
+		return result.isEmpty() ? null : result;
 	}
 	
 	/**
-	 * Returns the first <b>full word</b> (words separated by whitespace, non-letters, or end of line) found in the text
+	 * Returns <b>full words</b> (words separated by whitespace, non-letters, or end of line) found in the text
 	 * (case-insensitive), or null if none was found.
 	 *
 	 * @param text text to check
-	 * @return first word found, or null
+	 * @return words found, or null
 	 */
-	public @Nullable String findFirstIsolatedEntry(String text)
+	public @Nullable Set<String> findIsolatedEntries(String text)
 	{
+		// this removes dupes
+		Set<String> result = new LinkedHashSet<>();
+		
 		for(int i = 0; i < text.length(); i++)
 		{
 			TrieNode node = root;
@@ -103,13 +110,13 @@ public class Trie {
 					
 					if(validPrefix && validSuffix)
 					{
-						return foundWord.toString();
+						result.add(foundWord.toString());
 					}
 				}
 			}
 		}
 		
-		return null;
+		return result.isEmpty() ? null : result;
 	}
 	
 	private static class TrieNode {

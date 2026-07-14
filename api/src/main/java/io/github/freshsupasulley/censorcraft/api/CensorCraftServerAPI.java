@@ -7,6 +7,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Handles basic interaction with CensorCraft on the server side.
@@ -16,13 +17,9 @@ public interface CensorCraftServerAPI {
 	/**
 	 * Punishes a player through the standard punishment pipeline.
 	 *
-	 * <p>The server will first run each punishment's server-side {@link Punishment#punish(Object) punish} method, then
-	 * send a packet to the player indicating to reset their rolling audio buffer which will also fire its client-side
-	 * code.</p>
-	 *
-	 * <p>The map must have a non-null key, but the value can be <code>null</code> which indicates to not announce a
-	 * message for that particular punishment. Keep in mind, this is only applicable when <code>chat_taboos</code> is
-	 * enabled in the server config.</p>
+	 * <p>The server will first run each punishment's server-side {@link Punishment#punish(Object, Set) punish} method,
+	 * then send a packet to the player indicating to reset their rolling audio buffer which will also fire its
+	 * client-side code.</p>
 	 *
 	 * <p>If the map is empty, it will only reset the audio buffer on the client's machine and the
 	 * <code>censorcraft</code> scoreboard will not increase the player's score.</p>
@@ -30,7 +27,7 @@ public interface CensorCraftServerAPI {
 	 * @param player      the <code>net.minecraft.server.level</code> server player object
 	 * @param punishments {@link Map} of punishments to the taboo said by the player
 	 */
-	void punish(Object player, Map<Punishment, @Nullable String> punishments);
+	void punish(Object player, Map<Punishment, @Nullable Set<String>> punishments);
 	
 	/**
 	 * Gets the {@link java.util.List} of {@link Punishment} instances that each represent one array of tables in the

@@ -21,7 +21,7 @@ public record CensorCraftServerAPIImpl(CommentedFileConfig config) implements Ce
 	public static CensorCraftServerAPI INSTANCE;
 	
 	@Override
-	public void punish(Object player, Map<Punishment, @Nullable String> punishments)
+	public void punish(Object player, Map<Punishment, @Nullable Set<String>> punishments)
 	{
 		WordPacket.punish((ServerPlayer) player, punishments);
 	}

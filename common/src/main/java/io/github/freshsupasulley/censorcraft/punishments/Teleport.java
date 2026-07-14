@@ -1,7 +1,10 @@
 package io.github.freshsupasulley.censorcraft.punishments;
 
+import io.github.freshsupasulley.censorcraft.api.punishments.PunishmentJob;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
+
+import java.util.Set;
 
 public class Teleport extends BuiltInPunishment {
 	
@@ -21,7 +24,7 @@ public class Teleport extends BuiltInPunishment {
 	}
 	
 	@Override
-	public void punish(ServerPlayer player)
+	public PunishmentJob punish(ServerPlayer player, Set<String> taboos)
 	{
 		Vec3 pos = player.position();
 		boolean coords = config.get("coords");
@@ -35,5 +38,7 @@ public class Teleport extends BuiltInPunishment {
 		{
 			player.teleportTo(x + pos.x, y + pos.y, z + pos.z);
 		}
+		
+		return null;
 	}
 }

@@ -87,6 +87,10 @@ public class ForgeCensorCraft extends CensorCraft {
 	@SubscribeEvent
 	public static void serverTickEvent(TickEvent.ServerTickEvent.Post event)
 	{
+		// Tick jobs
+		INSTANCE.tickJobs(event.getServer());
+		
+		// Tick scoreboard
 		Scoreboard scoreboard = event.getServer().getScoreboard();
 		
 		// Only use the objective if the server admin wants one
@@ -161,7 +165,7 @@ public class ForgeCensorCraft extends CensorCraft {
 				// Signal to clients to reset their audio buffer
 				// (so if they spoke a taboo right as its enabled, they don't get punished)
 				// This could be paired with temporarily ignoring taboos for like 1s server side if required
-				ForgeCensorCraft.channel.send(new PunishedPacket(Set.of()), PacketDistributor.PLAYER.with(player));
+				ForgeCensorCraft.channel.send(new PunishedPacket(Set.of(), Set.of()), PacketDistributor.PLAYER.with(player));
 			}
 		}
 		

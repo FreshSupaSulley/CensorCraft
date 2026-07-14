@@ -1,9 +1,12 @@
 package io.github.freshsupasulley.censorcraft.punishments;
 
+import io.github.freshsupasulley.censorcraft.api.punishments.PunishmentJob;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.ExplosionDamageCalculator;
 import net.minecraft.world.level.Level.ExplosionInteraction;
 import net.minecraft.world.phys.Vec3;
+
+import java.util.Set;
 
 public class Explosion extends BuiltInPunishment {
 	
@@ -22,7 +25,7 @@ public class Explosion extends BuiltInPunishment {
 	}
 	
 	@Override
-	public void punish(ServerPlayer player)
+	public PunishmentJob punish(ServerPlayer player, Set<String> taboos)
 	{
 		Number radius = config.get("explosion_radius");
 		boolean createFires = config.get("create_fires");
@@ -30,10 +33,12 @@ public class Explosion extends BuiltInPunishment {
 		
 		Vec3 pos = player.position();
 		player.level().explode(null, player.level().damageSources().generic(), new ExplosionDamageCalculator(), pos.x, pos.y, pos.z, radius.floatValue(), createFires, griefing ? ExplosionInteraction.BLOCK : ExplosionInteraction.NONE);
+		
+		return null;
 	}
 	
 	@Override
-	public boolean initEnable()
+	public boolean isEnabledOnInit()
 	{
 		return true;
 	}

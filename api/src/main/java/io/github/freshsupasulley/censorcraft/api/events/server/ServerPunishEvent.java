@@ -6,6 +6,8 @@ import java.util.UUID;
 
 /**
  * Fires when the player is about to be punished on the server-side.
+ *
+ * <p>If {@link io.github.freshsupasulley.censorcraft.api.punishments.PunishmentParam#PUNISH_EVERYONE punish_everyone} is enabled, this fires once per person we are punishing.</p>
  */
 public interface ServerPunishEvent extends ServerEvent {
 	
